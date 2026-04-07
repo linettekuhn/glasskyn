@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 venv/
 *.env
+*.env.*
 
 # Node / React Native
 node_modules/
