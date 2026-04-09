@@ -2,8 +2,11 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.middleware.auth import get_db
+from app.routers import auth as auth_router
 
 app = FastAPI()
+
+app.include_router(auth_router.router)
 
 
 @app.get("/items")

@@ -1,7 +1,8 @@
 import os
 import sys
 from logging.config import fileConfig
-
+from app.db.base_class import Base
+from app.models import User, Product, ScanResult, Alert
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
@@ -10,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # --- 2: Import your Base metadata ---
 try:
-    from app.db.base import Base 
+    from app.db.base import Base
 except ImportError as e:
     print(f"\n[ERROR] Could not import Base from app.db.base. {e}")
     print("Ensure you have created app/__init__.py and app/db/__init__.py\n")
@@ -31,6 +32,7 @@ if config.config_file_name is not None:
 # --- 6: Set metadata for autogenerate ---
 target_metadata = Base.metadata
 
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     url = config.get_main_option("sqlalchemy.url")
@@ -44,6 +46,7 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     connectable = engine_from_config(
@@ -53,13 +56,11 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, 
-            target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
+
 
 if context.is_offline_mode():
     run_migrations_offline()
