@@ -10,7 +10,7 @@ class ProductCreate(BaseModel):
     category: Optional[str] = None
 
 
-class ProductUpload(BaseModel):
+class ProductUpdate(BaseModel):
     name: Optional[str] = None
     brand: Optional[str] = None
     category: Optional[str] = None
