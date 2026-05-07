@@ -10,9 +10,8 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import Toast from "react-native-toast-message";
 import LoadingSpinner from "../../src/components/LoadingSpinner";
+import { getProducts } from "../../src/api/products";
 import { Product } from "../../src/types";
-
-const MOCK_PRODUCTS: Product[] = [];
 
 export default function ProductListScreen() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -21,9 +20,8 @@ export default function ProductListScreen() {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      // TODO: call getProducts()
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setProducts(MOCK_PRODUCTS);
+      const data = await getProducts();
+      setProducts(data);
     } catch {
       Toast.show({
         type: "error",

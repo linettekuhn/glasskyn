@@ -6,7 +6,7 @@ import {
   useEffect,
 } from "react";
 import { User } from "../types";
-import { getToken, removeToken } from "../storage/token";
+import { getToken as getStoredToken, setToken as saveToken, removeToken } from "../storage/token";
 import * as auth from "../api/auth";
 
 interface AuthContextType {
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const storedToken = await getToken();
+      const storedToken = await getStoredToken();
       if (storedToken) {
         setToken(storedToken);
 
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const performLogin = async (email: string, password: string) => {
     const data = await auth.login(email, password);
-    await setToken(data.access_token);
+    await saveToken(data.access_token);
     setToken(data.access_token);
     setUser(data.user);
   };

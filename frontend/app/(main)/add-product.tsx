@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
+import { createProduct } from "../../src/api/products";
 
 export default function AddProductScreen() {
   const [name, setName] = useState("");
@@ -31,8 +32,11 @@ export default function AddProductScreen() {
 
     setLoading(true);
     try {
-      // TODO: call create product backend endpoint
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await createProduct({
+        name: name.trim(),
+        brand: brand.trim() || undefined,
+        category: category.trim() || undefined,
+      });
 
       Toast.show({
         type: "success",

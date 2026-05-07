@@ -1,9 +1,24 @@
 import axios from "axios";
 import { getToken } from "../storage/token";
 import Toast from "react-native-toast-message";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
+
+// TODO: change in prod to backend url
+const getBaseUrl = () => {
+  if (Platform.OS === "web") {
+    return "http://localhost:8000/";
+  }
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    const ip = hostUri.split(":")[0];
+    return `http://${ip}:8000/`;
+  }
+  return "http://localhost:8000/";
+};
 
 const apiClient = axios.create({
-  baseURL: "http://localhost:8000/",
+  baseURL: getBaseUrl(),
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
