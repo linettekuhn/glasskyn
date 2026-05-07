@@ -1,5 +1,13 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { User } from '../types';
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from "react";
+import { User } from "../types";
+import { getToken, removeToken } from "../storage/token";
+import * as auth from "../api/auth";
 
 interface AuthContextType {
   user: User | null;
@@ -16,13 +24,36 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const storedToken = await getToken();
+      if (storedToken) {
+        setToken(storedToken);
+
+        // TODO: validate token with /auth/refresh
+
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
+  const performLogin = async (email: string, password: string) => {
+    const data = await auth.login(email, password);
+    await setToken(data.access_token);
+    setToken(data.access_token);
+    setUser(data.user);
+  };
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Backend connection will be added later
-      console.log('Login attempted:', email);
+      await performLogin(email, password);
+    } catch (error: any) {
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -31,14 +62,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Backend connection will be added later
-      console.log('Register attempted:', name, email);
+      await auth.register(name, email, password);
+      await performLogin(email, password);
+    } catch (error: any) {
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await removeToken();
     setUser(null);
     setToken(null);
   };
@@ -63,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

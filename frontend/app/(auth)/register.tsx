@@ -9,26 +9,34 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
+import { useAuth } from "../../src/contexts/AuthContext";
+import Toast from "react-native-toast-message";
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+
+  const { register } = useAuth();
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
-      setError("Please fill in all fields");
+      Toast.show({
+        type: "error",
+        text1: "Validation",
+        text2: "Please fill in all fields",
+      });
       return;
     }
     setLoading(true);
-    setError("");
-    // TODO: API call will be added later
-    setTimeout(() => {
+    try {
+      await register(name, email, password);
+      router.replace("/(main)");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -39,8 +47,6 @@ export default function RegisterScreen() {
       <View style={styles.form}>
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Sign up to get started</Text>
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TextInput
           style={styles.input}
@@ -114,11 +120,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     marginBottom: 32,
-  },
-  error: {
-    color: "#e74c3c",
-    marginBottom: 16,
-    fontSize: 14,
   },
   input: {
     borderWidth: 1,

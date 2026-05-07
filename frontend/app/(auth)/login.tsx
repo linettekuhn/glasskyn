@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
@@ -8,38 +8,43 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { Link } from 'expo-router';
+} from "react-native";
+import { Link, router } from "expo-router";
+import { useAuth } from "../../src/contexts/AuthContext";
+import Toast from "react-native-toast-message";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const { login } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError('Please fill in all fields');
+      Toast.show({
+        type: "error",
+        text1: "Validation",
+        text2: "Please fill in all fields",
+      });
       return;
     }
     setLoading(true);
-    setError('');
-    // API call will be added later
-    setTimeout(() => {
+    try {
+      await login(email, password);
+      router.replace("/(main)");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.form}>
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Log in to your account</Text>
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TextInput
           style={styles.input}
@@ -76,8 +81,7 @@ export default function LoginScreen() {
 
         <Link href="/(auth)/register" style={styles.link}>
           <Text style={styles.linkText}>
-            Don't have an account?{' '}
-            <Text style={styles.linkBold}>Register</Text>
+            Don't have an account? <Text style={styles.linkBold}>Register</Text>
           </Text>
         </Link>
       </View>
@@ -88,63 +92,58 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
+    backgroundColor: "#fff",
+    justifyContent: "center",
   },
   form: {
     paddingHorizontal: 24,
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 4,
-    color: '#1a1a1a',
+    color: "#1a1a1a",
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginBottom: 32,
-  },
-  error: {
-    color: '#e74c3c',
-    marginBottom: 16,
-    fontSize: 14,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     marginBottom: 16,
-    backgroundColor: '#fafafa',
-    color: '#1a1a1a',
+    backgroundColor: "#fafafa",
+    color: "#1a1a1a",
   },
   button: {
-    backgroundColor: '#6c63ff',
+    backgroundColor: "#6c63ff",
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   link: {
     marginTop: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   linkText: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   linkBold: {
-    color: '#6c63ff',
-    fontWeight: '600',
+    color: "#6c63ff",
+    fontWeight: "600",
   },
 });
