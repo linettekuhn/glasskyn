@@ -34,6 +34,8 @@ export default function RegisterScreen() {
     try {
       await register(name, email, password);
       router.replace("/(main)");
+    } catch {
+      // toast already shown by axios interceptor
     } finally {
       setLoading(false);
     }

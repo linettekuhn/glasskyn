@@ -23,15 +23,20 @@ apiClient.interceptors.request.use(async (config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const errorData = error?.response?.data?.detail;
     let message = "Something went wrong";
 
-    if (typeof errorData === "string") {
-      // handle HTTPException errors
-      message = errorData;
-    } else {
-      // handle Pydantic validation errors
-      message = errorData[0]?.msg || message;
+    if (error.response) {
+      const errorData = error?.response?.data?.detail;
+      if (typeof errorData === "string") {
+        // handle HTTPException errors
+        message = errorData;
+      } else if (Array.isArray(errorData)) {
+        // handle Pydantic validation errors
+        message = errorData[0]?.msg || message;
+      }
+    } else if (error.request) {
+      // network error
+      message = "Cannot connect to server";
     }
 
     Toast.show({
