@@ -9,10 +9,16 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "axios": "^1.16.0",
     "expo": "~54.0.33",
+    "expo-constants": "^55.0.16",
+    "expo-linking": "^55.0.15",
+    "expo-router": "^55.0.14",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
-    "react-native": "0.81.5"
+    "react-native": "0.81.5",
+    "react-native-safe-area-context": "^5.7.0",
+    "react-native-screens": "^4.24.0"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
