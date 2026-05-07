@@ -33,9 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(storedToken);
 
         // TODO: validate token with /auth/refresh
-
-        setIsLoading(false);
       }
+      setIsLoading(false);
     };
 
     initializeAuth();
