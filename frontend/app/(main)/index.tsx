@@ -6,11 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import Toast from "react-native-toast-message";
 import LoadingSpinner from "../../src/components/LoadingSpinner";
-import { getProducts } from "../../src/api/products";
+import { getProducts, deleteProduct } from "../../src/api/products";
 import { Product } from "../../src/types";
 
 export default function ProductListScreen() {
@@ -67,12 +68,54 @@ export default function ProductListScreen() {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.cardName}>{item.name}</Text>
-            {item.brand || item.category ? (
-              <Text style={styles.cardMeta}>
-                {[item.brand, item.category].filter(Boolean).join(" · ")}
-              </Text>
-            ) : null}
+            <View style={styles.cardBody}>
+              <Text style={styles.cardName}>{item.name}</Text>
+              {item.brand || item.category ? (
+                <Text style={styles.cardMeta}>
+                  {[item.brand, item.category].filter(Boolean).join(" · ")}
+                </Text>
+              ) : null}
+            </View>
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(main)/add-product",
+                    params: {
+                      editId: String(item.id),
+                      name: item.name,
+                      brand: item.brand || "",
+                      category: item.category || "",
+                    },
+                  })
+                }
+              >
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() =>
+                  Alert.alert("Delete", `Delete "${item.name}"?`, [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Delete",
+                      style: "destructive",
+                      onPress: async () => {
+                        try {
+                          await deleteProduct(item.id);
+                          fetchProducts();
+                        } catch {
+                          // toast shown by interceptor
+                        }
+                      },
+                    },
+                  ])
+                }
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
         contentContainerStyle={styles.listContent}
@@ -139,6 +182,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
   },
+  cardBody: {
+    marginBottom: 12,
+  },
   cardName: {
     fontSize: 16,
     fontWeight: "600",
@@ -148,6 +194,32 @@ const styles = StyleSheet.create({
   cardMeta: {
     fontSize: 14,
     color: "#888",
+  },
+  cardActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  editButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#f0f0f0",
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6c63ff",
+  },
+  deleteButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#fef0f0",
+  },
+  deleteButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#e74c3c",
   },
   fab: {
     position: "absolute",

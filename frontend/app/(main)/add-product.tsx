@@ -10,19 +10,30 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import Toast from "react-native-toast-message";
-import { createProduct, lookupProduct } from "../../src/api/products";
+import { createProduct, updateProduct, lookupProduct } from "../../src/api/products";
 
 export default function AddProductScreen() {
+  const params = useLocalSearchParams<{
+    editId?: string;
+    name?: string;
+    brand?: string;
+    category?: string;
+  }>();
+  const editId = params.editId ? Number(params.editId) : null;
+
   const [permission, requestPermission] = useCameraPermissions();
   const [barcode, setBarcode] = useState("");
-  const [name, setName] = useState("");
-  const [brand, setBrand] = useState("");
-  const [category, setCategory] = useState("");
+  const [name, setName] = useState(params.name ?? "");
+  const [brand, setBrand] = useState(params.brand ?? "");
+  const [category, setCategory] = useState(params.category ?? "");
   const [lookupLoading, setLookupLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const lastScanned = useRef<string | null>(null);
+
+  const isEditing = editId !== null;
 
   const resetForm = () => {
     setName("");
@@ -78,19 +89,31 @@ export default function AddProductScreen() {
 
     setSubmitLoading(true);
     try {
-      await createProduct({
+      const data = {
         name: name.trim(),
         brand: brand.trim() || undefined,
         category: category.trim() || undefined,
-      });
+      };
 
-      Toast.show({
-        type: "success",
-        text1: "Added",
-        text2: `${name.trim()} saved`,
-        position: "top",
-      });
-      resetForm();
+      if (isEditing) {
+        await updateProduct(editId, data);
+        Toast.show({
+          type: "success",
+          text1: "Updated",
+          text2: `${name.trim()} saved`,
+          position: "top",
+        });
+        router.back();
+      } else {
+        await createProduct(data);
+        Toast.show({
+          type: "success",
+          text1: "Added",
+          text2: `${name.trim()} saved`,
+          position: "top",
+        });
+        resetForm();
+      }
     } catch {
       // interceptor shows toast
     } finally {
@@ -203,7 +226,7 @@ export default function AddProductScreen() {
             {submitLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.addButtonText}>Add</Text>
+              <Text style={styles.addButtonText}>{isEditing ? "Save" : "Add"}</Text>
             )}
           </TouchableOpacity>
         </View>

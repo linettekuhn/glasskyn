@@ -14,3 +14,12 @@ export async function lookupProduct(barcode: string) {
   const response = await apiClient.get(`/products/lookup/${barcode}`);
   return response.data;
 }
+
+export async function updateProduct(id: number, data: { name?: string; brand?: string; category?: string }) {
+  const response = await apiClient.patch(`/products/${id}`, data);
+  return response.data;
+}
+
+export async function deleteProduct(id: number) {
+  await apiClient.delete(`/products/${id}`);
+}
