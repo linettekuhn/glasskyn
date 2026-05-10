@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.schemas.product import ProductOut, ProductCreate, ProductUpdate
+from app.schemas.openbeautyfacts import BarcodeLookupResult
 from app.middleware.auth import get_db, get_current_user
 from app.models.user import User
 from app.models.product import Product
+from app.services.openbeautyfacts import lookup_product, RateLimitError
 from typing import List
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -91,3 +93,25 @@ def delete_product(
     db.commit()
 
     return None
+
+
+@router.get("/lookup/{barcode}", response_model=BarcodeLookupResult)
+async def lookup_product_by_barcode(
+    barcode: str,
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        result = await lookup_product(barcode)
+    except RateLimitError:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded. Try again later.",
+        )
+
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
+        )
+
+    return result
