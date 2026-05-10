@@ -18,3 +18,5 @@ OBF_USER_AGENT: str = os.environ.get(
 )
 OBF_CACHE_TTL_SECONDS: int = int(os.environ.get("OBF_CACHE_TTL_SECONDS", "3600"))
 OBF_RATE_LIMIT_RPM: int = int(os.environ.get("OBF_RATE_LIMIT_RPM", "10"))
+OBF_AUTH_USERNAME: str = os.environ.get("OBF_AUTH_USERNAME", "")
+OBF_AUTH_PASSWORD: str = os.environ.get("OBF_AUTH_PASSWORD", "")

@@ -1,10 +1,13 @@
 import time
+import base64
 import httpx
 from app.core.config import (
     OBF_API_BASE_URL,
     OBF_USER_AGENT,
     OBF_CACHE_TTL_SECONDS,
     OBF_RATE_LIMIT_RPM,
+    OBF_AUTH_USERNAME,
+    OBF_AUTH_PASSWORD,
 )
 
 FIELDS = "product_name,brands,categories,image_url,quantity,ingredients_text"
@@ -55,8 +58,17 @@ async def lookup_product(barcode: str) -> dict | None:
     url = f"{OBF_API_BASE_URL}/api/v2/product/{barcode}.json"
     headers = {"User-Agent": OBF_USER_AGENT}
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(url, headers=headers, params={"fields": FIELDS})
+    if OBF_AUTH_USERNAME and OBF_AUTH_PASSWORD:
+        credentials = f"{OBF_AUTH_USERNAME}:{OBF_AUTH_PASSWORD}"
+        encoded = base64.b64encode(credentials.encode()).decode()
+        headers["Authorization"] = f"Basic {encoded}"
+
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        resp = await client.get(
+            url,
+            headers=headers,
+            params={"fields": FIELDS, "product_type": "all"},
+        )
 
     if resp.status_code != 200:
         return None
