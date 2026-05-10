@@ -9,3 +9,8 @@ export async function createProduct(data: { name: string; brand?: string; catego
   const response = await apiClient.post('/products', data);
   return response.data;
 }
+
+export async function lookupProduct(barcode: string) {
+  const response = await apiClient.get(`/products/lookup/${barcode}`);
+  return response.data;
+}

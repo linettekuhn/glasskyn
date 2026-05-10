@@ -10,7 +10,29 @@ from app.core.config import (
     OBF_AUTH_PASSWORD,
 )
 
-FIELDS = "product_name,brands,categories,image_url,quantity,ingredients_text"
+FIELDS = "product_name,brands,categories,categories_hierarchy,image_url,quantity,ingredients_text"
+
+EXCLUDED_CATEGORIES = {
+    "open-beauty-facts",
+    "non-food-products",
+    "incorrect-product-type",
+    "unknown",
+    "missing-category",
+    "all-products",
+    "categories-known",
+}
+
+
+def _parse_categories(product: dict) -> str:
+    hierarchy = product.get("categories_hierarchy") or []
+    meaningful = [
+        c for c in hierarchy if c.split(":", 1)[-1] not in EXCLUDED_CATEGORIES
+    ]
+    if not meaningful:
+        return ""
+    leaf = meaningful[-1]
+    name = leaf.split(":", 1)[-1] if ":" in leaf else leaf
+    return name.replace("-", " ").title()
 
 _cache: dict[str, tuple[float, dict]] = {}
 _rate_history: list[float] = []
@@ -79,6 +101,7 @@ async def lookup_product(barcode: str) -> dict | None:
 
     product = data["product"]
     product["barcode"] = data.get("code", barcode)
+    product["categories"] = _parse_categories(product)
 
     BarcodeCache.set(barcode, product)
     return product
