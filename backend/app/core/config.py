@@ -20,3 +20,8 @@ OBF_CACHE_TTL_SECONDS: int = int(os.environ.get("OBF_CACHE_TTL_SECONDS", "3600")
 OBF_RATE_LIMIT_RPM: int = int(os.environ.get("OBF_RATE_LIMIT_RPM", "10"))
 OBF_AUTH_USERNAME: str = os.environ.get("OBF_AUTH_USERNAME", "")
 OBF_AUTH_PASSWORD: str = os.environ.get("OBF_AUTH_PASSWORD", "")
+
+AWS_ACCESS_KEY_ID: str = os.environ.get("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY: str = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+AWS_REGION: str = os.environ.get("AWS_REGION", "us-east-1")
+S3_BUCKET_NAME: str = os.environ.get("S3_BUCKET_NAME", "")

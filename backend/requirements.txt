@@ -11,3 +11,4 @@ python-jose[cryptography]
 python-multipart
 pydantic[email]
 email-validator
+boto3
