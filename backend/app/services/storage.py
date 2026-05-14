@@ -30,7 +30,11 @@ def _get_s3_client():
             aws_access_key_id=AWS_ACCESS_KEY_ID,
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
             region_name=AWS_REGION,
-            config=Config(signature_version="s3v4"),
+            endpoint_url=f"https://s3.{AWS_REGION}.amazonaws.com",
+            config=Config(
+                signature_version="s3v4",
+                retries={"max_attempts": 3},
+            ),
         )
     return s3_client
 
@@ -53,6 +57,9 @@ def generate_presigned_upload_url(
     file_key = f"products/{uuid.uuid4()}.{ext}"
 
     client = _get_s3_client()
+    
+    # Use regional endpoint to avoid redirect issues
+    regional_endpoint = f"https://s3.{AWS_REGION}.amazonaws.com"
     upload_url = client.generate_presigned_url(
         "put_object",
         Params={
@@ -61,6 +68,7 @@ def generate_presigned_upload_url(
             "ContentType": content_type,
         },
         ExpiresIn=expiration,
+        HttpMethod="PUT",
     )
 
     public_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{file_key}"

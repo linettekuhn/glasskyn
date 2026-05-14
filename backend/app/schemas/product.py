@@ -8,12 +8,14 @@ class ProductCreate(BaseModel):
     name: str
     brand: Optional[str] = None
     category: Optional[str] = None
+    image_s3_key: Optional[str] = None
 
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
     brand: Optional[str] = None
     category: Optional[str] = None
+    image_s3_key: Optional[str] = None
 
 
 # response schemas
@@ -22,6 +24,8 @@ class ProductOut(BaseModel):
     name: str
     brand: Optional[str] = None
     category: Optional[str] = None
+    image_s3_key: Optional[str] = None
+    image_url: Optional[str] = None
     created_at: datetime
     user_id: int
 

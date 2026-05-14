@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -21,14 +22,19 @@ export default function AddProductScreen() {
     name?: string;
     brand?: string;
     category?: string;
+    barcode?: string;
+    imageUrl?: string;
+    imageS3Key?: string;
   }>();
   const editId = params.editId ? Number(params.editId) : null;
 
   const [permission, requestPermission] = useCameraPermissions();
-  const [barcode, setBarcode] = useState("");
+  const [barcode, setBarcode] = useState(params.barcode ?? "");
   const [name, setName] = useState(params.name ?? "");
   const [brand, setBrand] = useState(params.brand ?? "");
   const [category, setCategory] = useState(params.category ?? "");
+  const [imageUrl, setImageUrl] = useState(params.imageUrl ?? "");
+  const [imageS3Key, setImageS3Key] = useState(params.imageS3Key ?? "");
   const [lookupLoading, setLookupLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const lastScanned = useRef<string | null>(null);
@@ -40,6 +46,8 @@ export default function AddProductScreen() {
     setBrand("");
     setCategory("");
     setBarcode("");
+    setImageUrl("");
+    setImageS3Key("");
     lastScanned.current = null;
   };
 
@@ -93,6 +101,7 @@ export default function AddProductScreen() {
         name: name.trim(),
         brand: brand.trim() || undefined,
         category: category.trim() || undefined,
+        image_s3_key: imageS3Key || undefined,
       };
 
       if (isEditing) {
@@ -179,6 +188,21 @@ export default function AddProductScreen() {
             )}
           </TouchableOpacity>
         </View>
+
+        {imageUrl ? (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: imageUrl }} style={styles.imagePreview} />
+            <TouchableOpacity
+              style={styles.removeImageButton}
+              onPress={() => {
+                setImageUrl("");
+                setImageS3Key("");
+              }}
+            >
+              <Text style={styles.removeImageText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         <Text style={styles.sectionTitle}>Product Details</Text>
 
@@ -346,5 +370,31 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
+  },
+  imagePreviewContainer: {
+    position: "relative",
+    marginBottom: 16,
+  },
+  imagePreview: {
+    width: "100%",
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: "#f0f0f0",
+  },
+  removeImageButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  removeImageText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

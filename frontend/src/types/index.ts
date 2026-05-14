@@ -9,6 +9,8 @@ export interface Product {
   name: string;
   brand: string | null;
   category: string | null;
+  image_s3_key: string | null;
+  image_url: string | null;
   created_at: string;
   user_id: number;
 }
