@@ -85,7 +85,7 @@ export default function MyShelfScreen() {
                 style={styles.editButton}
                 onPress={() =>
                   router.push({
-                    pathname: "/(main)/add-product",
+                    pathname: "/(modals)/add-product",
                     params: {
                       editId: String(item.id),
                       name: item.name,

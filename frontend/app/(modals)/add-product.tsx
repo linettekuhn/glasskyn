@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -141,7 +141,7 @@ export default function AddProductScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {permission?.granted ? (
+        {!isEditing && permission?.granted ? (
           <CameraView
             style={styles.camera}
             onBarcodeScanned={(result) => doLookup(result.data)}
@@ -149,7 +149,7 @@ export default function AddProductScreen() {
               barcodeTypes: ["ean13", "ean8", "upc_a", "code128", "code39"],
             }}
           />
-        ) : (
+        ) : !isEditing ? (
           <View style={styles.permissionBox}>
             <Text style={styles.permissionText}>
               Camera access needed for barcode scanning
@@ -163,7 +163,7 @@ export default function AddProductScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
 
         <Text style={styles.sectionTitle}>Barcode</Text>
         <View style={styles.barcodeRow}>
@@ -236,10 +236,10 @@ export default function AddProductScreen() {
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[styles.button, styles.clearButton]}
-            onPress={resetForm}
+            onPress={() => isEditing ? router.back() : resetForm()}
             disabled={isLoading}
           >
-            <Text style={styles.clearButtonText}>Clear</Text>
+            <Text style={styles.clearButtonText}>{isEditing ? "Cancel" : "Clear"}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

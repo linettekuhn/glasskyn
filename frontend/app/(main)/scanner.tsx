@@ -6,7 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import Toast from "react-native-toast-message";
 import { getPresignedUrl, uploadToS3 } from "../../src/api/uploads";
@@ -18,6 +18,10 @@ export default function ScannerScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const lastScanned = useRef<string | null>(null);
+
+  useFocusEffect(() => {
+    lastScanned.current = null;
+  });
 
   const handleCapture = async () => {
     if (!cameraRef.current || isCapturing || isProcessing) return;
@@ -70,7 +74,7 @@ export default function ScannerScreen() {
       // Step 4: Navigate to add product with pre-filled data
       console.log("[DEBUG] Navigating to add-product...");
       router.push({
-        pathname: "/(main)/add-product",
+        pathname: "/(modals)/add-product",
         params: {
           name: productData.name || "",
           brand: productData.brand || "",
