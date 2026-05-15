@@ -1,17 +1,32 @@
 import { Stack } from "expo-router";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function ModalLayout() {
   return (
-    <Stack
-      screenOptions={{
-        presentation: "modal",
-        headerShown: true,
-        headerTitle: "",
-        headerTintColor: "#6c63ff",
-        headerBackTitle: "Back",
-      }}
-    >
-      <Stack.Screen name="add-product" options={{ headerShown: false }} />
-    </Stack>
+    <SafeAreaProvider>
+      <Stack
+        screenOptions={{
+          presentation: "modal",
+          headerShown: true,
+          headerTitle: "",
+          headerTintColor: "#6c63ff",
+          headerBackTitle: "Back",
+          headerStyle: {
+            backgroundColor: "#fff",
+          },
+          headerShadowVisible: false,
+          gestureEnabled: true,
+          gestureDirection: "vertical",
+        }}
+      >
+        <Stack.Screen
+          name="add-product"
+          options={{
+            headerShown: false,
+            contentStyle: { backgroundColor: "#fff" },
+          }}
+        />
+      </Stack>
+    </SafeAreaProvider>
   );
 }

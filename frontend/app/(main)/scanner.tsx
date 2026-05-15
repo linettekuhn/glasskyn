@@ -6,7 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import Toast from "react-native-toast-message";
 import { getPresignedUrl, uploadToS3 } from "../../src/api/uploads";
@@ -16,12 +16,14 @@ export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const lastScanned = useRef<string | null>(null);
 
-  useFocusEffect(() => {
-    lastScanned.current = null;
-  });
+  const handleActivateCamera = () => {
+    if (isCapturing || isProcessing) return;
+    setIsCameraActive(true);
+  };
 
   const handleCapture = async () => {
     if (!cameraRef.current || isCapturing || isProcessing) return;
@@ -51,7 +53,7 @@ export default function ScannerScreen() {
       const fileName = `scan_${Date.now()}.jpg`;
       const { upload_url, file_key, public_url } = await getPresignedUrl(
         fileName,
-        "image/jpeg"
+        "image/jpeg",
       );
       console.log("[DEBUG] Got presigned URL, file_key:", file_key);
 
@@ -67,7 +69,10 @@ export default function ScannerScreen() {
       console.log("[DEBUG] S3 upload complete");
 
       // Step 3: Process image (barcode lookup + TODO: OCR, classifier)
-      console.log("[DEBUG] Calling process endpoint, barcode:", lastScanned.current);
+      console.log(
+        "[DEBUG] Calling process endpoint, barcode:",
+        lastScanned.current,
+      );
       const productData = await processImage(file_key, lastScanned.current);
       console.log("[DEBUG] Process result:", productData);
 
@@ -116,55 +121,63 @@ export default function ScannerScreen() {
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <CameraView
-        ref={cameraRef}
-        style={styles.camera}
-        facing="back"
-        barcodeScannerSettings={{
-          barcodeTypes: ["ean13", "ean8", "upc_a", "code128", "code39"],
-        }}
-        onBarcodeScanned={(result) => {
-          if (lastScanned.current !== result.data) {
-            lastScanned.current = result.data;
-          }
-        }}
-      />
+  if (isCameraActive) {
+    return (
+      <View style={styles.container}>
+        <CameraView ref={cameraRef} style={styles.camera} facing="back" />
 
-      <View style={styles.overlay}>
-        <View style={styles.scanArea}>
-          <View style={[styles.corner, styles.topLeft]} />
-          <View style={[styles.corner, styles.topRight]} />
-          <View style={[styles.corner, styles.bottomLeft]} />
-          <View style={[styles.corner, styles.bottomRight]} />
+        <View style={styles.overlay}>
+          <View style={styles.scanArea}>
+            <View style={[styles.corner, styles.topLeft]} />
+            <View style={[styles.corner, styles.topRight]} />
+            <View style={[styles.corner, styles.bottomLeft]} />
+            <View style={[styles.corner, styles.bottomRight]} />
+          </View>
+          <Text style={styles.hint}>Position product within frame</Text>
         </View>
-        <Text style={styles.hint}>
-          Position product barcode or photo within frame
+
+        <View style={styles.controls}>
+          {isProcessing ? (
+            <View style={styles.processing}>
+              <ActivityIndicator size="large" color="#6c63ff" />
+              <Text style={styles.processingText}>Processing...</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.captureButton,
+                (isCapturing || isProcessing) && styles.buttonDisabled,
+              ]}
+              onPress={handleCapture}
+              disabled={isCapturing || isProcessing}
+            >
+              {isCapturing ? (
+                <ActivityIndicator size="small" color="#6c63ff" />
+              ) : (
+                <View style={styles.captureInner} />
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      style={styles.placeholderContainer}
+      onPress={handleActivateCamera}
+      activeOpacity={0.7}
+    >
+      <View style={styles.placeholder}>
+        <Text style={styles.placeholderIcon}>📷</Text>
+        <Text style={styles.placeholderTitle}>Tap to Scan</Text>
+        <Text style={styles.placeholderSubtitle}>
+          Take a photo of your product
         </Text>
       </View>
-
-      <View style={styles.controls}>
-        {isProcessing ? (
-          <View style={styles.processing}>
-            <ActivityIndicator size="large" color="#6c63ff" />
-            <Text style={styles.processingText}>Processing...</Text>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={[styles.captureButton, (isCapturing || isProcessing) && styles.buttonDisabled]}
-            onPress={handleCapture}
-            disabled={isCapturing || isProcessing}
-          >
-            {isCapturing ? (
-              <ActivityIndicator size="small" color="#6c63ff" />
-            ) : (
-              <View style={styles.captureInner} />
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
+      <Text style={styles.placeholderHint}>Camera activates when you tap</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -172,6 +185,42 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000",
+  },
+  placeholderContainer: {
+    flex: 1,
+    backgroundColor: "#1a1a1a",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  placeholder: {
+    backgroundColor: "#2a2a2a",
+    borderRadius: 20,
+    padding: 40,
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#6c63ff",
+    borderStyle: "dashed",
+  },
+  placeholderIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  placeholderTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 8,
+  },
+  placeholderSubtitle: {
+    fontSize: 16,
+    color: "#999",
+    textAlign: "center",
+  },
+  placeholderHint: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 24,
   },
   center: {
     flex: 1,
