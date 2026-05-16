@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import Toast from "react-native-toast-message";
-import LoadingSpinner from "../../src/components/LoadingSpinner";
+import LoadingSpinner from "../../src/components/ui/loading-spinner";
 import { getProducts, deleteProduct } from "../../src/api/products";
 import { Product } from "../../src/types";
 
@@ -70,7 +70,10 @@ export default function MyShelfScreen() {
         renderItem={({ item }) => (
           <View style={styles.card}>
             {item.image_url ? (
-              <Image source={{ uri: item.image_url }} style={styles.thumbnail} />
+              <Image
+                source={{ uri: item.image_url }}
+                style={styles.thumbnail}
+              />
             ) : null}
             <View style={styles.cardBody}>
               <Text style={styles.cardName}>{item.name}</Text>

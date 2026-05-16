@@ -44,7 +44,7 @@ export const Colors = {
       900: "#333232",
     },
 
-    background: "#F5ECEA",
+    background: "#FCFBFB",
     text: "#151C1A",
     tabBackground: "#271B17",
     error: "#A10000",
@@ -87,7 +87,7 @@ export const Colors = {
       900: "#FCFBFB",
     },
 
-    background: "#271B17",
+    background: "#333232",
     text: "#F5ECEA",
     tabBackground: "#F5ECEA",
     error: "#FF5C5C",
