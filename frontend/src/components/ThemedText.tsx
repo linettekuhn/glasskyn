@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
 
 const typeStyles = StyleSheet.create({
   displayLarge: {
-    fontFamily: "DM-Serif-Display",
+    fontFamily: Fonts.serif,
     fontSize: 48,
     lineHeight: 48 * 1.2,
     letterSpacing: 0.015,
