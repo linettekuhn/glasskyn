@@ -2,24 +2,34 @@ import { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  useColorScheme,
+  Pressable,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
-import { Link, router } from "expo-router";
-import { useAuth } from "../../src/contexts/AuthContext";
+import { useRouter } from "expo-router";
+import { useAuth } from "@/contexts/AuthContext";
 import Toast from "react-native-toast-message";
+import { ThemedText } from "@/components/ui/themed-text";
+import { Colors, getTheme } from "@/constants/theme";
+import ThemedTextInput from "@/components/ui/themed-text-input";
+import { Octicons } from "@expo/vector-icons";
+import ThemedButton from "@/components/ui/themed-button";
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
   const { register } = useAuth();
+  const colorScheme = useColorScheme();
+  const colors = Colors[getTheme(colorScheme)];
+  const [showPass, setShowPass] = useState(false);
+  const router = useRouter();
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
@@ -43,62 +53,106 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.form}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Sign up to get started</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Name"
-          placeholderTextColor="#999"
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-          editable={!loading}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#999"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          editable={!loading}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!loading}
-        />
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Create Account</Text>
-          )}
-        </TouchableOpacity>
-
-        <Link href="/(auth)/login" style={styles.link}>
-          <Text style={styles.linkText}>
-            Already have an account? <Text style={styles.linkBold}>Log In</Text>
-          </Text>
-        </Link>
-      </View>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.content}>
+          <View style={styles.heading}>
+            <ThemedText type="h1">Create your shelf</ThemedText>
+            <ThemedText
+              type="bodyLarge"
+              style={{ color: colors.secondary[600] }}
+            >
+              Keep your cosmetics fresh and effective.
+            </ThemedText>
+          </View>
+          <View style={styles.form}>
+            <View style={styles.inputWrapper}>
+              <ThemedText type="caption">Name</ThemedText>
+              <ThemedTextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter your full name"
+                autoCapitalize="words"
+                editable={!loading}
+              />
+            </View>
+            <View style={styles.inputWrapper}>
+              <ThemedText type="caption">Email</ThemedText>
+              <ThemedTextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="hello@example.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!loading}
+              />
+            </View>
+            <View style={styles.inputWrapper}>
+              <ThemedText type="caption">Password</ThemedText>
+              <ThemedTextInput
+                placeholder="* * *"
+                value={password}
+                onChangeText={setPassword}
+                editable={!loading}
+                secureTextEntry={!showPass}
+              >
+                <Pressable
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  onPress={() => setShowPass((prev) => !prev)}
+                >
+                  {showPass ? (
+                    <Octicons
+                      name="eye-closed"
+                      size={20}
+                      color={colors.primary[500]}
+                    />
+                  ) : (
+                    <Octicons
+                      name="eye"
+                      size={20}
+                      color={colors.primary[500]}
+                    />
+                  )}
+                </Pressable>
+              </ThemedTextInput>
+            </View>
+            <ThemedButton
+              text="Create Account"
+              onPress={handleRegister}
+              disabled={loading}
+              loading={loading}
+              RightIconComponent={Octicons}
+              rightIconName="arrow-right"
+            />
+          </View>
+          <View style={styles.divider}>
+            <View
+              style={[styles.line, { backgroundColor: colors.secondary[500] }]}
+            />
+            <ThemedText
+              type="overline"
+              style={{ paddingHorizontal: 16, color: colors.secondary[600] }}
+            >
+              or
+            </ThemedText>
+            <View
+              style={[styles.line, { backgroundColor: colors.secondary[500] }]}
+            />
+          </View>
+          <View style={styles.link}>
+            <ThemedText>Already have an account?</ThemedText>
+            <ThemedText
+              link
+              style={{ color: colors.secondary[700] }}
+              onPressWhenLink={() => router.push("/(auth)/login")}
+            >
+              Log in
+            </ThemedText>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
@@ -106,58 +160,34 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
     justifyContent: "center",
   },
-  form: {
-    paddingHorizontal: 24,
+  content: {
+    paddingHorizontal: 32,
+    gap: 32,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 4,
-    color: "#1a1a1a",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 32,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 16,
-    backgroundColor: "#fafafa",
-    color: "#1a1a1a",
-  },
-  button: {
-    backgroundColor: "#6c63ff",
-    borderRadius: 12,
-    padding: 16,
+  heading: {
     alignItems: "center",
-    marginTop: 8,
   },
-  buttonDisabled: {
-    opacity: 0.7,
+  inputWrapper: {
+    gap: 8,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  form: {
+    gap: 24,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+  },
+  line: {
+    flex: 1,
+    height: 1,
   },
   link: {
-    marginTop: 24,
+    flexDirection: "row",
     alignItems: "center",
-  },
-  linkText: {
-    fontSize: 14,
-    color: "#666",
-  },
-  linkBold: {
-    color: "#6c63ff",
-    fontWeight: "600",
+    gap: 4,
+    alignSelf: "center",
   },
 });

@@ -1,5 +1,11 @@
-import { StyleSheet, Text, type TextProps } from "react-native";
+import { useRef, useEffect } from "react";
+import { StyleSheet, Text, type TextProps, Pressable } from "react-native";
 
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Fonts } from "@/constants/theme";
 
@@ -21,10 +27,13 @@ export type ThemedTextProps = TextProps & {
     | "caption"
     | "captionLarge"
     | "captionSmall"
-    | "overline"
-    | "link";
+    | "overline";
   italic?: boolean;
+  link?: boolean;
+  onPressWhenLink?: () => void;
 };
+
+const ANIMATION_DURATION = 200;
 
 export function ThemedText({
   style,
@@ -32,13 +41,68 @@ export function ThemedText({
   darkColor,
   type = "body",
   italic = false,
+  link = false,
+  onPressWhenLink,
   ...rest
 }: ThemedTextProps) {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, "text");
+  const underlineWidth = useSharedValue(0);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handlePress = () => {
+    if (onPressWhenLink) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      underlineWidth.value = withTiming(1, { duration: ANIMATION_DURATION });
+      timeoutRef.current = setTimeout(() => {
+        onPressWhenLink();
+        timeoutRef.current = null;
+      }, ANIMATION_DURATION);
+    }
+  };
+
+  const animatedUnderlineStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: underlineWidth.value }],
+    opacity: underlineWidth.value,
+  }));
+
+  const baseStyle = typeStyles[type] || typeStyles.body;
+
+  if (link) {
+    return (
+      <Pressable
+        onPress={onPressWhenLink ? handlePress : undefined}
+        disabled={!onPressWhenLink}
+        style={{ alignItems: "center" }}
+      >
+        <Text
+          style={[{ color }, baseStyle, italic && styles.italic, style]}
+          {...rest}
+        />
+        <Animated.View
+          style={[
+            styles.underline,
+            { backgroundColor: color },
+            animatedUnderlineStyle,
+          ]}
+        />
+      </Pressable>
+    );
+  }
 
   return (
     <Text
-      style={[{ color }, typeStyles[type], italic && styles.italic, style]}
+      style={[{ color }, baseStyle, italic && styles.italic, style]}
       {...rest}
     />
   );
@@ -47,6 +111,12 @@ export function ThemedText({
 const styles = StyleSheet.create({
   italic: {
     fontFamily: Fonts.serifItalic,
+  },
+  underline: {
+    position: "absolute",
+    bottom: 0,
+    width: "100%",
+    height: 1,
   },
 });
 
@@ -82,19 +152,19 @@ const typeStyles = StyleSheet.create({
     letterSpacing: 0.025,
   },
   h4: {
-    fontFamily: Fonts.serif,
+    fontFamily: Fonts.sans,
     fontSize: 20,
     lineHeight: 20 * 1.6,
     letterSpacing: 0.025,
   },
   h5: {
-    fontFamily: Fonts.serif,
+    fontFamily: Fonts.sans,
     fontSize: 18.91,
     lineHeight: 18.91 * 1.6,
     letterSpacing: 0.03,
   },
   h6: {
-    fontFamily: Fonts.serif,
+    fontFamily: Fonts.sans,
     fontSize: 17.89,
     lineHeight: 17.89 * 1.6,
     letterSpacing: 0.03,
@@ -141,13 +211,5 @@ const typeStyles = StyleSheet.create({
     lineHeight: 13.53 * 1.65,
     letterSpacing: 0.03,
     textTransform: "uppercase",
-  },
-  link: {
-    fontFamily: Fonts.sans,
-    fontSize: 13.53,
-    lineHeight: 13.53 * 1.65,
-    letterSpacing: 0.03,
-    textTransform: "uppercase",
-    textDecorationLine: "underline",
   },
 });
