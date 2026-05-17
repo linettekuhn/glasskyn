@@ -4,11 +4,13 @@ export interface User {
   email: string;
 }
 
+export type ProductCategory = "skincare" | "makeup" | "haircare";
+
 export interface Product {
   id: number;
   name: string;
   brand: string | null;
-  category: string | null;
+  category: ProductCategory | null;
   image_s3_key: string | null;
   image_url: string | null;
   created_at: string;

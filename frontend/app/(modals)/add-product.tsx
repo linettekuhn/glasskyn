@@ -20,6 +20,7 @@ import {
   updateProduct,
   lookupProduct,
 } from "../../src/api/products";
+import { ProductCategory } from "../../src/types";
 
 export default function AddProductScreen() {
   const params = useLocalSearchParams<{
@@ -37,7 +38,9 @@ export default function AddProductScreen() {
   const [barcode, setBarcode] = useState(params.barcode ?? "");
   const [name, setName] = useState(params.name ?? "");
   const [brand, setBrand] = useState(params.brand ?? "");
-  const [category, setCategory] = useState(params.category ?? "");
+  const [category, setCategory] = useState<ProductCategory | "">(
+    (params.category as ProductCategory) || ""
+  );
   const [imageUrl, setImageUrl] = useState(params.imageUrl ?? "");
   const [imageS3Key, setImageS3Key] = useState(params.imageS3Key ?? "");
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -82,6 +85,17 @@ export default function AddProductScreen() {
     lastScanned.current = null;
   };
 
+  const CATEGORIES: ProductCategory[] = ["skincare", "makeup", "haircare"];
+
+  const normalizeCategory = (cat: string | null): ProductCategory | "" => {
+    if (!cat) return "";
+    const normalized = cat.toLowerCase().trim();
+    if (CATEGORIES.includes(normalized as ProductCategory)) {
+      return normalized as ProductCategory;
+    }
+    return "";
+  };
+
   const doLookup = async (code: string) => {
     console.log("[DEBUG] doLookup started with code:", code);
     // Set lastScanned FIRST to prevent race conditions with duplicate detections
@@ -95,7 +109,7 @@ export default function AddProductScreen() {
       console.log("[DEBUG] lookupProduct result:", result);
       setName(result.product_name || "");
       setBrand(result.brands || "");
-      setCategory(result.categories || "");
+      setCategory(normalizeCategory(result.categories));
       console.log("[DEBUG] Product found, fields populated");
       Toast.show({
         type: "success",
@@ -141,7 +155,7 @@ export default function AddProductScreen() {
       const data = {
         name: name.trim(),
         brand: brand.trim() || undefined,
-        category: category.trim() || undefined,
+        category: category || undefined,
         image_s3_key: imageS3Key || undefined,
       };
 
@@ -287,14 +301,29 @@ export default function AddProductScreen() {
             editable={!isLoading}
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Category (optional)"
-            placeholderTextColor="#999"
-            value={category}
-            onChangeText={setCategory}
-            editable={!isLoading}
-          />
+          <Text style={styles.sectionTitle}>Category</Text>
+          <View style={styles.segmentedControl}>
+            {CATEGORIES.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.segmentButton,
+                  category === cat && styles.segmentButtonActive,
+                ]}
+                onPress={() => setCategory(category === cat ? "" : cat)}
+                disabled={isLoading}
+              >
+                <Text
+                  style={[
+                    styles.segmentButtonText,
+                    category === cat && styles.segmentButtonTextActive,
+                  ]}
+                >
+                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           <View style={styles.buttonRow}>
             <TouchableOpacity
@@ -496,5 +525,33 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  segmentedControl: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#fafafa",
+    alignItems: "center",
+  },
+  segmentButtonActive: {
+    backgroundColor: "#6c63ff",
+    borderColor: "#6c63ff",
+  },
+  segmentButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+    textTransform: "capitalize",
+  },
+  segmentButtonTextActive: {
+    color: "#fff",
   },
 });

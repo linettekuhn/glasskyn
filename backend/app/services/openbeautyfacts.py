@@ -34,6 +34,7 @@ def _parse_categories(product: dict) -> str:
     name = leaf.split(":", 1)[-1] if ":" in leaf else leaf
     return name.replace("-", " ").title()
 
+
 _cache: dict[str, tuple[float, dict]] = {}
 _rate_history: list[float] = []
 
@@ -85,7 +86,7 @@ async def lookup_product(barcode: str) -> dict | None:
         encoded = base64.b64encode(credentials.encode()).decode()
         headers["Authorization"] = f"Basic {encoded}"
 
-    async with httpx.AsyncClient(follow_redirects=True) as client:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
         resp = await client.get(
             url,
             headers=headers,
