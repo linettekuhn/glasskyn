@@ -71,7 +71,11 @@ export default function ThemedButton({
               color={txtColor ?? color}
             />
           )}
-          <ThemedText type="bodyLarge" style={{ color: txtColor ?? color }}>
+          <ThemedText
+            type="bodyLarge"
+            weight="medium"
+            style={{ color: txtColor ?? color }}
+          >
             {text}
           </ThemedText>
           {RightIconComponent && rightIconName && (

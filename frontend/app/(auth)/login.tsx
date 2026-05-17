@@ -70,7 +70,9 @@ export default function LoginScreen() {
           </View>
           <View style={styles.form}>
             <View style={styles.inputWrapper}>
-              <ThemedText type="caption">Email</ThemedText>
+              <ThemedText type="caption" weight="medium">
+                Email
+              </ThemedText>
               <ThemedTextInput
                 value={email}
                 onChangeText={setEmail}
@@ -81,7 +83,9 @@ export default function LoginScreen() {
               />
             </View>
             <View style={styles.inputWrapper}>
-              <ThemedText type="caption">Password</ThemedText>
+              <ThemedText type="caption" weight="medium">
+                Password
+              </ThemedText>
               <ThemedTextInput
                 placeholder="* * *"
                 value={password}
@@ -112,6 +116,7 @@ export default function LoginScreen() {
               <ThemedText
                 style={{ alignSelf: "flex-end", color: colors.secondary[700] }}
                 type="caption"
+                weight="medium"
               >
                 Forgot password?
               </ThemedText>

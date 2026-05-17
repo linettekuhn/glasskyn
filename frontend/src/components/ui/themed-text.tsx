@@ -28,6 +28,7 @@ export type ThemedTextProps = TextProps & {
     | "captionLarge"
     | "captionSmall"
     | "overline";
+  weight?: "thin" | "extraLight" | "light" | "regular" | "medium" | "semiBold" | "bold" | "extraBold" | "black";
   italic?: boolean;
   link?: boolean;
   onPressWhenLink?: () => void;
@@ -35,11 +36,24 @@ export type ThemedTextProps = TextProps & {
 
 const ANIMATION_DURATION = 200;
 
+const weightToFamily: Record<NonNullable<ThemedTextProps["weight"]>, string> = {
+  thin: Fonts.sansThin,
+  extraLight: Fonts.sansExtraLight,
+  light: Fonts.sansLight,
+  regular: Fonts.sans,
+  medium: Fonts.sansMedium,
+  semiBold: Fonts.sansSemiBold,
+  bold: Fonts.sansBold,
+  extraBold: Fonts.sansExtraBold,
+  black: Fonts.sansBlack,
+};
+
 export function ThemedText({
   style,
   lightColor,
   darkColor,
   type = "body",
+  weight,
   italic = false,
   link = false,
   onPressWhenLink,
@@ -77,6 +91,7 @@ export function ThemedText({
   }));
 
   const baseStyle = typeStyles[type] || typeStyles.body;
+  const weightStyle = weight && !italic ? { fontFamily: weightToFamily[weight] } : undefined;
 
   if (link) {
     return (
@@ -86,7 +101,7 @@ export function ThemedText({
         style={{ alignItems: "center" }}
       >
         <Text
-          style={[{ color }, baseStyle, italic && styles.italic, style]}
+          style={[{ color }, baseStyle, weightStyle, italic && styles.italic, style]}
           {...rest}
         />
         <Animated.View
@@ -102,7 +117,7 @@ export function ThemedText({
 
   return (
     <Text
-      style={[{ color }, baseStyle, italic && styles.italic, style]}
+      style={[{ color }, baseStyle, weightStyle, italic && styles.italic, style]}
       {...rest}
     />
   );

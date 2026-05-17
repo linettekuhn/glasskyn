@@ -69,7 +69,9 @@ export default function RegisterScreen() {
           </View>
           <View style={styles.form}>
             <View style={styles.inputWrapper}>
-              <ThemedText type="caption">Name</ThemedText>
+              <ThemedText type="caption" weight="medium">
+                Name
+              </ThemedText>
               <ThemedTextInput
                 value={name}
                 onChangeText={setName}
@@ -79,7 +81,9 @@ export default function RegisterScreen() {
               />
             </View>
             <View style={styles.inputWrapper}>
-              <ThemedText type="caption">Email</ThemedText>
+              <ThemedText type="caption" weight="medium">
+                Email
+              </ThemedText>
               <ThemedTextInput
                 value={email}
                 onChangeText={setEmail}
@@ -90,7 +94,9 @@ export default function RegisterScreen() {
               />
             </View>
             <View style={styles.inputWrapper}>
-              <ThemedText type="caption">Password</ThemedText>
+              <ThemedText type="caption" weight="medium">
+                Password
+              </ThemedText>
               <ThemedTextInput
                 placeholder="* * *"
                 value={password}

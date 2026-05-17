@@ -96,6 +96,14 @@ export const Colors = {
 
 export const Fonts = {
   sans: "DM-Sans",
+  sansThin: "DM-Sans-Thin",
+  sansExtraLight: "DM-Sans-ExtraLight",
+  sansLight: "DM-Sans-Light",
+  sansMedium: "DM-Sans-Medium",
+  sansSemiBold: "DM-Sans-SemiBold",
+  sansBold: "DM-Sans-Bold",
+  sansExtraBold: "DM-Sans-ExtraBold",
+  sansBlack: "DM-Sans-Black",
   serif: "DM-Serif-Display",
   serifItalic: "DM-Serif-Display-Italic",
 };
