@@ -2,6 +2,7 @@ import { Colors, getTheme } from "@/constants/theme";
 import { ComponentType } from "react";
 import {
   ActivityIndicator,
+  FlexAlignType,
   Pressable,
   StyleSheet,
   TouchableOpacity,
@@ -15,6 +16,23 @@ type Props = {
   text: string;
   onPress: () => void;
   color?: string;
+  textType?:
+    | "displayLarge"
+    | "displayMedium"
+    | "h1"
+    | "h2"
+    | "h3"
+    | "h4"
+    | "h5"
+    | "h6"
+    | "body"
+    | "bodyLarge"
+    | "bodySmall"
+    | "caption"
+    | "captionLarge"
+    | "captionSmall"
+    | "overline";
+  alignment?: "auto" | FlexAlignType | undefined;
   outlined?: boolean;
   disabled?: boolean;
   loading?: boolean;
@@ -28,13 +46,15 @@ export default function ThemedButton({
   text,
   onPress,
   color,
+  textType = "bodyLarge",
+  alignment = "stretch",
+  outlined = false,
+  disabled = false,
+  loading = false,
   LeftIconComponent,
   leftIconName,
   RightIconComponent,
   rightIconName,
-  outlined = false,
-  disabled = false,
-  loading = false,
 }: Props) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -57,6 +77,7 @@ export default function ThemedButton({
           opacity: disabled ? 0.6 : 1,
           backgroundColor: bgColor,
           borderColor: outlined ? c : bgColor,
+          alignSelf: alignment,
         },
       ]}
     >
@@ -72,7 +93,7 @@ export default function ThemedButton({
             />
           )}
           <ThemedText
-            type="bodyLarge"
+            type={textType}
             weight="medium"
             style={{ color: txtColor ?? color }}
           >
@@ -94,9 +115,8 @@ export default function ThemedButton({
 const styles = StyleSheet.create({
   button: {
     borderRadius: 25,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    alignSelf: "stretch",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderWidth: 1,
   },
 
