@@ -25,7 +25,7 @@ export default function MainLayout() {
   const inactiveColor = colors.primary[600];
   const focusedColor = colors.primary[800];
   const bgColor = colors.neutral[100];
-  const strokeColor = colors.neutral[200];
+  const strokeColor = colors.primary[200];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
