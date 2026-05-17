@@ -208,10 +208,10 @@ export default function MyShelfScreen() {
       )}
 
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: colors.secondary[500] }]}
         onPress={() => router.push("/(main)/scanner")}
       >
-        <Text style={styles.fabText}>+</Text>
+        <MaterialCommunityIcons size={32} name="plus" color={bgColor} />
       </TouchableOpacity>
     </View>
   );
@@ -306,7 +306,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#6c63ff",
     justifyContent: "center",
     alignItems: "center",
     elevation: 4,
@@ -314,11 +313,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-  },
-  fabText: {
-    color: "#fff",
-    fontSize: 28,
-    lineHeight: 30,
-    fontWeight: "400",
   },
 });
