@@ -12,3 +12,4 @@ python-multipart
 pydantic[email]
 email-validator
 boto3
+google-cloud-vision

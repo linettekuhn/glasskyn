@@ -1,15 +1,20 @@
+import asyncio
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from app.middleware.auth import get_current_user
+from sqlalchemy.orm import Session
+from app.middleware.auth import get_current_user, get_db
 from app.models.user import User
+from app.models.scan import ScanResult
 from app.schemas.upload import (
     PresignedUploadRequest,
     PresignedUploadResponse,
     PresignedDownloadResponse,
 )
 from app.services import storage
+from app.services import vision as vision_service
 from app.services.openbeautyfacts import lookup_product
+from app.core.config import S3_BUCKET_NAME, AWS_REGION
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +31,8 @@ class ProcessImageResponse(BaseModel):
     brand: str | None = None
     category: str | None = None
     barcode: str | None = None
+    raw_ocr_text: str | None = None
+    scan_id: int | None = None
 
 
 @router.post(
@@ -63,34 +70,52 @@ def generate_download_url(
 async def process_uploaded_image(
     body: ProcessImageRequest,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     logger.info(f"[DEBUG] process_uploaded_image called with file_key={body.file_key}, barcode={body.barcode}")
     
-    # TODO: Future phases - implement OCR and classifier
-    # - Phase 4: Use Google Vision API for OCR
-    # - Phase 7: Use PyTorch classifier for category detection
+    # Run OCR on the uploaded image
+    image_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{body.file_key}"
+    logger.info(f"[DEBUG] Running OCR on image: {image_url}")
+    raw_ocr_text = None
+    try:
+        ocr_result = await asyncio.to_thread(vision_service.detect_text, image_url)
+        raw_ocr_text = ocr_result.get("raw_text")
+        logger.info(f"[DEBUG] OCR extracted {len(raw_ocr_text or '')} characters")
+    except Exception as e:
+        logger.error(f"[DEBUG] OCR failed: {e}")
+    
+    # Create scan result record
+    scan = ScanResult(
+        user_id=current_user.id,
+        image_s3_key=body.file_key,
+        raw_ocr_text=raw_ocr_text,
+    )
+    db.add(scan)
+    db.commit()
+    db.refresh(scan)
+    logger.info(f"[DEBUG] Created ScanResult id={scan.id}")
     
     # If barcode was detected, try to lookup product info
+    name = None
+    brand = None
+    category = None
     if body.barcode:
         logger.info(f"[DEBUG] Attempting barcode lookup for: {body.barcode}")
         try:
             result = lookup_product(body.barcode)
             logger.info(f"[DEBUG] Barcode lookup result: {result}")
-            return ProcessImageResponse(
-                name=result.get("product_name"),
-                brand=result.get("brands"),
-                category=result.get("categories"),
-                barcode=body.barcode,
-            )
+            name = result.get("product_name")
+            brand = result.get("brands")
+            category = result.get("categories")
         except Exception as e:
             logger.error(f"[DEBUG] Barcode lookup failed: {e}")
-            # Barcode lookup failed, return barcode only
-            pass
     
-    logger.info(f"[DEBUG] Returning empty response (no barcode found)")
     return ProcessImageResponse(
-        name=None,
-        brand=None,
-        category=None,
+        name=name,
+        brand=brand,
+        category=category,
         barcode=body.barcode,
+        raw_ocr_text=raw_ocr_text,
+        scan_id=scan.id,
     )

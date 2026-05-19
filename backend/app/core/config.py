@@ -1,7 +1,11 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Resolve the backend root directory (two levels up from this file)
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 
 JWT_SECRET: str = os.environ.get("JWT_SECRET", "fallback")
 JWT_ALGORITHM: str = "HS256"
@@ -20,6 +24,11 @@ OBF_CACHE_TTL_SECONDS: int = int(os.environ.get("OBF_CACHE_TTL_SECONDS", "3600")
 OBF_RATE_LIMIT_RPM: int = int(os.environ.get("OBF_RATE_LIMIT_RPM", "10"))
 OBF_AUTH_USERNAME: str = os.environ.get("OBF_AUTH_USERNAME", "")
 OBF_AUTH_PASSWORD: str = os.environ.get("OBF_AUTH_PASSWORD", "")
+
+GOOGLE_APPLICATION_CREDENTIALS: str = os.environ.get(
+    "GOOGLE_APPLICATION_CREDENTIALS",
+    str(BACKEND_DIR / "credentials" / "shelf-love-353bbeca17ab.json"),
+)
 
 AWS_ACCESS_KEY_ID: str = os.environ.get("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY: str = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
