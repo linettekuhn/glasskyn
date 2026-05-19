@@ -17,3 +17,5 @@ dist/
 
 # Logs
 *.log
+
+credentials/
