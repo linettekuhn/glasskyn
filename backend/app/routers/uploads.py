@@ -14,6 +14,7 @@ from app.schemas.upload import (
 from app.services import storage
 from app.services import vision as vision_service
 from app.services.openbeautyfacts import lookup_product
+from app.services.extraction import extract_all
 
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,10 @@ class ProcessImageResponse(BaseModel):
     barcode: str | None = None
     raw_ocr_text: str | None = None
     scan_id: int | None = None
+    pao_months: int | None = None
+    expiry_date: str | None = None
+    category_method: str | None = None
+    extraction_method: str | None = None
 
 
 @router.post(
@@ -94,11 +99,20 @@ async def process_uploaded_image(
     else:
         logger.error("[DEBUG] Skipping OCR — no valid image URL")
     
-    # Create scan result record
+    # Run extraction on OCR text
+    extraction = extract_all(raw_ocr_text)
+    logger.info(f"[DEBUG] Extraction result: pao_months={extraction['pao_months']}, method={extraction['extraction_method']}")
+
+    # Create scan result record with extraction data
     scan = ScanResult(
         user_id=current_user.id,
         image_s3_key=body.file_key,
         raw_ocr_text=raw_ocr_text,
+        pao_months=extraction["pao_months"],
+        expiry_date=extraction["expiry_date"],
+        category=extraction["category"],
+        category_method=extraction["category_method"],
+        extraction_method=extraction["extraction_method"],
     )
     db.add(scan)
     db.commit()
@@ -127,4 +141,8 @@ async def process_uploaded_image(
         barcode=body.barcode,
         raw_ocr_text=raw_ocr_text,
         scan_id=scan.id,
+        pao_months=scan.pao_months,
+        expiry_date=None,
+        category_method=scan.category_method,
+        extraction_method=scan.extraction_method,
     )
