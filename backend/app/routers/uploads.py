@@ -14,7 +14,7 @@ from app.schemas.upload import (
 from app.services import storage
 from app.services import vision as vision_service
 from app.services.openbeautyfacts import lookup_product
-from app.core.config import S3_BUCKET_NAME, AWS_REGION
+
 
 logger = logging.getLogger(__name__)
 
@@ -75,15 +75,24 @@ async def process_uploaded_image(
     logger.info(f"[DEBUG] process_uploaded_image called with file_key={body.file_key}, barcode={body.barcode}")
     
     # Run OCR on the uploaded image
-    image_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{body.file_key}"
-    logger.info(f"[DEBUG] Running OCR on image: {image_url}")
-    raw_ocr_text = None
     try:
-        ocr_result = await asyncio.to_thread(vision_service.detect_text, image_url)
-        raw_ocr_text = ocr_result.get("raw_text")
-        logger.info(f"[DEBUG] OCR extracted {len(raw_ocr_text or '')} characters")
+        download_info = storage.generate_presigned_download_url(body.file_key)
+        image_url = download_info["download_url"]
     except Exception as e:
-        logger.error(f"[DEBUG] OCR failed: {e}")
+        logger.error(f"[DEBUG] Failed to generate download URL: {e}")
+        image_url = None
+    
+    raw_ocr_text = None
+    if image_url:
+        logger.info(f"[DEBUG] Running OCR on image")
+        try:
+            ocr_result = await asyncio.to_thread(vision_service.detect_text, image_url)
+            raw_ocr_text = ocr_result.get("raw_text")
+            logger.info(f"[DEBUG] OCR extracted {len(raw_ocr_text or '')} characters")
+        except Exception as e:
+            logger.error(f"[DEBUG] OCR failed: {e}")
+    else:
+        logger.error("[DEBUG] Skipping OCR — no valid image URL")
     
     # Create scan result record
     scan = ScanResult(
