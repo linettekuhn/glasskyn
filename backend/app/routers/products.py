@@ -5,6 +5,7 @@ from app.schemas.openbeautyfacts import BarcodeLookupResult
 from app.middleware.auth import get_db, get_current_user
 from app.models.user import User
 from app.models.product import Product
+from app.models.scan import ScanResult
 from app.services.openbeautyfacts import lookup_product, RateLimitError
 from typing import List
 
@@ -29,6 +30,16 @@ def create_product(
     db.add(product)
     db.commit()
     db.refresh(product)
+
+    # link scan result to product if scan_id was provided
+    if body.scan_id:
+        scan = db.query(ScanResult).filter(
+            ScanResult.id == body.scan_id,
+            ScanResult.user_id == current_user.id,
+        ).first()
+        if scan:
+            scan.product_id = product.id
+            db.commit()
 
     return product
 

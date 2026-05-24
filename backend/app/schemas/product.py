@@ -11,6 +11,7 @@ class ProductCreate(BaseModel):
     brand: Optional[str] = None
     category: Optional[ProductCategory] = None
     image_s3_key: Optional[str] = None
+    scan_id: Optional[int] = None
 
     @field_validator("category", mode="before")
     @classmethod
