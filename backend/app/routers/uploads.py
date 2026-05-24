@@ -26,6 +26,18 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
+# In-memory OCR cache: S3 file_key -> raw_text
+# Avoids redundant Google Vision API calls if the same image is re-processed
+_ocr_cache: dict[str, str] = {}
+
+
+def _get_cached_ocr(file_key: str) -> str | None:
+    return _ocr_cache.get(file_key)
+
+
+def _set_cached_ocr(file_key: str, text: str) -> None:
+    _ocr_cache[file_key] = text
+
 
 class ProcessImageRequest(BaseModel):
     file_key: str
@@ -183,19 +195,27 @@ async def process_multi_images(
     except Exception as e:
         logger.error("Failed to generate download URLs: %s", e)
 
-    # Run OCR on both images
-    async def run_ocr(url: str | None) -> str | None:
+    # Run OCR on both images (with caching to avoid redundant Vision API calls)
+    async def run_ocr(file_key: str, url: str | None) -> str | None:
         if not url:
             return None
+        cached = _get_cached_ocr(file_key)
+        if cached is not None:
+            logger.info("OCR cache hit for %s", file_key)
+            return cached
         try:
             result = await asyncio.to_thread(vision_service.detect_text, url)
-            return result.get("raw_text")
+            text = result.get("raw_text")
+            if text:
+                _set_cached_ocr(file_key, text)
+            return text
         except Exception as e:
             logger.error("OCR failed for %s: %s", url, e)
             return None
 
     front_text, back_text = await asyncio.gather(
-        run_ocr(front_url), run_ocr(back_url),
+        run_ocr(body.front_file_key, front_url),
+        run_ocr(body.back_file_key, back_url),
     )
 
     # Merge raw text
@@ -323,19 +343,26 @@ async def process_pao_image(
     except Exception as e:
         logger.error("Failed to generate download URL: %s", e)
 
-    # Run OCR on PAO image
+    # Run OCR on PAO image (with caching)
     pao_text = None
     if pao_url:
-        try:
-            ocr_result = await asyncio.to_thread(
-                vision_service.detect_text, pao_url
-            )
-            pao_text = ocr_result.get("raw_text")
-            logger.info(
-                "PAO OCR extracted %d chars", len(pao_text or "")
-            )
-        except Exception as e:
-            logger.error("PAO OCR failed: %s", e)
+        cached = _get_cached_ocr(body.file_key)
+        if cached is not None:
+            pao_text = cached
+            logger.info("PAO OCR cache hit for %s", body.file_key)
+        else:
+            try:
+                ocr_result = await asyncio.to_thread(
+                    vision_service.detect_text, pao_url
+                )
+                pao_text = ocr_result.get("raw_text")
+                if pao_text:
+                    _set_cached_ocr(body.file_key, pao_text)
+                logger.info(
+                    "PAO OCR extracted %d chars", len(pao_text or "")
+                )
+            except Exception as e:
+                logger.error("PAO OCR failed: %s", e)
 
     # Run PAO extraction only
     pao_result = extract_pao(pao_text)
