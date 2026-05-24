@@ -1,0 +1,21 @@
+filename,brand,product_name,label_side,expected_category,expected_pao_months,notes
+01.jpeg,BIODERMA,Sensibio H2O Micellar Water,front,skincare,,front panel — PAO symbol likely on back/bottle
+02.jpeg,BIODERMA,Sensibio H2O Micellar Water,back,skincare,12,transparent label low contrast — PAO out of frame
+03.jpeg,Sesderma,DRYSES Deodorant Roll-On,back,skincare,12,ingredients panel — 12M visible
+04.jpeg,Sesderma,DRYSES Deodorant Roll-On,front,skincare,,curved surface — edge text clipped
+05.jpeg,L'Oreal Paris,Elvive Dream Lengths Shampoo,back,haircare,12,ingredients panel — 12M visible
+06.jpeg,L'Oreal Paris,Elvive Dream Lengths Shampoo,front,haircare,,front label only — no PAO visible
+07.jpeg,Aveeno,Apple Cider Vinegar Shampoo,back,haircare,18,ingredients panel — 18M visible
+08.jpeg,Aveeno,Apple Cider Vinegar Shampoo,front,haircare,,front label only — no PAO visible
+09.jpeg,Natasha Denona,Hyglam Concealer,back,makeup,12,blurry small PAO likely won't get picked up
+10.jpeg,Natasha Denona,ND,front,makeup,,only 17 OCR chars — brand name only
+11.jpeg,Huda Beauty,Cherry Blossom Loose Powder,back,makeup,18,directions panel — 18M visible
+12.jpeg,Huda Beauty,Brand logo only,front,makeup,,only 11 OCR chars — brand name only
+13.jpeg,Morphe,Jumbo Continuous Setting Mist,back,makeup,,ingredients panel — no PAO visible
+14.jpeg,Morphe,Jumbo Continuous Setting Mist,front,makeup,,front label only — no PAO visible
+15.jpeg,IT Cosmetics,CC+ Cream Sunscreen,back,makeup,12,Drug Facts panel — 12M visible
+16.jpeg,IT Cosmetics,CC+ Cream Sunscreen,front,makeup,,EXP 2026/09 visible — no PAO symbol detected
+17.jpeg,La Roche-Posay,Anthelios Sunscreen,back,skincare,12,Drug Facts panel — 12M visible
+18.jpeg,La Roche-Posay,Anthelios Sunscreen,front,skincare,,front label only — no PAO visible
+19.jpeg,Garnier Fructis,Curl Air Dry Cream,back,haircare,12,ingredients panel — 12M visible
+20.jpeg,Garnier Fructis,Curl Air Dry Cream,front,haircare,,front label only — no PAO visible
