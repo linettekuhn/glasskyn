@@ -31,6 +31,8 @@ export default function AddProductScreen() {
     barcode?: string;
     imageUrl?: string;
     imageS3Key?: string;
+    scanId?: string;
+    paoMonths?: string;
   }>();
   const editId = params.editId ? Number(params.editId) : null;
 
@@ -152,12 +154,17 @@ export default function AddProductScreen() {
 
     setSubmitLoading(true);
     try {
-      const data = {
+      const data: Parameters<typeof createProduct>[0] = {
         name: name.trim(),
         brand: brand.trim() || undefined,
         category: category || undefined,
         image_s3_key: imageS3Key || undefined,
       };
+
+      const scanId = params.scanId ? Number(params.scanId) : null;
+      if (!isEditing && scanId) {
+        data.scan_id = scanId;
+      }
 
       if (isEditing) {
         await updateProduct(editId, data);

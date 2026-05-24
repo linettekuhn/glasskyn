@@ -68,7 +68,7 @@ export default function ScannerScreen() {
       await uploadToS3(upload_url, blob, "image/jpeg");
       console.log("[DEBUG] S3 upload complete");
 
-      // Step 3: Process image (barcode lookup + TODO: OCR, classifier)
+      // Step 3: Process image (OCR + extraction + barcode lookup)
       console.log(
         "[DEBUG] Calling process endpoint, barcode:",
         lastScanned.current,
@@ -87,6 +87,8 @@ export default function ScannerScreen() {
           barcode: productData.barcode || "",
           imageUrl: public_url,
           imageS3Key: file_key,
+          scanId: productData.scan_id?.toString() || "",
+          paoMonths: productData.pao_months?.toString() || "",
         },
       });
     } catch (err: any) {

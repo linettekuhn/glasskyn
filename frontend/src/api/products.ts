@@ -5,6 +5,11 @@ export interface ProcessImageResult {
   brand: string | null;
   category: string | null;
   barcode: string | null;
+  scan_id: number | null;
+  pao_months: number | null;
+  expiry_date: string | null;
+  category_method: string | null;
+  extraction_method: string | null;
 }
 
 export async function getProducts() {
@@ -17,6 +22,7 @@ export async function createProduct(data: {
   brand?: string;
   category?: string;
   image_s3_key?: string;
+  scan_id?: number | null;
 }) {
   const response = await apiClient.post('/products', data);
   return response.data;
