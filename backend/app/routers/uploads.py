@@ -122,7 +122,6 @@ async def process_uploaded_image(
     # If barcode was detected, try to lookup product info
     name = None
     brand = None
-    category = None
     if body.barcode:
         logger.info(f"[DEBUG] Attempting barcode lookup for: {body.barcode}")
         try:
@@ -130,19 +129,18 @@ async def process_uploaded_image(
             logger.info(f"[DEBUG] Barcode lookup result: {result}")
             name = result.get("product_name")
             brand = result.get("brands")
-            category = result.get("categories")
         except Exception as e:
             logger.error(f"[DEBUG] Barcode lookup failed: {e}")
     
     return ProcessImageResponse(
         name=name,
         brand=brand,
-        category=category,
+        category=scan.category,
         barcode=body.barcode,
         raw_ocr_text=raw_ocr_text,
         scan_id=scan.id,
         pao_months=scan.pao_months,
-        expiry_date=None,
+        expiry_date=scan.expiry_date,
         category_method=scan.category_method,
         extraction_method=scan.extraction_method,
     )
