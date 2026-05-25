@@ -30,3 +30,22 @@ export interface BarcodeLookupResult {
   categories: string | null;
   barcode: string;
 }
+
+export interface ProcessMultiResult {
+  scan_id: number | null;
+  product_name: string | null;
+  brand: string | null;
+  name_brand_method: "barcode_lookup" | "llm_extraction" | null;
+  category: string | null;
+  category_method: string | null;
+  pao_months: number | null;
+  expiry_date: string | null;
+  extraction_method: string | null;
+}
+
+export interface ProcessPaoResult {
+  pao_months: number | null;
+  extraction_method: string | null;
+}
+
+export type NameBrandMethod = "barcode_lookup" | "llm_extraction" | "manual";

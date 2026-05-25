@@ -387,3 +387,37 @@ async def process_pao_image(
         pao_months=_pao,
         extraction_method=_ext_method,
     )
+
+
+class UpdateScanResultRequest(BaseModel):
+    product_name: str | None = None
+    brand: str | None = None
+    name_brand_method: str | None = None
+
+
+@router.patch("/scan/{scan_id}")
+def update_scan_result(
+    scan_id: int,
+    body: UpdateScanResultRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    scan = db.query(ScanResult).filter(
+        ScanResult.id == scan_id,
+        ScanResult.user_id == current_user.id,
+    ).first()
+    if not scan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scan not found",
+        )
+
+    if body.product_name is not None:
+        scan.product_name = body.product_name  # type: ignore[assignment]
+    if body.brand is not None:
+        scan.brand = body.brand  # type: ignore[assignment]
+    if body.name_brand_method is not None:
+        scan.name_brand_method = body.name_brand_method  # type: ignore[assignment]
+
+    db.commit()
+    return {"status": "ok"}
