@@ -92,6 +92,7 @@ export async function updateScanResult(
     product_name?: string;
     brand?: string;
     name_brand_method?: string;
+    pao_months?: number | null;
   },
 ) {
   console.log("[API] updateScanResult called", { scanId, data });

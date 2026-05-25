@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import type { ProcessMultiResult } from "../types";
+import type { ProcessMultiResult, ScanStep } from "../types";
 
 interface ScanContextType {
+  step: ScanStep;
   frontImageUri: string | null;
   backImageUri: string | null;
   frontFileKey: string | null;
@@ -9,6 +10,7 @@ interface ScanContextType {
   barcode: string | null;
   scanResult: ProcessMultiResult | null;
   paoMonths: number | null;
+  setStep: (v: ScanStep) => void;
   setFrontImageUri: (v: string | null) => void;
   setBackImageUri: (v: string | null) => void;
   setFrontFileKey: (v: string | null) => void;
@@ -22,6 +24,7 @@ interface ScanContextType {
 const ScanContext = createContext<ScanContextType | null>(null);
 
 export function ScanProvider({ children }: { children: ReactNode }) {
+  const [step, setStep] = useState<ScanStep>("front");
   const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
   const [backImageUri, setBackImageUri] = useState<string | null>(null);
   const [frontFileKey, setFrontFileKey] = useState<string | null>(null);
@@ -31,6 +34,7 @@ export function ScanProvider({ children }: { children: ReactNode }) {
   const [paoMonths, setPaoMonths] = useState<number | null>(null);
 
   const reset = useCallback(() => {
+    setStep("front");
     setFrontImageUri(null);
     setBackImageUri(null);
     setFrontFileKey(null);
@@ -43,6 +47,7 @@ export function ScanProvider({ children }: { children: ReactNode }) {
   return (
     <ScanContext.Provider
       value={{
+        step,
         frontImageUri,
         backImageUri,
         frontFileKey,
@@ -50,6 +55,7 @@ export function ScanProvider({ children }: { children: ReactNode }) {
         barcode,
         scanResult,
         paoMonths,
+        setStep,
         setFrontImageUri,
         setBackImageUri,
         setFrontFileKey,

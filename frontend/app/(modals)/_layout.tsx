@@ -29,35 +29,9 @@ export default function ModalLayout() {
           }}
         />
         <Stack.Screen
-          name="scan-front"
+          name="scan"
           options={{
             headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="scan-back"
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="scan-pao"
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="scan-manual-pao"
-          options={{
-            headerTitle: "PAO Value",
-            contentStyle: { backgroundColor: "#fff" },
-          }}
-        />
-        <Stack.Screen
-          name="scan-confirm"
-          options={{
-            headerTitle: "Confirm Scan",
-            contentStyle: { backgroundColor: "#fff" },
           }}
         />
       </Stack>

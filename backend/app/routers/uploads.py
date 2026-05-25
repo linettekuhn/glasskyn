@@ -393,6 +393,7 @@ class UpdateScanResultRequest(BaseModel):
     product_name: str | None = None
     brand: str | None = None
     name_brand_method: str | None = None
+    pao_months: int | None = None
 
 
 @router.patch("/scan/{scan_id}")
@@ -418,6 +419,8 @@ def update_scan_result(
         scan.brand = body.brand  # type: ignore[assignment]
     if body.name_brand_method is not None:
         scan.name_brand_method = body.name_brand_method  # type: ignore[assignment]
+    if body.pao_months is not None:
+        scan.pao_months = body.pao_months  # type: ignore[assignment]
 
     db.commit()
     return {"status": "ok"}

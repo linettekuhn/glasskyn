@@ -1,25 +1,19 @@
-import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { useCameraPermissions } from "expo-camera";
 
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
-  const [pressed, setPressed] = useState(false);
 
   const handleTap = () => {
-    if (pressed) return;
-    setPressed(true);
-
     if (!permission?.granted) {
       requestPermission().then(() => {
-        // Navigate after granting, or let the scan-front screen handle it
-        router.push("/(modals)/scan-front");
+        router.push("/(modals)/scan");
       });
       return;
     }
 
-    router.push("/(modals)/scan-front");
+    router.push("/(modals)/scan");
   };
 
   return (
