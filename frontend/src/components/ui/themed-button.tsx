@@ -65,7 +65,11 @@ export default function ThemedButton({
       ? colors.background
       : c;
   const tiny = tinyColor(bgColor);
-  const txtColor = tiny.isDark() ? colors.neutral[100] : colors.neutral[900];
+  const txtColor = outlined
+    ? colors.text
+    : tiny.isDark()
+      ? colors.neutral[100]
+      : colors.neutral[900];
 
   return (
     <TouchableOpacity
