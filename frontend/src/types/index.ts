@@ -50,4 +50,4 @@ export interface ProcessPaoResult {
 
 export type NameBrandMethod = "barcode_lookup" | "llm_extraction" | "manual";
 
-export type ScanStep = "front" | "back" | "pao" | "manual-pao" | "confirm";
+export type ScanStep = "front" | "back" | "pao" | "confirm";
