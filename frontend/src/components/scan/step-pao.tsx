@@ -26,6 +26,7 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(0);
+  const [torch, setTorch] = useState(false);
   const zoomAtGestureStart = useRef(0);
   const cameraRef = useRef<CameraView>(null);
   const colorScheme = useColorScheme();
@@ -92,6 +93,7 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
       <View style={styles.container}>
         <CameraView
           zoom={zoom}
+          enableTorch={torch}
           ref={cameraRef}
           style={StyleSheet.absoluteFill}
           facing="back"
@@ -102,7 +104,10 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
               <Text style={styles.iconButtonText}>✕</Text>
             </TouchableOpacity>
             <View style={{ flex: 1 }} />
-            <TouchableOpacity style={styles.iconButton} onPress={() => {}}>
+            <TouchableOpacity
+              style={[styles.iconButton, torch && { backgroundColor: "rgba(255, 200, 0, 0.6)" }]}
+              onPress={() => setTorch(prev => !prev)}
+            >
               <Text style={styles.iconButtonText}>⚡</Text>
             </TouchableOpacity>
           </View>
