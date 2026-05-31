@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
   useColorScheme,
 } from "react-native";
 import { CameraView } from "expo-camera";
@@ -16,10 +16,16 @@ import { Colors, getTheme } from "@/constants/theme";
 import ScanOverlay from "./scan-overlay";
 import { ThemedText } from "../ui/themed-text";
 import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
+import { useBlurCheck } from "../../hooks/use-blur-check";
+import ThemedButton from "../ui/themed-button";
+import IconButton from "../ui/icon-button";
+import ScanBadge from "./scan-badge";
 
 const btnColor = Colors["light"].primary[400];
 const txtColor = Colors["light"].neutral[100];
+const scanArea = { width: 300, height: 250, top: 120 };
 
 export default function StepPao({ onClose }: { onClose: () => void }) {
   const { scanResult, setPaoMonths, setStep } = useScanContext();
@@ -27,46 +33,60 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(0);
   const [torch, setTorch] = useState(false);
+  const [phase, setPhase] = useState<"camera" | "preview">("camera");
+  const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const zoomAtGestureStart = useRef(0);
   const cameraRef = useRef<CameraView>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+  const { blurStatus, variance } = useBlurCheck(
+    phase === "preview" ? capturedUri : null,
+  );
 
   const handleCapture = async () => {
     if (!cameraRef.current || isCapturing || isProcessing) return;
     setIsCapturing(true);
-
     try {
       const result = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: false,
       });
-
-      if (!result?.uri) {
-        setIsCapturing(false);
-        return;
-      }
-
+      if (!result?.uri) return;
+      setCapturedUri(result.uri);
+      setPhase("preview");
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: err?.message || "Failed to capture image",
+      });
+    } finally {
       setIsCapturing(false);
-      setIsProcessing(true);
+    }
+  };
 
+  const handleRetake = () => {
+    setCapturedUri(null);
+    setPhase("camera");
+  };
+
+  const handleConfirm = async () => {
+    if (!capturedUri || isProcessing) return;
+    setIsProcessing(true);
+    try {
       const fileName = `pao_${Date.now()}.jpg`;
       const { upload_url, file_key } = await getPresignedUrl(
         fileName,
         "image/jpeg",
       );
-      const response = await fetch(result.uri);
+      const response = await fetch(capturedUri);
       const blob = await response.blob();
       await uploadToS3(upload_url, blob, "image/jpeg");
-
       const scanId = scanResult?.scan_id;
       if (scanId) {
         const paoResult = await processPaoImage(file_key, scanId);
-        if (paoResult.pao_months !== null) {
-          setPaoMonths(paoResult.pao_months);
-        }
+        if (paoResult.pao_months !== null) setPaoMonths(paoResult.pao_months);
       }
-
       setStep("confirm");
     } catch (err: any) {
       Toast.show({
@@ -83,105 +103,173 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
       zoomAtGestureStart.current = zoom;
     })
     .onUpdate((e) => {
-      const newZoom = zoomAtGestureStart.current + (e.scale - 1) * 0.1;
-      setZoom(Math.min(Math.max(newZoom, 0), 1));
+      setZoom(
+        Math.min(
+          Math.max(zoomAtGestureStart.current + (e.scale - 1) * 0.1, 0),
+          1,
+        ),
+      );
     })
     .runOnJS(true);
+
+  const isPreview = phase === "preview" && !!capturedUri;
 
   return (
     <GestureDetector gesture={pinchGesture}>
       <View style={styles.container}>
-        <CameraView
-          zoom={zoom}
-          enableTorch={torch}
-          ref={cameraRef}
-          style={StyleSheet.absoluteFill}
-          facing="back"
-        />
-        <ScanOverlay scanArea={{ width: 300, height: 250, top: 120 }}>
+        {isPreview ? (
+          <Image
+            source={{ uri: capturedUri! }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+        ) : (
+          <CameraView
+            zoom={zoom}
+            enableTorch={torch}
+            ref={cameraRef}
+            style={StyleSheet.absoluteFill}
+            facing="back"
+          />
+        )}
+
+        <ScanOverlay scanArea={scanArea}>
           <View style={styles.topBar}>
-            <TouchableOpacity onPress={onClose} style={styles.iconButton}>
-              <Text style={styles.iconButtonText}>✕</Text>
-            </TouchableOpacity>
-            <View style={{ flex: 1 }} />
-            <TouchableOpacity
-              style={[styles.iconButton, torch && { backgroundColor: "rgba(255, 200, 0, 0.6)" }]}
-              onPress={() => setTorch(prev => !prev)}
-            >
-              <Text style={styles.iconButtonText}>⚡</Text>
-            </TouchableOpacity>
+            <IconButton
+              onPress={isPreview ? handleRetake : onClose}
+              IconComponent={MaterialCommunityIcons}
+              iconName="close"
+              iconColor={txtColor}
+            />
+            {!isPreview && (
+              <>
+                <View style={{ flex: 1 }} />
+                <IconButton
+                  onPress={() => setTorch((p) => !p)}
+                  IconComponent={MaterialCommunityIcons}
+                  iconName="flashlight"
+                  iconColor={txtColor}
+                  active={torch}
+                  activeColor={btnColor}
+                />
+              </>
+            )}
           </View>
+
           <View style={styles.bottomSection}>
-            <View style={{ alignItems: "center", gap: 8 }}>
-              <ThemedText
-                type="bodyLarge"
-                style={{
-                  textAlign: "center",
-                  color: txtColor,
-                }}
-              >
-                We couldn&apos;t find the {"\n"} Period After Opening (PAO)
-                symbol
-              </ThemedText>
-              <View
-                style={[styles.hint, { backgroundColor: colors.neutral[100] }]}
-              >
-                <View
-                  style={[
-                    styles.hintIcon,
-                    { backgroundColor: colors.primary[400] },
-                  ]}
-                >
-                  <MaterialIcons
-                    name="lightbulb-outline"
-                    size={32}
-                    color={colors.primary[700]}
+            {isPreview ? (
+              <>
+                <ScanBadge status={blurStatus} />
+                <View style={{ alignItems: "center", gap: 4 }}>
+                  <ThemedText
+                    style={{ color: txtColor }}
+                    type="bodyLarge"
+                    weight="bold"
+                  >
+                    PAO symbol captured
+                  </ThemedText>
+                  <ThemedText
+                    style={{ color: txtColor, opacity: 0.7 }}
+                    type="caption"
+                  >
+                    Score: {variance.toFixed(1)}
+                  </ThemedText>
+                </View>
+                <View style={styles.buttonRow}>
+                  <ThemedButton
+                    text="Retake"
+                    color={btnColor}
+                    outlined
+                    onPress={handleRetake}
+                    alignment="stretch"
+                    leftIconName="reload"
+                    LeftIconComponent={MaterialCommunityIcons}
+                  />
+                  <ThemedButton
+                    text="Use Photo"
+                    color={btnColor}
+                    onPress={handleConfirm}
+                    alignment="stretch"
+                    loading={isProcessing}
+                    leftIconName="check"
+                    LeftIconComponent={MaterialCommunityIcons}
                   />
                 </View>
-                <View style={{ flex: 1 }}>
+              </>
+            ) : (
+              <>
+                <View style={{ alignItems: "center", gap: 8 }}>
                   <ThemedText
-                    type="captionLarge"
-                    style={{ color: colors.primary[900] }}
-                    weight="medium"
+                    type="bodyLarge"
+                    style={{ textAlign: "center", color: txtColor }}
                   >
-                    Can&apos;t find the PAO?
+                    We couldn&apos;t find the {"\n"} Period After Opening (PAO)
+                    symbol
                   </ThemedText>
-                  <ThemedText
-                    type="caption"
-                    style={{ color: colors.primary[700] }}
+                  <View
+                    style={[
+                      styles.hint,
+                      { backgroundColor: colors.neutral[100] },
+                    ]}
                   >
-                    Check the bottle for a small open jar icon with a number
-                    capture it directly.
-                  </ThemedText>
+                    <View
+                      style={[
+                        styles.hintIcon,
+                        { backgroundColor: colors.primary[400] },
+                      ]}
+                    >
+                      <MaterialIcons
+                        name="lightbulb-outline"
+                        size={32}
+                        color={colors.primary[700]}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText
+                        type="captionLarge"
+                        style={{ color: colors.primary[900] }}
+                        weight="medium"
+                      >
+                        Can&apos;t find the PAO?
+                      </ThemedText>
+                      <ThemedText
+                        type="caption"
+                        style={{ color: colors.primary[700] }}
+                      >
+                        Check the bottle for a small open jar icon with a number
+                        and capture it directly.
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={styles.link}>
+                    <ThemedText style={{ color: txtColor }}>
+                      No PAO symbol?
+                    </ThemedText>
+                    <ThemedText
+                      link
+                      style={{ color: Colors["light"].secondary[400] }}
+                      onPressWhenLink={() => setStep("confirm")}
+                    >
+                      Skip this step
+                    </ThemedText>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.link}>
-                <ThemedText style={{ color: txtColor }}>
-                  No PAO symbol?
-                </ThemedText>
-                <ThemedText
-                  link
-                  style={{ color: Colors["light"].secondary[400] }}
-                  onPressWhenLink={() => setStep("confirm")}
+                <TouchableOpacity
+                  style={[
+                    styles.captureButton,
+                    (isCapturing || isProcessing) && styles.buttonDisabled,
+                  ]}
+                  onPress={handleCapture}
+                  disabled={isCapturing || isProcessing}
                 >
-                  Skip this step
-                </ThemedText>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={[
-                styles.captureButton,
-                (isCapturing || isProcessing) && styles.buttonDisabled,
-              ]}
-              onPress={handleCapture}
-              disabled={isCapturing || isProcessing}
-            >
-              {isCapturing || isProcessing ? (
-                <ActivityIndicator size="large" color={btnColor} />
-              ) : (
-                <View style={styles.captureInner} />
-              )}
-            </TouchableOpacity>
+                  {isCapturing || isProcessing ? (
+                    <ActivityIndicator size="large" color={btnColor} />
+                  ) : (
+                    <View style={styles.captureInner} />
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </ScanOverlay>
       </View>
@@ -205,29 +293,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  iconButtonText: { color: "#fff", fontSize: 18, fontWeight: "700" },
   bottomSection: {
     position: "absolute",
     bottom: 70,
     left: 0,
     right: 0,
     alignItems: "center",
-    gap: 24,
-    paddingHorizontal: 12,
+    gap: 20,
+    paddingHorizontal: 20,
   },
   captureButton: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "rgba(0, 0, 0, 0)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 4,
@@ -240,6 +318,13 @@ const styles = StyleSheet.create({
     backgroundColor: btnColor,
   },
   buttonDisabled: { opacity: 0.7 },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 16,
+    width: "100%",
+    paddingHorizontal: 20,
+  },
   hint: {
     paddingVertical: 24,
     paddingHorizontal: 16,

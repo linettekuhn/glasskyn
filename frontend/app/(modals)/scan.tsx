@@ -5,7 +5,7 @@ import { useScanContext } from "../../src/contexts/ScanContext";
 import StepFront from "../../src/components/scan/step-front";
 import StepBack from "../../src/components/scan/step-back";
 import StepPao from "../../src/components/scan/step-pao";
-import StepConfirm from "../../src/components/scan/StepConfirm";
+import StepConfirm from "../../src/components/scan/step-confirm";
 
 export default function ScanScreen() {
   const { step, reset } = useScanContext();

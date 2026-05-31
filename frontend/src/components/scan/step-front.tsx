@@ -1,47 +1,55 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  useColorScheme,
+  Image,
 } from "react-native";
 import { CameraView } from "expo-camera";
 import Toast from "react-native-toast-message";
 import { useScanContext } from "../../contexts/ScanContext";
 import { ThemedText } from "../ui/themed-text";
-import { Colors, getTheme } from "@/constants/theme";
+import { Colors } from "@/constants/theme";
 import ScanOverlay from "./scan-overlay";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
+import { useBlurCheck } from "../../hooks/use-blur-check";
+import ThemedButton from "../ui/themed-button";
+import IconButton from "../ui/icon-button";
+import ScanBadge from "./scan-badge";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const btnColor = Colors["light"].primary[400];
 const txtColor = Colors["light"].neutral[100];
+const scanArea = { width: 300, height: 450, top: 120 };
 
 export default function StepFront({ onClose }: { onClose: () => void }) {
-  const { setFrontImageUri, setBarcode, barcode, setStep } = useScanContext();
+  const { setFrontImageUri, setBarcode, setStep } = useScanContext();
   const [isCapturing, setIsCapturing] = useState(false);
   const [zoom, setZoom] = useState(0);
   const [torch, setTorch] = useState(false);
+  const [phase, setPhase] = useState<"camera" | "preview">("camera");
+  const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const zoomAtGestureStart = useRef(0);
   const cameraRef = useRef<CameraView>(null);
   const hasProcessedBarcode = useRef(false);
-  const colorScheme = useColorScheme();
-  const colors = Colors[getTheme(colorScheme)];
+  const { blurStatus, variance } = useBlurCheck(
+    phase === "preview" ? capturedUri : null,
+  );
 
   useEffect(() => {
     hasProcessedBarcode.current = false;
   }, []);
 
   const handleBarcodeScanned = useCallback(
-    (result: { data: string }) => {
+    ({ data }: { data: string }) => {
       if (hasProcessedBarcode.current) return;
       hasProcessedBarcode.current = true;
-      setBarcode(result.data);
+      setBarcode(data);
       Toast.show({
         type: "success",
         text1: "Barcode found",
-        text2: result.data,
+        text2: data,
         position: "top",
         visibilityTime: 2000,
       });
@@ -52,27 +60,33 @@ export default function StepFront({ onClose }: { onClose: () => void }) {
   const handleCapture = async () => {
     if (!cameraRef.current || isCapturing) return;
     setIsCapturing(true);
-
     try {
       const result = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: false,
       });
-
-      if (!result?.uri) {
-        setIsCapturing(false);
-        return;
-      }
-
-      setFrontImageUri(result.uri);
-      setStep("back");
+      if (!result?.uri) return;
+      setCapturedUri(result.uri);
+      setPhase("preview");
     } catch (err: any) {
       Toast.show({
         type: "error",
         text1: "Error",
         text2: err?.message || "Failed to capture image",
       });
+    } finally {
       setIsCapturing(false);
+    }
+  };
+
+  const handleRetake = () => {
+    setCapturedUri(null);
+    setPhase("camera");
+  };
+  const handleConfirm = () => {
+    if (capturedUri) {
+      setFrontImageUri(capturedUri);
+      setStep("back");
     }
   };
 
@@ -81,81 +95,149 @@ export default function StepFront({ onClose }: { onClose: () => void }) {
       zoomAtGestureStart.current = zoom;
     })
     .onUpdate((e) => {
-      const newZoom = zoomAtGestureStart.current + (e.scale - 1) * 0.1;
-      setZoom(Math.min(Math.max(newZoom, 0), 1));
+      setZoom(
+        Math.min(
+          Math.max(zoomAtGestureStart.current + (e.scale - 1) * 0.1, 0),
+          1,
+        ),
+      );
     })
     .runOnJS(true);
+
+  const isPreview = phase === "preview" && !!capturedUri;
 
   return (
     <GestureDetector gesture={pinchGesture}>
       <View style={styles.container}>
-        <CameraView
-          zoom={zoom}
-          enableTorch={torch}
-          ref={cameraRef}
-          style={StyleSheet.absoluteFill}
-          facing="back"
-          onBarcodeScanned={handleBarcodeScanned}
-          barcodeScannerSettings={{
-            barcodeTypes: ["ean13", "ean8", "upc_a", "code128", "code39"],
-          }}
-        />
+        {isPreview ? (
+          <Image
+            source={{ uri: capturedUri! }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+        ) : (
+          <CameraView
+            zoom={zoom}
+            enableTorch={torch}
+            ref={cameraRef}
+            style={StyleSheet.absoluteFill}
+            facing="back"
+            onBarcodeScanned={handleBarcodeScanned}
+            barcodeScannerSettings={{
+              barcodeTypes: ["ean13", "ean8", "upc_a", "code128", "code39"],
+            }}
+          />
+        )}
 
-      <ScanOverlay scanArea={{ width: 300, height: 450, top: 120 }}>
-        <View style={styles.topBar}>
-          <TouchableOpacity onPress={onClose} style={styles.iconButton}>
-            <Text style={styles.iconButtonText}>✕</Text>
-          </TouchableOpacity>
-          <View style={{ flex: 1 }} />
-          <TouchableOpacity
-            style={[styles.iconButton, torch && { backgroundColor: "rgba(255, 200, 0, 0.6)" }]}
-            onPress={() => setTorch(prev => !prev)}
-          >
-            <Text style={styles.iconButtonText}>⚡</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.bottomSection}>
-          <View style={{ alignItems: "center", gap: 8 }}>
-            <ThemedText style={{ color: txtColor }} type="bodyLarge">
-              Point and capture the{" "}
-              <ThemedText
-                style={{ color: txtColor }}
-                type="bodyLarge"
-                weight="bold"
-              >
-                front
-              </ThemedText>{" "}
-              of your product
-            </ThemedText>
-            <View style={styles.link}>
-              <ThemedText style={{ color: txtColor }}>
-                No front label?
-              </ThemedText>
-              <ThemedText
-                link
-                style={{ color: Colors["light"].secondary[400] }}
-                onPressWhenLink={() => setStep("back")}
-              >
-                Skip this step
-              </ThemedText>
-            </View>
+        <ScanOverlay scanArea={scanArea}>
+          <View style={styles.topBar}>
+            <IconButton
+              iconColor={txtColor}
+              activeColor={btnColor}
+              onPress={isPreview ? handleRetake : onClose}
+              IconComponent={MaterialCommunityIcons}
+              iconName="close"
+            />
+            {!isPreview && (
+              <>
+                <View style={{ flex: 1 }} />
+                <IconButton
+                  iconColor={txtColor}
+                  activeColor={btnColor}
+                  onPress={() => setTorch((p) => !p)}
+                  IconComponent={MaterialCommunityIcons}
+                  iconName="flashlight"
+                  active={torch}
+                />
+              </>
+            )}
           </View>
 
-          <TouchableOpacity
-            style={[styles.captureButton, isCapturing && styles.buttonDisabled]}
-            onPress={handleCapture}
-            disabled={isCapturing}
-          >
-            {isCapturing ? (
-              <ActivityIndicator size="large" color={btnColor} />
+          <View style={styles.bottomSection}>
+            {isPreview ? (
+              <>
+                <ScanBadge status={blurStatus} />
+                <View style={{ alignItems: "center", gap: 4 }}>
+                  <ThemedText
+                    style={{ color: txtColor }}
+                    type="bodyLarge"
+                    weight="bold"
+                  >
+                    Front label captured
+                  </ThemedText>
+                  <ThemedText
+                    style={{ color: txtColor, opacity: 0.7 }}
+                    type="caption"
+                  >
+                    Score: {variance.toFixed(1)}
+                  </ThemedText>
+                </View>
+                <View style={styles.buttonRow}>
+                  <ThemedButton
+                    text="Retake"
+                    color={btnColor}
+                    outlined
+                    onPress={handleRetake}
+                    alignment="stretch"
+                    leftIconName="reload"
+                    LeftIconComponent={MaterialCommunityIcons}
+                  />
+                  <ThemedButton
+                    text="Use Photo"
+                    color={btnColor}
+                    onPress={handleConfirm}
+                    alignment="stretch"
+                    leftIconName="check"
+                    LeftIconComponent={MaterialCommunityIcons}
+                  />
+                </View>
+              </>
             ) : (
-              <View style={styles.captureInner} />
+              <>
+                <View style={{ alignItems: "center", gap: 8 }}>
+                  <ThemedText style={{ color: txtColor }} type="bodyLarge">
+                    Point and capture the{" "}
+                    <ThemedText
+                      style={{ color: txtColor }}
+                      type="bodyLarge"
+                      weight="bold"
+                    >
+                      front
+                    </ThemedText>{" "}
+                    of your product
+                  </ThemedText>
+                  <View style={styles.link}>
+                    <ThemedText style={{ color: txtColor }}>
+                      No front label?
+                    </ThemedText>
+                    <ThemedText
+                      link
+                      style={{ color: Colors["light"].secondary[400] }}
+                      onPressWhenLink={() => setStep("back")}
+                    >
+                      Skip this step
+                    </ThemedText>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.captureButton,
+                    isCapturing && styles.buttonDisabled,
+                  ]}
+                  onPress={handleCapture}
+                  disabled={isCapturing}
+                >
+                  {isCapturing ? (
+                    <ActivityIndicator size="large" color={btnColor} />
+                  ) : (
+                    <View style={styles.captureInner} />
+                  )}
+                </TouchableOpacity>
+              </>
             )}
-          </TouchableOpacity>
-        </View>
-      </ScanOverlay>
-    </View>
+          </View>
+        </ScanOverlay>
+      </View>
     </GestureDetector>
   );
 }
@@ -176,28 +258,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  iconButtonText: { color: "#fff", fontSize: 18, fontWeight: "700" },
   bottomSection: {
     position: "absolute",
     bottom: 70,
     left: 0,
     right: 0,
     alignItems: "center",
-    gap: 24,
+    gap: 20,
+    paddingHorizontal: 20,
   },
   captureButton: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "rgba(0, 0, 0, 0)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 4,
@@ -210,4 +283,11 @@ const styles = StyleSheet.create({
     backgroundColor: btnColor,
   },
   buttonDisabled: { opacity: 0.7 },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 16,
+    width: "100%",
+    paddingHorizontal: 20,
+  },
 });
