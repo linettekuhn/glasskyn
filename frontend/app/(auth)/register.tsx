@@ -149,13 +149,12 @@ export default function RegisterScreen() {
           </View>
           <View style={styles.link}>
             <ThemedText>Already have an account?</ThemedText>
-            <ThemedText
+            <ThemedButton
               link
-              style={{ color: colors.secondary[700] }}
-              onPressWhenLink={() => router.push("/(auth)/login")}
-            >
-              Log in
-            </ThemedText>
+              onPress={() => router.push("/(auth)/login")}
+              color={colors.secondary[700]}
+              text="Log in"
+            />
           </View>
         </View>
       </TouchableWithoutFeedback>

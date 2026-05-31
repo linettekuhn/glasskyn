@@ -273,13 +273,12 @@ export default function StepBack({ onClose }: { onClose: () => void }) {
                     <ThemedText style={{ color: txtColor }}>
                       No back label?
                     </ThemedText>
-                    <ThemedText
+                    <ThemedButton
                       link
-                      style={{ color: Colors["light"].secondary[400] }}
-                      onPressWhenLink={() => setStep("pao")}
-                    >
-                      Skip this step
-                    </ThemedText>
+                      onPress={() => setStep("pao")}
+                      color={Colors["light"].secondary[400]}
+                      text="Skip this step"
+                    />
                   </View>
                 </View>
                 <TouchableOpacity

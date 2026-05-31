@@ -245,13 +245,12 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
                     <ThemedText style={{ color: txtColor }}>
                       No PAO symbol?
                     </ThemedText>
-                    <ThemedText
+                    <ThemedButton
                       link
-                      style={{ color: Colors["light"].secondary[400] }}
-                      onPressWhenLink={() => setStep("confirm")}
-                    >
-                      Skip this step
-                    </ThemedText>
+                      onPress={() => setStep("confirm")}
+                      color={Colors["light"].secondary[400]}
+                      text="Skip this step"
+                    />
                   </View>
                 </View>
                 <TouchableOpacity

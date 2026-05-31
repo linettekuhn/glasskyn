@@ -51,14 +51,13 @@ export default function ScannerScreen() {
             </ThemedText>
           </View>
         </View>
-        <ThemedText
+        <ThemedButton
           link
-          type="captionSmall"
-          style={{ color: colors.secondary[700] }}
-          onPressWhenLink={() => router.push("/(modals)/add-product")}
-        >
-          Enter details manually instead
-        </ThemedText>
+          textType="captionSmall"
+          onPress={() => router.push("/(modals)/add-product")}
+          color={colors.secondary[700]}
+          text={"Enter details manually instead"}
+        />
       </TouchableOpacity>
     );
   }
@@ -92,14 +91,13 @@ export default function ScannerScreen() {
           }}
           alignment="center"
         />
-        <ThemedText
+        <ThemedButton
           link
-          type="captionSmall"
-          style={{ color: colors.secondary[700] }}
-          onPressWhenLink={() => router.push("/(modals)/add-product")}
-        >
-          Enter details manually instead
-        </ThemedText>
+          textType="captionSmall"
+          onPress={() => router.push("/(modals)/add-product")}
+          color={colors.secondary[700]}
+          text={"Enter details manually instead"}
+        />
       </TouchableOpacity>
     );
   }

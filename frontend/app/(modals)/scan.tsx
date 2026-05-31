@@ -27,9 +27,9 @@ export default function ScanScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.nonCameraContainer} edges={["bottom"]}>
+    <View style={styles.nonCameraContainer}>
       {step === "confirm" && <StepConfirm />}
-    </SafeAreaView>
+    </View>
   );
 }
 

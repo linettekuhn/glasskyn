@@ -1,11 +1,4 @@
-import { useRef, useEffect } from "react";
-import { StyleSheet, Text, type TextProps, Pressable } from "react-native";
-
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from "react-native-reanimated";
+import { StyleSheet, Text, type TextProps } from "react-native";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Fonts } from "@/constants/theme";
 
@@ -28,13 +21,18 @@ export type ThemedTextProps = TextProps & {
     | "captionLarge"
     | "captionSmall"
     | "overline";
-  weight?: "thin" | "extraLight" | "light" | "regular" | "medium" | "semiBold" | "bold" | "extraBold" | "black";
+  weight?:
+    | "thin"
+    | "extraLight"
+    | "light"
+    | "regular"
+    | "medium"
+    | "semiBold"
+    | "bold"
+    | "extraBold"
+    | "black";
   italic?: boolean;
-  link?: boolean;
-  onPressWhenLink?: () => void;
 };
-
-const ANIMATION_DURATION = 200;
 
 const weightToFamily: Record<NonNullable<ThemedTextProps["weight"]>, string> = {
   thin: Fonts.sansThin,
@@ -55,69 +53,23 @@ export function ThemedText({
   type = "body",
   weight,
   italic = false,
-  link = false,
-  onPressWhenLink,
   ...rest
 }: ThemedTextProps) {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, "text");
-  const underlineWidth = useSharedValue(0);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  const handlePress = () => {
-    if (onPressWhenLink) {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      underlineWidth.value = withTiming(1, { duration: ANIMATION_DURATION });
-      timeoutRef.current = setTimeout(() => {
-        onPressWhenLink();
-        timeoutRef.current = null;
-      }, ANIMATION_DURATION);
-    }
-  };
-
-  const animatedUnderlineStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: underlineWidth.value }],
-    opacity: underlineWidth.value,
-  }));
 
   const baseStyle = typeStyles[type] || typeStyles.body;
-  const weightStyle = weight && !italic ? { fontFamily: weightToFamily[weight] } : undefined;
-
-  if (link) {
-    return (
-      <Pressable
-        onPress={onPressWhenLink ? handlePress : undefined}
-        disabled={!onPressWhenLink}
-        style={{ alignItems: "center" }}
-      >
-        <Text
-          style={[{ color }, baseStyle, weightStyle, italic && styles.italic, style]}
-          {...rest}
-        />
-        <Animated.View
-          style={[
-            styles.underline,
-            { backgroundColor: color },
-            animatedUnderlineStyle,
-          ]}
-        />
-      </Pressable>
-    );
-  }
+  const weightStyle =
+    weight && !italic ? { fontFamily: weightToFamily[weight] } : undefined;
 
   return (
     <Text
-      style={[{ color }, baseStyle, weightStyle, italic && styles.italic, style]}
+      style={[
+        { color },
+        baseStyle,
+        weightStyle,
+        italic && styles.italic,
+        style,
+      ]}
       {...rest}
     />
   );
@@ -126,12 +78,6 @@ export function ThemedText({
 const styles = StyleSheet.create({
   italic: {
     fontFamily: Fonts.serifItalic,
-  },
-  underline: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    height: 1,
   },
 });
 

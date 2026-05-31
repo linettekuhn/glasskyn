@@ -1,16 +1,22 @@
 import { Colors, getTheme } from "@/constants/theme";
-import { ComponentType } from "react";
+import { ComponentType, useRef } from "react";
 import {
   ActivityIndicator,
   FlexAlignType,
-  Pressable,
   StyleSheet,
   TouchableOpacity,
   useColorScheme,
   View,
 } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { ThemedText } from "./themed-text";
 import tinyColor from "tinycolor2";
+
+const ANIMATION_DURATION = 200;
 
 type Props = {
   text: string;
@@ -34,6 +40,7 @@ type Props = {
     | "overline";
   alignment?: "auto" | FlexAlignType | undefined;
   outlined?: boolean;
+  link?: boolean;
   disabled?: boolean;
   loading?: boolean;
   LeftIconComponent?: ComponentType<any>;
@@ -49,6 +56,7 @@ export default function ThemedButton({
   textType = "bodyLarge",
   alignment = "stretch",
   outlined = false,
+  link = false,
   disabled = false,
   loading = false,
   LeftIconComponent,
@@ -58,6 +66,53 @@ export default function ThemedButton({
 }: Props) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+  const underlineWidth = useSharedValue(0);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const animatedUnderlineStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: underlineWidth.value }],
+    opacity: underlineWidth.value,
+  }));
+
+  const handleLinkPress = () => {
+    if (disabled) return;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    underlineWidth.value = withTiming(1, { duration: ANIMATION_DURATION });
+
+    timeoutRef.current = setTimeout(() => {
+      onPress();
+      underlineWidth.value = withTiming(0, { duration: ANIMATION_DURATION });
+      timeoutRef.current = null;
+    }, ANIMATION_DURATION);
+  };
+
+  if (link) {
+    const linkColor = color ?? colors.primary[500];
+    return (
+      <TouchableOpacity
+        disabled={disabled}
+        onPress={handleLinkPress}
+        style={{ alignSelf: "center", opacity: disabled ? 0.4 : 1 }}
+      >
+        <ThemedText
+          type={textType}
+          weight="medium"
+          style={{ color: linkColor }}
+        >
+          {text}
+        </ThemedText>
+        <Animated.View
+          style={[
+            styles.underline,
+            { backgroundColor: linkColor },
+            animatedUnderlineStyle,
+          ]}
+        />
+      </TouchableOpacity>
+    );
+  }
+
   const c = color ?? colors.primary[500];
   const bgColor = disabled
     ? colors.neutral[500]
@@ -88,7 +143,7 @@ export default function ThemedButton({
       {loading ? (
         <ActivityIndicator size={26} color={txtColor} />
       ) : (
-        <View style={[styles.content]}>
+        <View style={styles.content}>
           {LeftIconComponent && leftIconName && (
             <LeftIconComponent
               name={leftIconName}
@@ -123,11 +178,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderWidth: 1,
   },
-
+  linkButton: {
+    alignItems: "center",
+  },
   content: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
+  },
+  underline: {
+    bottom: 0,
+    height: 1,
   },
 });

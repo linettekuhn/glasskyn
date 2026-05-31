@@ -146,13 +146,12 @@ export default function LoginScreen() {
           </View>
           <View style={styles.link}>
             <ThemedText>Don't have an account?</ThemedText>
-            <ThemedText
+            <ThemedButton
               link
-              style={{ color: colors.secondary[700] }}
-              onPressWhenLink={() => router.push("/(auth)/register")}
-            >
-              Register
-            </ThemedText>
+              onPress={() => router.push("/(auth)/register")}
+              color={colors.secondary[700]}
+              text="Register"
+            />
           </View>
         </View>
       </TouchableWithoutFeedback>
