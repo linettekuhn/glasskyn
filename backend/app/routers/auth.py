@@ -84,7 +84,7 @@ async def refresh(
         )
 
     try:
-        user_id = decode_token(refresh_token)
+        user_id = decode_token(refresh_token, expected_type="refresh")
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -31,7 +31,7 @@ def get_current_user(
     )
 
     try:
-        user_id = decode_token(credentials.credentials)
+        user_id = decode_token(credentials.credentials, expected_type="access")
     except JWTError:
         raise credentials_exception
 

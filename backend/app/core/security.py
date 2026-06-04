@@ -2,7 +2,6 @@ from datetime import timedelta, datetime, timezone
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from app.core import config
-from typing import Optional
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -30,7 +29,7 @@ def create_token(data: dict, expires_delta: timedelta) -> str:
 
 def create_access_token(user_id: int) -> str:
     return create_token(
-        data={"sub": str(user_id)},
+        data={"sub": str(user_id), "type": "access"},
         expires_delta=timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
 
@@ -43,10 +42,13 @@ def create_refresh_token(user_id: int) -> str:
 
 
 # returns the user_id if the token is valid, raises JWTError otherwise
-def decode_token(token: str) -> Optional[int]:
+def decode_token(token: str, expected_type: str | None = None) -> int:
     payload = jwt.decode(token, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM])
 
-    user_id: Optional[int] = payload.get("sub")
+    if expected_type and payload.get("type") != expected_type:
+        raise JWTError("Invalid token type")
+
+    user_id: int | None = payload.get("sub")
     if user_id is None:
         raise JWTError("No subject in token")
 
