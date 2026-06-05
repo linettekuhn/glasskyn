@@ -1,3 +1,4 @@
+import hashlib
 from datetime import timedelta, datetime, timezone
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -34,22 +35,25 @@ def create_access_token(user_id: int) -> str:
     )
 
 
-def create_refresh_token(user_id: int) -> str:
+def create_refresh_token(user_id: int, family_id: str) -> str:
     return create_token(
-        data={"sub": str(user_id), "type": "refresh"},
+        data={"sub": str(user_id), "type": "refresh", "family_id": family_id},
         expires_delta=timedelta(minutes=config.REFRESH_TOKEN_EXPIRE_MINUTES),
     )
 
 
-# returns the user_id if the token is valid, raises JWTError otherwise
-def decode_token(token: str, expected_type: str | None = None) -> int:
+# returns the payload dict if the token is valid, raises JWTError otherwise
+def decode_token(token: str, expected_type: str | None = None) -> dict:
     payload = jwt.decode(token, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM])
 
     if expected_type and payload.get("type") != expected_type:
         raise JWTError("Invalid token type")
 
-    user_id: int | None = payload.get("sub")
-    if user_id is None:
+    if "sub" not in payload:
         raise JWTError("No subject in token")
 
-    return int(user_id)
+    return payload
+
+
+def hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()

@@ -7,6 +7,9 @@ load_dotenv()
 # Resolve the backend root directory (two levels up from this file)
 BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 
+ENVIRONMENT: str = os.environ.get("ENVIRONMENT", "development")
+IS_PRODUCTION: bool = ENVIRONMENT == "production"
+
 JWT_SECRET: str = os.environ.get("JWT_SECRET", "fallback")
 JWT_ALGORITHM: str = "HS256"
 
