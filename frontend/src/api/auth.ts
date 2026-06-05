@@ -9,3 +9,8 @@ export async function register(name: string, email: string, password: string) {
   const response = await apiClient.post('/auth/register', { name, email, password });
   return response.data;
 }
+
+export async function refresh() {
+  const response = await apiClient.post('/auth/refresh');
+  return response.data as { access_token: string; user: { id: number; name: string; email: string } };
+}

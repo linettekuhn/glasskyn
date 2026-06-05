@@ -30,9 +30,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initializeAuth = async () => {
       const storedToken = await getStoredToken();
       if (storedToken) {
-        setToken(storedToken);
-
-        // TODO: validate token with /auth/refresh
+        try {
+          const data = await auth.refresh();
+          await saveToken(data.access_token);
+          setToken(data.access_token);
+          setUser(data.user);
+        } catch {
+          await removeToken();
+        }
       }
       setIsLoading(false);
     };
