@@ -6,7 +6,11 @@ import {
   useEffect,
 } from "react";
 import { User } from "../types";
-import { getToken as getStoredToken, setToken as saveToken, removeToken } from "../storage/token";
+import {
+  getToken as getStoredToken,
+  setToken as saveToken,
+  removeToken,
+} from "../storage/token";
 import * as auth from "../api/auth";
 
 interface AuthContextType {
@@ -16,7 +20,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,6 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    try {
+      await auth.logout();
+    } catch {
+      // still clear local state even if server call fails
+    }
     await removeToken();
     setUser(null);
     setToken(null);

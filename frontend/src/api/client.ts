@@ -63,7 +63,12 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes("/auth/login") &&
+      !originalRequest.url?.includes("/auth/register")
+    ) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -78,7 +83,7 @@ apiClient.interceptors.response.use(
 
       try {
         const response = await axios.post(
-          `${apiClient.defaults.baseURL}/auth/refresh`,
+          `${apiClient.defaults.baseURL}auth/refresh`,
           {},
           { withCredentials: true },
         );
@@ -90,7 +95,6 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         await removeToken();
-        return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
