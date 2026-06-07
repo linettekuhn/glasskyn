@@ -7,9 +7,12 @@ import {
 } from "react";
 import { User } from "../types";
 import {
+  getRefreshToken,
+  setRefreshToken,
   getToken as getStoredToken,
   setToken as saveToken,
   removeToken,
+  removeRefreshToken,
 } from "../storage/token";
 import * as auth from "../api/auth";
 
@@ -32,15 +35,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const storedToken = await getStoredToken();
-      if (storedToken) {
+      const storedRefresh = await getRefreshToken();
+      if (storedRefresh) {
         try {
-          const data = await auth.refresh();
+          const data = await auth.refresh(storedRefresh);
           await saveToken(data.access_token);
+          await setRefreshToken(data.refresh_token);
           setToken(data.access_token);
           setUser(data.user);
         } catch {
           await removeToken();
+          await removeRefreshToken();
         }
       }
       setIsLoading(false);
@@ -52,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const performLogin = async (email: string, password: string) => {
     const data = await auth.login(email, password);
     await saveToken(data.access_token);
+    await setRefreshToken(data.refresh_token);
     setToken(data.access_token);
     setUser(data.user);
   };
@@ -81,11 +87,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await auth.logout();
+      const storedRefresh = await getRefreshToken();
+      if (storedRefresh) {
+        await auth.logout(storedRefresh);
+      }
     } catch {
       // still clear local state even if server call fails
     }
     await removeToken();
+    await removeRefreshToken();
     setUser(null);
     setToken(null);
   };

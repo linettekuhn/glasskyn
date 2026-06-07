@@ -1,5 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import { getToken, setToken, removeToken } from "../storage/token";
+import { getToken, setToken, removeToken, getRefreshToken, setRefreshToken, removeRefreshToken } from "../storage/token";
 import Toast from "react-native-toast-message";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
@@ -82,19 +82,25 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        const storedRefresh = await getRefreshToken();
         const response = await axios.post(
           `${apiClient.defaults.baseURL}auth/refresh`,
           {},
-          { withCredentials: true },
+          {
+            withCredentials: true,
+            headers: storedRefresh ? { "x-refresh-token": storedRefresh } : undefined,
+          },
         );
-        const { access_token } = response.data;
+        const { access_token, refresh_token } = response.data;
         await setToken(access_token);
+        if (refresh_token) await setRefreshToken(refresh_token);
         processQueue(null, access_token);
         originalRequest.headers.Authorization = `Bearer ${access_token}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
         await removeToken();
+        await removeRefreshToken();
       } finally {
         isRefreshing = false;
       }

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Cookie
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Cookie, Header
 from app.schemas.auth import (
     RegisterResponse,
     RegisterRequest,
@@ -86,22 +86,29 @@ async def login(body: LoginRequest, response: Response, db: Session = Depends(ge
         max_age=config.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
     )
 
-    return LoginResponse(access_token=access_token, user=UserOut.model_validate(user))
+    return LoginResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        user=UserOut.model_validate(user),
+    )
 
 
 @router.post("/refresh", response_model=RefreshResponse)
 async def refresh(
     response: Response,
     refresh_token: str | None = Cookie(default=None, alias="refreshToken"),
+    x_refresh_token: str | None = Header(default=None, alias="x-refresh-token"),
     db: Session = Depends(get_db),
 ):
-    if not refresh_token:
+    token = refresh_token or x_refresh_token
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token provided"
         )
 
     try:
-        payload = decode_token(refresh_token, expected_type="refresh")
+        payload = decode_token(token, expected_type="refresh")
         user_id = int(payload["sub"])
         family_id = payload.get("family_id", "")
     except JWTError:
@@ -117,7 +124,7 @@ async def refresh(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
-    token_hash = hash_refresh_token(refresh_token)
+    token_hash = hash_refresh_token(token)
     stored_token = db.query(RefreshToken).filter(
         RefreshToken.token_hash == token_hash,
         RefreshToken.is_revoked == False,
@@ -167,6 +174,7 @@ async def refresh(
 
     return RefreshResponse(
         access_token=new_access_token,
+        refresh_token=new_refresh_token,
         token_type="bearer",
         user=UserOut.model_validate(user),
     )
@@ -176,10 +184,12 @@ async def refresh(
 async def logout(
     response: Response,
     refresh_token: str | None = Cookie(default=None, alias="refreshToken"),
+    x_refresh_token: str | None = Header(default=None, alias="x-refresh-token"),
     db: Session = Depends(get_db),
 ):
-    if refresh_token:
-        token_hash = hash_refresh_token(refresh_token)
+    token = refresh_token or x_refresh_token
+    if token:
+        token_hash = hash_refresh_token(token)
         db.query(RefreshToken).filter(
             RefreshToken.token_hash == token_hash,
             RefreshToken.is_revoked == False,

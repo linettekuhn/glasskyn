@@ -13,8 +13,7 @@ IS_PRODUCTION: bool = ENVIRONMENT == "production"
 JWT_SECRET: str = os.environ.get("JWT_SECRET", "fallback")
 JWT_ALGORITHM: str = "HS256"
 
-# TODO: change back to 30
-ACCESS_TOKEN_EXPIRE_MINUTES: int = 1
+ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
 REFRESH_TOKEN_EXPIRE_MINUTES: int = 7 * 24 * 60
 
