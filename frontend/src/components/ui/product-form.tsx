@@ -11,12 +11,14 @@ import { ThemedText } from "./themed-text";
 import ThemedTextInput from "./themed-text-input";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "./themed-button";
+import IconSelector from "./icon-selector";
 
 export interface ProductFormData {
   name: string;
   brand: string;
   category: ProductCategory | "";
   paoMonths: string;
+  icon: string;
 }
 
 interface ProductFormProps {
@@ -42,6 +44,19 @@ export default function ProductForm({
   const colors = Colors[getTheme(colorScheme)];
   return (
     <View style={styles.form}>
+      <View style={styles.inputWrapper}>
+        <ThemedText
+          type="caption"
+          weight="bold"
+          style={{ color: colors.primary[700] }}
+        >
+          ICON
+        </ThemedText>
+        <IconSelector
+          value={value.icon}
+          onChange={(icon) => onChange({ ...value, icon })}
+        />
+      </View>
       <View style={styles.inputWrapper}>
         <ThemedText
           type="caption"
@@ -153,7 +168,8 @@ const styles = StyleSheet.create({
     marginRight: "auto",
   },
   form: {
-    marginVertical: 12,
-    gap: 8,
+    marginTop: 12,
+    marginBottom: 24,
+    gap: 12,
   },
 });

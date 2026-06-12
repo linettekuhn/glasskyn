@@ -17,6 +17,7 @@ import { createProduct, updateScanResult } from "../../api/products";
 import type { ProductCategory, NameBrandMethod } from "../../types";
 import { useScanContext } from "../../contexts/ScanContext";
 import ProductForm, { ProductFormData } from "../ui/product-form";
+import { DEFAULT_ICON } from "../ui/icon-selector";
 import { ThemedText } from "../ui/themed-text";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "../ui/themed-button";
@@ -34,6 +35,7 @@ export default function StepConfirm() {
     brand: initialBrand,
     category: initialCategory,
     paoMonths: paoMonths !== null ? `${paoMonths}` : "",
+    icon: DEFAULT_ICON,
   });
   const [saving, setSaving] = useState(false);
 
@@ -95,6 +97,7 @@ export default function StepConfirm() {
         name: formData.name.trim(),
         brand: formData.brand.trim() || undefined,
         category: formData.category || undefined,
+        icon: formData.icon || undefined,
         image_s3_key: frontFileKey || undefined,
         scan_id: scanId || null,
       });

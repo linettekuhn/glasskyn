@@ -23,6 +23,7 @@ export async function createProduct(data: {
   brand?: string;
   category?: string;
   image_s3_key?: string;
+  icon?: string;
   scan_id?: number | null;
 }) {
   const response = await apiClient.post('/products', data);
@@ -39,6 +40,7 @@ export async function updateProduct(id: number, data: {
   brand?: string;
   category?: string;
   image_s3_key?: string;
+  icon?: string;
 }) {
   const response = await apiClient.patch(`/products/${id}`, data);
   return response.data;

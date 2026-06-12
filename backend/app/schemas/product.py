@@ -11,6 +11,7 @@ class ProductCreate(BaseModel):
     brand: Optional[str] = None
     category: Optional[ProductCategory] = None
     image_s3_key: Optional[str] = None
+    icon: Optional[str] = None
     scan_id: Optional[int] = None
 
     @field_validator("category", mode="before")
@@ -30,6 +31,7 @@ class ProductUpdate(BaseModel):
     brand: Optional[str] = None
     category: Optional[ProductCategory] = None
     image_s3_key: Optional[str] = None
+    icon: Optional[str] = None
 
     @field_validator("category", mode="before")
     @classmethod
@@ -51,6 +53,7 @@ class ProductOut(BaseModel):
     category: Optional[str] = None
     image_s3_key: Optional[str] = None
     image_url: Optional[str] = None
+    icon: Optional[str] = None
     created_at: datetime
     user_id: int
 

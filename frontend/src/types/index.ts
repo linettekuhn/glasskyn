@@ -13,6 +13,7 @@ export interface Product {
   category: ProductCategory | null;
   image_s3_key: string | null;
   image_url: string | null;
+  icon: string | null;
   created_at: string;
   user_id: number;
 }

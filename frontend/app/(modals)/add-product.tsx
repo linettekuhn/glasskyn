@@ -18,6 +18,7 @@ import type { ProductCategory } from "../../src/types";
 import ProductForm, {
   ProductFormData,
 } from "../../src/components/ui/product-form";
+import { DEFAULT_ICON } from "../../src/components/ui/icon-selector";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
@@ -28,6 +29,7 @@ export default function AddProductScreen() {
     name?: string;
     brand?: string;
     category?: string;
+    icon?: string;
     imageS3Key?: string;
     scanId?: string;
   }>();
@@ -38,6 +40,7 @@ export default function AddProductScreen() {
     brand: params.brand ?? "",
     category: (params.category as ProductCategory) || "",
     paoMonths: "",
+    icon: params.icon || DEFAULT_ICON,
   });
   const [submitLoading, setSubmitLoading] = useState(false);
   const colorScheme = useColorScheme();
@@ -47,7 +50,7 @@ export default function AddProductScreen() {
   const isEditing = editId !== null;
 
   const resetForm = () => {
-    setFormData({ name: "", brand: "", category: "", paoMonths: "" });
+    setFormData({ name: "", brand: "", category: "", paoMonths: "", icon: DEFAULT_ICON });
   };
 
   const handleSubmit = async () => {
@@ -67,6 +70,7 @@ export default function AddProductScreen() {
         name: formData.name.trim(),
         brand: formData.brand.trim() || undefined,
         category: formData.category || undefined,
+        icon: formData.icon || undefined,
         image_s3_key: params.imageS3Key || undefined,
       };
 

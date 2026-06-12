@@ -23,6 +23,7 @@ def create_product(
         name=body.name,
         brand=body.brand,
         category=body.category,
+        icon=body.icon,
         user_id=current_user.id,
     )
 

@@ -18,7 +18,8 @@ import { Product, ProductCategory } from "../../src/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, MaterialIcons, FontAwesome6 } from "@expo/vector-icons";
+import { fromValue } from "../../src/components/ui/icon-selector";
 
 const categoryLabels: { key: "all" | ProductCategory; label: string }[] = [
   { key: "all", label: "All" },
@@ -140,13 +141,25 @@ export default function MyShelfScreen() {
         <FlatList
           data={filteredProducts}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
+          renderItem={({ item }) => {
+            const iconConfig = item.icon ? fromValue(item.icon) : null;
+            return (
             <View style={styles.card}>
               {item.image_url ? (
                 <Image
                   source={{ uri: item.image_url }}
                   style={styles.thumbnail}
                 />
+              ) : iconConfig ? (
+                <View style={styles.iconBox}>
+                  {iconConfig.family === "MaterialIcons" ? (
+                    <MaterialIcons name={iconConfig.name as any} size={28} color={colors.secondary[500]} />
+                  ) : iconConfig.family === "FontAwesome6" ? (
+                    <FontAwesome6 name={iconConfig.name as any} size={28} color={colors.secondary[500]} />
+                  ) : (
+                    <MaterialCommunityIcons name={iconConfig.name as any} size={28} color={colors.secondary[500]} />
+                  )}
+                </View>
               ) : null}
               <View style={styles.cardBody}>
                 <Text style={styles.cardName}>{item.name}</Text>
@@ -167,6 +180,7 @@ export default function MyShelfScreen() {
                         name: item.name,
                         brand: item.brand || "",
                         category: item.category || "",
+                        icon: item.icon || "",
                         imageUrl: item.image_url || "",
                         imageS3Key: item.image_s3_key || "",
                       },
@@ -199,7 +213,8 @@ export default function MyShelfScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-          )}
+          );
+          }}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl refreshing={loading} onRefresh={fetchProducts} />
@@ -259,6 +274,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 12,
     backgroundColor: "#f0f0f0",
+  },
+  iconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: "#f5f0ee",
+    justifyContent: "center",
+    alignItems: "center",
   },
   cardBody: {
     flex: 1,
