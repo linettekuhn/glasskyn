@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, Field
 from typing import Optional, Literal
 from datetime import datetime
 
@@ -12,6 +12,7 @@ class ProductCreate(BaseModel):
     category: Optional[ProductCategory] = None
     image_s3_key: Optional[str] = None
     icon: Optional[str] = None
+    pao_months: Optional[int] = Field(default=None, ge=1, le=120)
     scan_id: Optional[int] = None
 
     @field_validator("category", mode="before")
@@ -25,6 +26,19 @@ class ProductCreate(BaseModel):
                 return normalized
         return None
 
+    @field_validator("pao_months", mode="before")
+    @classmethod
+    def normalize_pao(cls, v):
+        if v is None or v == "":
+            return None
+        try:
+            val = int(v)
+            if 1 <= val <= 120:
+                return val
+        except (ValueError, TypeError):
+            pass
+        return None
+
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
@@ -32,6 +46,7 @@ class ProductUpdate(BaseModel):
     category: Optional[ProductCategory] = None
     image_s3_key: Optional[str] = None
     icon: Optional[str] = None
+    pao_months: Optional[int] = Field(default=None, ge=1, le=120)
 
     @field_validator("category", mode="before")
     @classmethod
@@ -54,6 +69,7 @@ class ProductOut(BaseModel):
     image_s3_key: Optional[str] = None
     image_url: Optional[str] = None
     icon: Optional[str] = None
+    pao_months: Optional[int] = None
     created_at: datetime
     user_id: int
 

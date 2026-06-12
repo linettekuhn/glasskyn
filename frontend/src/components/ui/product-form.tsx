@@ -12,11 +12,12 @@ import ThemedTextInput from "./themed-text-input";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "./themed-button";
 import IconSelector from "./icon-selector";
+import ProductCard from "./product-card";
 
 export interface ProductFormData {
   name: string;
   brand: string;
-  category: ProductCategory | "";
+  category: ProductCategory | null;
   paoMonths: string;
   icon: string;
 }
@@ -44,6 +45,63 @@ export default function ProductForm({
   const colors = Colors[getTheme(colorScheme)];
   return (
     <View style={styles.form}>
+      <View style={styles.inputWrapper}>
+        <ThemedText
+          type="caption"
+          weight="bold"
+          style={{ color: colors.primary[700] }}
+        >
+          PREVIEW
+        </ThemedText>
+        <ProductCard
+          product={{
+            id: -1,
+            name: value.name,
+            brand: value.brand,
+            category: value.category,
+            icon: value.icon,
+            image_s3_key: null,
+            image_url: null,
+            created_at: "",
+            user_id: -1,
+            pao_months: value.paoMonths ? parseInt(value.paoMonths, 10) : null,
+          }}
+          onDelete={() => {}}
+          isPreview
+        />
+      </View>
+
+      <View style={styles.inputWrapper}>
+        <ThemedText
+          type="caption"
+          weight="bold"
+          style={{ color: colors.primary[700] }}
+        >
+          CATEGORY
+        </ThemedText>
+        <View style={styles.segmentedControl}>
+          {CATEGORIES.map((cat) => (
+            <ThemedButton
+              key={cat}
+              text={cat.charAt(0).toUpperCase() + cat.slice(1)}
+              textType="bodySmall"
+              color={
+                value.category === cat
+                  ? colors.secondary[500]
+                  : colors.secondary[700]
+              }
+              outlined={!(value.category === cat)}
+              onPress={() =>
+                onChange({
+                  ...value,
+                  category: value.category === cat ? null : cat,
+                })
+              }
+              disabled={disabled}
+            />
+          ))}
+        </View>
+      </View>
       <View style={styles.inputWrapper}>
         <ThemedText
           type="caption"
@@ -112,7 +170,7 @@ export default function ProductForm({
               PAO (PERIOD AFTER OPENING)
             </ThemedText>
             <ThemedTextInput
-              value={value.brand}
+              value={value.paoMonths}
               onChangeText={(text) => onChange({ ...value, paoMonths: text })}
               placeholder="Enter PAO in months here"
               autoCapitalize="none"
@@ -121,38 +179,6 @@ export default function ProductForm({
           </View>
         </>
       )}
-
-      <View style={styles.inputWrapper}>
-        <ThemedText
-          type="caption"
-          weight="bold"
-          style={{ color: colors.primary[700] }}
-        >
-          CATEGORY
-        </ThemedText>
-        <View style={styles.segmentedControl}>
-          {CATEGORIES.map((cat) => (
-            <ThemedButton
-              key={cat}
-              text={cat.charAt(0).toUpperCase() + cat.slice(1)}
-              textType="bodySmall"
-              color={
-                value.category === cat
-                  ? colors.secondary[500]
-                  : colors.secondary[700]
-              }
-              outlined={!(value.category === cat)}
-              onPress={() =>
-                onChange({
-                  ...value,
-                  category: value.category === cat ? "" : cat,
-                })
-              }
-              disabled={disabled}
-            />
-          ))}
-        </View>
-      </View>
     </View>
   );
 }
@@ -169,7 +195,7 @@ const styles = StyleSheet.create({
   },
   form: {
     marginTop: 12,
-    marginBottom: 24,
-    gap: 12,
+    marginBottom: 12,
+    gap: 8,
   },
 });

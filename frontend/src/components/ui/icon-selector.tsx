@@ -2,8 +2,10 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
+  ScrollView,
   useColorScheme,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   MaterialCommunityIcons,
   MaterialIcons,
@@ -88,35 +90,48 @@ export default function IconSelector({ value, onChange }: IconSelectorProps) {
   const selected = fromValue(value) ?? fromValue(DEFAULT_ICON)!;
 
   return (
-    <View style={styles.grid}>
-      {ICON_OPTIONS.map((icon) => {
-        const isSelected =
-          icon.family === selected.family && icon.name === selected.name;
-        return (
-          <TouchableOpacity
-            key={`${icon.family}/${icon.name}`}
-            style={[
-              styles.cell,
-              {
-                borderColor: isSelected
-                  ? colors.secondary[500]
-                  : colors.secondary[700],
-                backgroundColor: isSelected
-                  ? colors.secondary[500]
-                  : "transparent",
-              },
-            ]}
-            onPress={() => onChange(toValue(icon))}
-            activeOpacity={0.7}
-          >
-            <IconComponent
-              icon={icon}
-              size={24}
-              color={isSelected ? colors.text : colors.neutral[800]}
-            />
-          </TouchableOpacity>
-        );
-      })}
+    <View style={styles.container}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}
+      >
+        {ICON_OPTIONS.map((icon) => {
+          const isSelected =
+            icon.family === selected.family && icon.name === selected.name;
+          return (
+            <TouchableOpacity
+              key={`${icon.family}/${icon.name}`}
+              style={[
+                styles.cell,
+                {
+                  borderColor: isSelected
+                    ? colors.secondary[500]
+                    : colors.secondary[700],
+                  backgroundColor: isSelected
+                    ? colors.secondary[500]
+                    : "transparent",
+                },
+              ]}
+              onPress={() => onChange(toValue(icon))}
+              activeOpacity={0.7}
+            >
+              <IconComponent
+                icon={icon}
+                size={24}
+                color={isSelected ? colors.text : colors.neutral[800]}
+              />
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+      <LinearGradient
+        colors={[`${colors.background}00`, colors.background]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.fadeRight}
+        pointerEvents="none"
+      />
     </View>
   );
 }
@@ -124,11 +139,14 @@ export default function IconSelector({ value, onChange }: IconSelectorProps) {
 export { ICON_OPTIONS, toValue, fromValue };
 
 const styles = StyleSheet.create({
-  grid: {
+  container: {
+    position: "relative",
+  },
+  row: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 10,
-    justifyContent: "center",
+    paddingHorizontal: 4,
+    paddingRight: 40,
   },
   cell: {
     width: 48,
@@ -137,5 +155,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  fadeRight: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 40,
   },
 });

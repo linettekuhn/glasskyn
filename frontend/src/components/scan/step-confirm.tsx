@@ -98,6 +98,7 @@ export default function StepConfirm() {
         brand: formData.brand.trim() || undefined,
         category: formData.category || undefined,
         icon: formData.icon || undefined,
+        pao_months: paoValue ?? undefined,
         image_s3_key: frontFileKey || undefined,
         scan_id: scanId || null,
       });

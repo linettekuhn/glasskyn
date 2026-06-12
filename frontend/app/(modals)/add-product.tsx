@@ -30,6 +30,7 @@ export default function AddProductScreen() {
     brand?: string;
     category?: string;
     icon?: string;
+    pao_months?: string;
     imageS3Key?: string;
     scanId?: string;
   }>();
@@ -39,7 +40,7 @@ export default function AddProductScreen() {
     name: params.name ?? "",
     brand: params.brand ?? "",
     category: (params.category as ProductCategory) || "",
-    paoMonths: "",
+    paoMonths: params.pao_months ?? "",
     icon: params.icon || DEFAULT_ICON,
   });
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -50,7 +51,13 @@ export default function AddProductScreen() {
   const isEditing = editId !== null;
 
   const resetForm = () => {
-    setFormData({ name: "", brand: "", category: "", paoMonths: "", icon: DEFAULT_ICON });
+    setFormData({
+      name: "",
+      brand: "",
+      category: null,
+      paoMonths: "",
+      icon: DEFAULT_ICON,
+    });
   };
 
   const handleSubmit = async () => {
@@ -66,11 +73,16 @@ export default function AddProductScreen() {
 
     setSubmitLoading(true);
     try {
+      const paoMonths = formData.paoMonths
+        ? parseInt(formData.paoMonths, 10) || undefined
+        : undefined;
+
       const data: Parameters<typeof createProduct>[0] = {
         name: formData.name.trim(),
         brand: formData.brand.trim() || undefined,
         category: formData.category || undefined,
         icon: formData.icon || undefined,
+        pao_months: paoMonths,
         image_s3_key: params.imageS3Key || undefined,
       };
 
@@ -138,6 +150,7 @@ export default function AddProductScreen() {
             value={formData}
             onChange={setFormData}
             disabled={submitLoading}
+            showPaoInput
           />
 
           <View style={styles.buttons}>

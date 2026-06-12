@@ -7,7 +7,7 @@ class ScanResult(Base):
     __tablename__ = "scan_results"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
     image_s3_key = Column(String, nullable=True)
     back_image_s3_key = Column(String, nullable=True)
     raw_ocr_text = Column(Text, nullable=True)

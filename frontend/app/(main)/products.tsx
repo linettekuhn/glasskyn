@@ -1,25 +1,22 @@
 import { useState, useCallback } from "react";
 import {
   View,
-  Text,
   FlatList,
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  Alert,
-  Image,
   useColorScheme,
 } from "react-native";
-import { router, useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 import LoadingSpinner from "../../src/components/ui/loading-spinner";
-import { getProducts, deleteProduct } from "../../src/api/products";
+import { getProducts } from "../../src/api/products";
 import { Product, ProductCategory } from "../../src/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
-import { MaterialCommunityIcons, MaterialIcons, FontAwesome6 } from "@expo/vector-icons";
-import { fromValue } from "../../src/components/ui/icon-selector";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import ProductCard from "../../src/components/ui/product-card";
 
 const categoryLabels: { key: "all" | ProductCategory; label: string }[] = [
   { key: "all", label: "All" },
@@ -141,80 +138,9 @@ export default function MyShelfScreen() {
         <FlatList
           data={filteredProducts}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => {
-            const iconConfig = item.icon ? fromValue(item.icon) : null;
-            return (
-            <View style={styles.card}>
-              {item.image_url ? (
-                <Image
-                  source={{ uri: item.image_url }}
-                  style={styles.thumbnail}
-                />
-              ) : iconConfig ? (
-                <View style={styles.iconBox}>
-                  {iconConfig.family === "MaterialIcons" ? (
-                    <MaterialIcons name={iconConfig.name as any} size={28} color={colors.secondary[500]} />
-                  ) : iconConfig.family === "FontAwesome6" ? (
-                    <FontAwesome6 name={iconConfig.name as any} size={28} color={colors.secondary[500]} />
-                  ) : (
-                    <MaterialCommunityIcons name={iconConfig.name as any} size={28} color={colors.secondary[500]} />
-                  )}
-                </View>
-              ) : null}
-              <View style={styles.cardBody}>
-                <Text style={styles.cardName}>{item.name}</Text>
-                {item.brand || item.category ? (
-                  <Text style={styles.cardMeta}>
-                    {[item.brand, item.category].filter(Boolean).join(" · ")}
-                  </Text>
-                ) : null}
-              </View>
-              <View style={styles.cardActions}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/(modals)/add-product",
-                      params: {
-                        editId: String(item.id),
-                        name: item.name,
-                        brand: item.brand || "",
-                        category: item.category || "",
-                        icon: item.icon || "",
-                        imageUrl: item.image_url || "",
-                        imageS3Key: item.image_s3_key || "",
-                      },
-                    })
-                  }
-                >
-                  <Text style={styles.editButtonText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() =>
-                    Alert.alert("Delete", `Delete "${item.name}"?`, [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Delete",
-                        style: "destructive",
-                        onPress: async () => {
-                          try {
-                            await deleteProduct(item.id);
-                            fetchProducts();
-                          } catch {
-                            // toast shown by interceptor
-                          }
-                        },
-                      },
-                    ])
-                  }
-                >
-                  <Text style={styles.deleteButtonText}>Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-          }}
+          renderItem={({ item }) => (
+            <ProductCard product={item} onDelete={fetchProducts} />
+          )}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl refreshing={loading} onRefresh={fetchProducts} />
@@ -255,73 +181,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   listContent: {
-    padding: 16,
     paddingBottom: 96,
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  thumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: "#f0f0f0",
-  },
-  iconBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: "#f5f0ee",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardBody: {
-    flex: 1,
-  },
-  cardName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1a1a1a",
-    marginBottom: 4,
-  },
-  cardMeta: {
-    fontSize: 14,
-    color: "#888",
-  },
-  cardActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  editButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: "#f0f0f0",
-  },
-  editButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6c63ff",
-  },
-  deleteButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: "#fef0f0",
-  },
-  deleteButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#e74c3c",
+    gap: 12,
   },
   fab: {
     position: "absolute",

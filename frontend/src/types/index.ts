@@ -14,6 +14,7 @@ export interface Product {
   image_s3_key: string | null;
   image_url: string | null;
   icon: string | null;
+  pao_months: number | null;
   created_at: string;
   user_id: number;
 }
