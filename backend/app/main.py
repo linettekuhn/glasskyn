@@ -5,6 +5,7 @@ from app.middleware.auth import get_db
 from app.routers import auth as auth_router
 from app.routers import products as products_router
 from app.routers import uploads as uploads_router
+from app.routers import classify as classify_router
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -21,6 +22,7 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(products_router.router)
 app.include_router(uploads_router.router)
+app.include_router(classify_router.router)
 
 
 @app.get("/items")
