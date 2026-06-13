@@ -4,6 +4,9 @@ __pycache__/
 **.venv/
 **/.venv/
 venv/
+**.venv-ml/
+**/.venv-ml/
+venv-ml/
 *.env
 *.env.*
 
