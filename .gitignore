@@ -1,12 +1,9 @@
 # Python
 __pycache__/
 *.pyc
-**.venv/
-**/.venv/
-venv/
-**.venv-ml/
-**/.venv-ml/
-venv-ml/
+**.venv*/
+**/.venv*/
+venv*/
 *.env
 *.env.*
 
