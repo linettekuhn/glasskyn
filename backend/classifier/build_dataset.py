@@ -1,8 +1,11 @@
 import hashlib, json, math, os, random, time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 from pathlib import Path
 
 import sys
+
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -28,18 +31,26 @@ def classify_product(categories_tags):
     return None
 
 
-def image_url(code, key, size=400):
+def image_url(code, imgid, size=400):
+    import re
     c = code.strip()
-    parts = [c[i : i + 3] for i in range(0, len(c), 3)]
-    path = "/".join(parts)
-    return f"https://images.openfoodfacts.org/images/products/{path}/{key}_{size}.jpg"
+    path = re.sub(r"(...)(...)(...)(.*)", r"\1/\2/\3/\4", c)
+    return f"https://world.openbeautyfacts.org/images/products/{path}/{imgid}.{size}.jpg"
 
 
-def download_image(url, dest, timeout=15):
+def download_image(client, rec, data_dir):
+    label_dir = data_dir / rec["label"]
+    label_dir.mkdir(exist_ok=True)
+    dest = label_dir / f"{rec['code']}.jpg"
+    if dest.exists():
+        return True
+    url = image_url(rec["code"], rec["imgid"])
     try:
-        resp = httpx.get(url, follow_redirects=True, timeout=timeout)
+        resp = client.get(url, follow_redirects=True, timeout=30)
         resp.raise_for_status()
-        Image.open(BytesIO(resp.content)).verify()
+        # quick content check instead of full PIL verify
+        if len(resp.content) < 1000:
+            return False
         dest.write_bytes(resp.content)
         return True
     except Exception:
@@ -47,6 +58,13 @@ def download_image(url, dest, timeout=15):
 
 
 def main():
+    import os
+
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+    if not os.environ.get("HF_TOKEN"):
+        print("Tip: set HF_TOKEN env var for higher download rates from HuggingFace")
+
     ds = load_dataset("openfoodfacts/product-database", split="beauty", streaming=True)
 
     records = []
@@ -55,16 +73,23 @@ def main():
         if label is None:
             continue
         images = row.get("images") or []
-        keys = [img["key"] for img in images]
-        preferred = [k for k in keys if k.startswith("front")]
-        key = preferred[0] if preferred else (keys[0] if keys else None)
-        if key is None:
+        preferred = None
+        for img in images:
+            if img["key"].startswith("front") and img.get("imgid") is not None:
+                preferred = img
+                break
+        if preferred is None:
+            for img in images:
+                if img.get("imgid") is not None:
+                    preferred = img
+                    break
+        if preferred is None:
             continue
         records.append(
             {
                 "code": row["code"],
                 "label": label,
-                "image_key": key,
+                "imgid": preferred["imgid"],
             }
         )
 
@@ -74,14 +99,20 @@ def main():
     pd.DataFrame(records).to_csv(manifest_path, index=False)
     print(f"Manifest saved to {manifest_path}")
 
-    for rec in tqdm(records, desc="Downloading images"):
-        label_dir = DATA_DIR / rec["label"]
-        label_dir.mkdir(exist_ok=True)
-        dest = label_dir / f"{rec['code']}.jpg"
-        if dest.exists():
-            continue
-        url = image_url(rec["code"], rec["image_key"])
-        download_image(url, dest)
+    # Parallel downloads
+    max_workers = int(os.environ.get("DOWNLOAD_WORKERS", "20"))
+    to_download = [r for r in records if not (DATA_DIR / r["label"] / f"{r['code']}.jpg").exists()]
+    print(f"Downloading {len(to_download):,} images with {max_workers} parallel workers...")
+
+    successful = 0
+    with httpx.Client(timeout=30, limits=httpx.Limits(max_keepalive_connections=max_workers, max_connections=max_workers * 2)) as client:
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {pool.submit(download_image, client, rec, DATA_DIR): rec for rec in to_download}
+            for f in tqdm(as_completed(futures), total=len(to_download), desc="Downloading images"):
+                if f.result():
+                    successful += 1
+
+    print(f"Downloaded {successful}/{len(to_download)} new images")
 
     # Print summary
     from collections import Counter

@@ -8,3 +8,4 @@ matplotlib
 seaborn
 jupyter
 tqdm
+python-dotenv
