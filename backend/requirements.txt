@@ -1,4 +1,5 @@
 fastapi
+httpx
 uvicorn[standard]
 sqlalchemy
 alembic
@@ -10,3 +11,6 @@ python-jose[cryptography]
 python-multipart
 pydantic[email]
 email-validator
+boto3
+google-cloud-vision
+openai

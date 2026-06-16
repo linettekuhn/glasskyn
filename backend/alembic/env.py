@@ -2,7 +2,7 @@ import os
 import sys
 from logging.config import fileConfig
 from app.db.base_class import Base
-from app.models import User, Product, ScanResult, Alert
+from app.models import User, Product, ScanResult, Alert, RefreshToken
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Cookie
+from datetime import datetime, timezone, timedelta
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Cookie, Header
 from app.schemas.auth import (
     RegisterResponse,
     RegisterRequest,
@@ -16,7 +18,10 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_refresh_token,
 )
+from app.core import config
+from app.models.refresh_token import RefreshToken
 from jose import JWTError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -57,34 +62,55 @@ async def login(body: LoginRequest, response: Response, db: Session = Depends(ge
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
 
+    family_id = str(uuid.uuid4())
     access_token = create_access_token(user.id)
-    refresh_token = create_refresh_token(user.id)
+    refresh_token = create_refresh_token(user.id, family_id)
+
+    token_hash = hash_refresh_token(refresh_token)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=config.REFRESH_TOKEN_EXPIRE_MINUTES)
+    db_refresh_token = RefreshToken(
+        user_id=user.id,
+        token_hash=token_hash,
+        family_id=family_id,
+        expires_at=expires_at,
+    )
+    db.add(db_refresh_token)
+    db.commit()
 
     response.set_cookie(
         key="refreshToken",
         value=refresh_token,
         httponly=True,
-        secure=False,  # TODO: set True in prod (isProduction check)
+        secure=config.IS_PRODUCTION,
         samesite="strict",
-        max_age=7 * 24 * 60 * 60,
+        max_age=config.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
     )
 
-    return LoginResponse(access_token=access_token, user=UserOut.model_validate(user))
+    return LoginResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        user=UserOut.model_validate(user),
+    )
 
 
 @router.post("/refresh", response_model=RefreshResponse)
 async def refresh(
     response: Response,
     refresh_token: str | None = Cookie(default=None, alias="refreshToken"),
+    x_refresh_token: str | None = Header(default=None, alias="x-refresh-token"),
     db: Session = Depends(get_db),
 ):
-    if not refresh_token:
+    token = refresh_token or x_refresh_token
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token provided"
         )
 
     try:
-        user_id = decode_token(refresh_token)
+        payload = decode_token(token, expected_type="refresh")
+        user_id = int(payload["sub"])
+        family_id = payload.get("family_id", "")
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -98,20 +124,57 @@ async def refresh(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
+    token_hash = hash_refresh_token(token)
+    stored_token = db.query(RefreshToken).filter(
+        RefreshToken.token_hash == token_hash,
+        RefreshToken.is_revoked == False,
+    ).first()
+
+    if not stored_token:
+        # token hash not found → possible token reuse (theft)
+        # revoke entire family if we can identify it
+        if family_id:
+            db.query(RefreshToken).filter(
+                RefreshToken.family_id == family_id,
+                RefreshToken.is_revoked == False,
+            ).update({"is_revoked": True})
+            db.commit()
+
+        response.delete_cookie(key="refreshToken", httponly=True, samesite="strict")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has been revoked",
+        )
+
+    # revoke current token (rotation)
+    stored_token.is_revoked = True
+
     new_access_token = create_access_token(user.id)
-    new_refresh_token = create_refresh_token(user.id)
+    new_refresh_token = create_refresh_token(user.id, stored_token.family_id)
+    new_token_hash = hash_refresh_token(new_refresh_token)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=config.REFRESH_TOKEN_EXPIRE_MINUTES)
+
+    new_stored_token = RefreshToken(
+        user_id=user.id,
+        token_hash=new_token_hash,
+        family_id=stored_token.family_id,
+        expires_at=expires_at,
+    )
+    db.add(new_stored_token)
+    db.commit()
 
     response.set_cookie(
         key="refreshToken",
         value=new_refresh_token,
         httponly=True,
-        secure=False,
+        secure=config.IS_PRODUCTION,
         samesite="strict",
-        max_age=7 * 24 * 60 * 60,
+        max_age=config.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
     )
 
     return RefreshResponse(
         access_token=new_access_token,
+        refresh_token=new_refresh_token,
         token_type="bearer",
         user=UserOut.model_validate(user),
     )
@@ -121,7 +184,18 @@ async def refresh(
 async def logout(
     response: Response,
     refresh_token: str | None = Cookie(default=None, alias="refreshToken"),
+    x_refresh_token: str | None = Header(default=None, alias="x-refresh-token"),
+    db: Session = Depends(get_db),
 ):
+    token = refresh_token or x_refresh_token
+    if token:
+        token_hash = hash_refresh_token(token)
+        db.query(RefreshToken).filter(
+            RefreshToken.token_hash == token_hash,
+            RefreshToken.is_revoked == False,
+        ).update({"is_revoked": True})
+        db.commit()
+
     response.delete_cookie(key="refreshToken", httponly=True, samesite="strict")
 
     return None

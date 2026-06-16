@@ -31,7 +31,8 @@ def get_current_user(
     )
 
     try:
-        user_id = decode_token(credentials.credentials)
+        payload = decode_token(credentials.credentials, expected_type="access")
+        user_id = int(payload["sub"])
     except JWTError:
         raise credentials_exception
 

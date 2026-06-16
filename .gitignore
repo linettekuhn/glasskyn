@@ -1,9 +1,9 @@
 # Python
 __pycache__/
 *.pyc
-**.venv/
-**/.venv/
-venv/
+**.venv*/
+**/.venv*/
+venv*/
 *.env
 *.env.*
 
@@ -17,3 +17,7 @@ dist/
 
 # Logs
 *.log
+
+credentials/
+**/data/raw/
+**/data/processed/
