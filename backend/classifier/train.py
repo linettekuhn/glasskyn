@@ -42,13 +42,15 @@ def train_model(train_ds, val_ds, device, epochs=20, batch_size=32,
     model.fc = nn.Linear(2048, len(train_ds.classes))
     model.to(device)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, factor=0.5)
 
     best_acc = 0.0
     best_state = None
     history = {"train_loss": [], "val_loss": [], "val_acc": []}
+    patience_counter = 0
+    max_patience = 5
 
     for epoch in range(epochs):
         model.train()
@@ -93,6 +95,12 @@ def train_model(train_ds, val_ds, device, epochs=20, batch_size=32,
         if acc > best_acc:
             best_acc = acc
             best_state = copy.deepcopy(model.state_dict())
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= max_patience:
+                print(f"  Early stopping triggered (no improvement for {max_patience} epochs)")
+                break
 
     if best_state is not None:
         model.load_state_dict(best_state)
