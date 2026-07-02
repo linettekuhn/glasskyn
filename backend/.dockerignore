@@ -1,0 +1,17 @@
+.venv
+.venv/**
+__pycache__
+__pycache__/**
+*.pyc
+.env
+.env.dev
+credentials/
+notebooks/
+classifier/__pycache__/
+data/raw/
+data/unlabeled/
+test_photos/
+.git/
+.gitignore
+.gitattributes
+*.md
