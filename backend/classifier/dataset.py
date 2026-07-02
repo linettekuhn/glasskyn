@@ -61,7 +61,7 @@ class ProductDataset(Dataset):
     def __len__(self):
         return len(self.samples)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> tuple[torch.Tensor, int]:
         path, label = self.samples[idx]
         img = Image.open(path).convert("RGB")
         img = self.transform(img)
