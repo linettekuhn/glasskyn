@@ -40,6 +40,8 @@ class ProductDataset(Dataset):
         if split == "train":
             self.transform = transforms.Compose([
                 transforms.Resize((256, 256)),
+                transforms.RandomAffine(degrees=15, translate=(0.15, 0.15), scale=(0.85, 1.15)),
+                transforms.RandomPerspective(distortion_scale=0.1, p=0.3),
                 transforms.RandomCrop(224),
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomRotation(10),
@@ -59,7 +61,7 @@ class ProductDataset(Dataset):
     def __len__(self):
         return len(self.samples)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> tuple[torch.Tensor, int]:
         path, label = self.samples[idx]
         img = Image.open(path).convert("RGB")
         img = self.transform(img)

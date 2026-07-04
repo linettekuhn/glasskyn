@@ -20,6 +20,8 @@ from app.services import vision as vision_service
 from app.services.openbeautyfacts import lookup_product
 from app.services.extraction import extract_all, extract_pao
 from app.services.llm import extract_name_brand
+from app.classifier.model import classify_image as raw_ml_classify
+from app.services.classifier import CLASSIFIER_CONFIDENCE_THRESHOLD
 
 
 logger = logging.getLogger(__name__)
@@ -116,9 +118,20 @@ async def process_uploaded_image(
     else:
         logger.error("[DEBUG] Skipping OCR — no valid image URL")
     
-    # Run extraction on OCR text
+    # Run extraction on OCR text (keyword-based)
     extraction = extract_all(raw_ocr_text)
     logger.info(f"[DEBUG] Extraction result: pao_months={extraction['pao_months']}, method={extraction['extraction_method']}")
+
+    # Run ML classifier on the image, override category if confident
+    if image_url:
+        ml_category, ml_confidence = await asyncio.to_thread(raw_ml_classify, image_url)
+        if ml_category is not None and ml_confidence is not None and ml_confidence >= CLASSIFIER_CONFIDENCE_THRESHOLD:
+            logger.info(
+                "ML classifier overrides category: %s (confidence=%.3f)",
+                ml_category, ml_confidence,
+            )
+            extraction["category"] = ml_category
+            extraction["category_method"] = "ml_classifier"
 
     # Create scan result record with extraction data
     scan = ScanResult(
@@ -213,9 +226,20 @@ async def process_multi_images(
             logger.error("OCR failed for %s: %s", url, e)
             return None
 
-    front_text, back_text = await asyncio.gather(
+    async def run_ml(url: str | None) -> tuple[str | None, float | None]:
+        if not url:
+            return None, None
+        try:
+            return await asyncio.to_thread(raw_ml_classify, url)
+        except Exception as e:
+            logger.error("ML classifier failed for %s: %s", url, e)
+            return None, None
+
+    front_text, back_text, ml_front, ml_back = await asyncio.gather(
         run_ocr(body.front_file_key, front_url),
         run_ocr(body.back_file_key, back_url),
+        run_ml(front_url),
+        run_ml(back_url),
     )
 
     # Merge raw text
@@ -233,8 +257,25 @@ async def process_multi_images(
         len(merged_text or ""),
     )
 
-    # Run extraction on merged text
+    # Run extraction on merged text (keyword-based)
     extraction = extract_all(merged_text)
+
+    # Run ML classifier on both images, pick the best confident result
+    best_ml_category = None
+    best_ml_confidence = 0.0
+
+    for cat, conf in [ml_front, ml_back]:
+        if cat is not None and conf is not None and conf > best_ml_confidence:
+            best_ml_category = cat
+            best_ml_confidence = conf
+
+    if best_ml_category is not None and best_ml_confidence >= CLASSIFIER_CONFIDENCE_THRESHOLD:
+        logger.info(
+            "ML classifier overrides category: %s (confidence=%.3f)",
+            best_ml_category, best_ml_confidence,
+        )
+        extraction["category"] = best_ml_category
+        extraction["category_method"] = "ml_classifier"
 
     # Create scan result record
     scan = ScanResult(

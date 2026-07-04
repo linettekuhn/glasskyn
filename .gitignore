@@ -20,4 +20,5 @@ dist/
 
 credentials/
 **/data/raw/
+**/data/unlabeled/
 **/data/processed/
