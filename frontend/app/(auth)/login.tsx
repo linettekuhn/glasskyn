@@ -44,7 +44,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email, password);
-      router.replace("/(main)");
+      router.replace("/");
     } catch {
       // toast already shown by axios interceptor
     } finally {

@@ -66,6 +66,22 @@ export default function MainLayout() {
           }}
         />
         <Tabs.Screen
+          name="routine"
+          options={{
+            title: "My Routine",
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon
+                IconComponent={MaterialCommunityIcons}
+                outlineName="clipboard-list-outline"
+                fillName="clipboard-list"
+                size={28}
+                color={color}
+                focused={focused}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="scanner"
           options={{
             title: "Scanner",

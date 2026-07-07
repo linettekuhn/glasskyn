@@ -73,6 +73,7 @@ export interface SkinProfile {
   id: number;
   user_id: number;
   skin_type: SkinType | null;
+  is_sensitive: boolean | null;
   concerns: string[];
   goals: string[];
   created_at: string;

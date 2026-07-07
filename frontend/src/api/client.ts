@@ -106,6 +106,13 @@ apiClient.interceptors.response.use(
       }
     }
 
+    if (
+      error.response?.status === 404 &&
+      originalRequest.url?.includes("/routines/skin-profile")
+    ) {
+      return Promise.reject(error);
+    }
+
     let message = "Something went wrong";
 
     if (error.response) {

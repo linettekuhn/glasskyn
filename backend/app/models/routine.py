@@ -9,6 +9,7 @@ class SkinProfile(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
     skin_type = Column(String, nullable=True)
+    is_sensitive = Column(Boolean, nullable=True)
     concerns = Column(JSONB, default=list)
     goals = Column(JSONB, default=list)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -7,12 +7,14 @@ from datetime import datetime
 
 class SkinProfileCreate(BaseModel):
     skin_type: Optional[str] = None
+    is_sensitive: Optional[bool] = None
     concerns: Optional[List[str]] = None
     goals: Optional[List[str]] = None
 
 
 class SkinProfileUpdate(BaseModel):
     skin_type: Optional[str] = None
+    is_sensitive: Optional[bool] = None
     concerns: Optional[List[str]] = None
     goals: Optional[List[str]] = None
 
@@ -21,6 +23,7 @@ class SkinProfileOut(BaseModel):
     id: int
     user_id: int
     skin_type: Optional[str] = None
+    is_sensitive: Optional[bool] = None
     concerns: list = []
     goals: list = []
     created_at: datetime
