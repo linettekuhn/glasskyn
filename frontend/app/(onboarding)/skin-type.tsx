@@ -4,27 +4,43 @@ import {
   StyleSheet,
   useColorScheme,
   TouchableOpacity,
-  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/ui/themed-text";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "@/components/ui/themed-button";
 import { useOnboarding } from "@/contexts/OnboardingContext";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import OnboardingStep from "@/components/ui/onboarding-step";
+import Svg, { Circle } from "react-native-svg";
 
 const SKIN_TYPES = [
-  { key: "dry", label: "Dry" },
-  { key: "oily", label: "Oily" },
-  { key: "combination", label: "Combination" },
-  { key: "normal", label: "Normal" },
+  {
+    key: "dry",
+    label: "Dry",
+    desc: "Tight, flaky, or rough, needs extra moisture",
+  },
+  {
+    key: "oily",
+    label: "Oily",
+    desc: "Shine, larger pores, tendency to break out",
+  },
+  {
+    key: "combination",
+    label: "Combination",
+    desc: "Oily down the center, drier along the cheeks",
+  },
+  {
+    key: "normal",
+    label: "Normal",
+    desc: "Balanced, not too oily or dry, few concerns",
+  },
 ];
 
 export default function SkinTypeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const router = useRouter();
-  const { state, setSkinType, setIsSensitive, reset } = useOnboarding();
+  const { state, setSkinType, setIsSensitive } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(state.skinType);
   const [sensitive, setSensitive] = useState<boolean | null>(state.isSensitive);
 
@@ -38,19 +54,10 @@ export default function SkinTypeScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      contentContainerStyle={styles.content}
-    >
-      <TouchableOpacity onPress={() => router.back()} style={{ alignSelf: "flex-start" }}>
-        <MaterialCommunityIcons name="chevron-left" size={28} color={colors.neutral[700]} />
-      </TouchableOpacity>
+    <OnboardingStep currentStep={1}>
       <View style={styles.header}>
         <ThemedText type="h1">What's your skin type?</ThemedText>
-        <ThemedText
-          type="bodyLarge"
-          style={{ color: colors.secondary[600] }}
-        >
+        <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
           Pick the one that fits most days. You can always update this later.
         </ThemedText>
       </View>
@@ -65,17 +72,28 @@ export default function SkinTypeScreen() {
               style={[
                 styles.card,
                 {
-                  backgroundColor: active ? colors.primary[100] : colors.neutral[100],
-                  borderColor: active ? colors.primary[500] : colors.neutral[400],
+                  backgroundColor: active
+                    ? colors.primary[400]
+                    : colors.primary[200],
                 },
               ]}
             >
               <ThemedText
                 type="bodyLarge"
-                weight="medium"
-                style={{ color: active ? colors.primary[700] : colors.text }}
+                weight="semiBold"
+                style={{ color: colors.primary[900] }}
               >
                 {st.label}
+              </ThemedText>
+              <Svg width={100} height={100}>
+                <Circle cx={50} cy={50} r={50} />
+              </Svg>
+              <ThemedText
+                type="captionSmall"
+                italic
+                style={{ textAlign: "center", color: colors.primary[800] }}
+              >
+                {st.desc}
               </ThemedText>
             </TouchableOpacity>
           );
@@ -83,7 +101,7 @@ export default function SkinTypeScreen() {
       </View>
 
       <View style={styles.sensitiveSection}>
-        <ThemedText type="bodyLarge" weight="medium">
+        <ThemedText type="body" weight="medium">
           Is your skin sensitive or easily irritated?
         </ThemedText>
         <View style={styles.toggleRow}>
@@ -91,73 +109,54 @@ export default function SkinTypeScreen() {
             text="Yes"
             outlined={sensitive !== true}
             onPress={() => setSensitive(true)}
-            color={colors.primary[500]}
+            color={colors.primary[400]}
             alignment="center"
           />
           <ThemedButton
             text="No"
             outlined={sensitive !== false}
             onPress={() => setSensitive(false)}
-            color={colors.primary[500]}
+            color={colors.primary[400]}
             alignment="center"
           />
         </View>
       </View>
 
-      <View style={styles.footer}>
-        <ThemedButton
-          text="Continue"
-          onPress={handleContinue}
-          disabled={!canContinue}
-        />
-        <ThemedText type="caption" style={{ color: colors.neutral[700], textAlign: "center" }}>
-          Step 1 of 3
-        </ThemedText>
-      </View>
-
       <ThemedButton
-        link
-        text="Reset"
-        onPress={() => { reset(); router.replace("/(onboarding)/welcome"); }}
-        color={colors.neutral[700]}
+        text="Continue"
+        onPress={handleContinue}
+        disabled={!canContinue}
+        color={colors.secondary[500]}
       />
-    </ScrollView>
+    </OnboardingStep>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 32,
-    paddingTop: 80,
-    gap: 32,
-  },
   header: {
     gap: 8,
   },
   grid: {
     flexDirection: "row",
+    justifyContent: "center",
     flexWrap: "wrap",
     gap: 12,
   },
   card: {
-    width: "47%",
-    aspectRatio: 1.5,
+    maxWidth: 150,
     borderRadius: 16,
-    borderWidth: 1,
-    justifyContent: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    justifyContent: "space-between",
     alignItems: "center",
+    gap: 4,
   },
   sensitiveSection: {
-    gap: 16,
+    gap: 4,
+    alignItems: "center",
   },
   toggleRow: {
     flexDirection: "row",
-    gap: 12,
-  },
-  footer: {
     gap: 12,
   },
 });

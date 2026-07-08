@@ -20,12 +20,14 @@ export default function WelcomeScreen() {
             type="bodyLarge"
             style={{ textAlign: "center", color: colors.secondary[600] }}
           >
-            A few quick questions so we can recommend the right products and routines for you.
+            A few quick questions so we can recommend the right products and
+            routines for you.
           </ThemedText>
         </View>
         <ThemedButton
           text="Get Started"
           onPress={() => router.push("/(onboarding)/skin-type")}
+          color={colors.primary[600]}
         />
       </View>
     </View>

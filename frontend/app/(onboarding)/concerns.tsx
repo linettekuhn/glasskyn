@@ -1,17 +1,11 @@
 import { useState } from "react";
-import {
-  View,
-  StyleSheet,
-  useColorScheme,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native";
+import { View, StyleSheet, useColorScheme } from "react-native";
 import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/ui/themed-text";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "@/components/ui/themed-button";
 import { useOnboarding } from "@/contexts/OnboardingContext";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import OnboardingStep from "@/components/ui/onboarding-step";
 
 const CONCERNS = [
   "Acne",
@@ -28,14 +22,14 @@ export default function ConcernsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const router = useRouter();
-  const { state, setConcerns, reset } = useOnboarding();
+  const { state, setConcerns } = useOnboarding();
   const [selected, setSelected] = useState<string[]>(state.concerns);
 
   const toggle = (concern: string) => {
     setSelected((prev) =>
       prev.includes(concern)
         ? prev.filter((c) => c !== concern)
-        : [...prev, concern]
+        : [...prev, concern],
     );
   };
 
@@ -50,20 +44,12 @@ export default function ConcernsScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      contentContainerStyle={styles.content}
-    >
-      <TouchableOpacity onPress={() => router.back()} style={{ alignSelf: "flex-start" }}>
-        <MaterialCommunityIcons name="chevron-left" size={28} color={colors.neutral[700]} />
-      </TouchableOpacity>
+    <OnboardingStep currentStep={2}>
       <View style={styles.header}>
         <ThemedText type="h1">Any concerns you're focused on?</ThemedText>
-        <ThemedText
-          type="bodyLarge"
-          style={{ color: colors.secondary[600] }}
-        >
-          Select as many as apply. This helps us flag ingredients that matter to you.
+        <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
+          Select as many as apply. This helps us flag ingredients that matter to
+          you.
         </ThemedText>
       </View>
 
@@ -76,45 +62,31 @@ export default function ConcernsScreen() {
               text={concern}
               outlined={!active}
               onPress={() => toggle(concern)}
-              color={colors.primary[500]}
+              color={colors.primary[400]}
               alignment="center"
             />
           );
         })}
       </View>
 
-      <View style={styles.footer}>
-        <ThemedButton text="Continue" onPress={handleContinue} />
+      <View style={{ gap: 8 }}>
+        <ThemedButton
+          text="Continue"
+          onPress={handleContinue}
+          color={colors.primary[600]}
+        />
         <ThemedButton
           link
           text="Skip for now"
           onPress={handleSkip}
-          color={colors.neutral[700]}
+          color={colors.neutral[800]}
         />
-        <ThemedText type="caption" style={{ color: colors.neutral[700], textAlign: "center" }}>
-          Step 2 of 3
-        </ThemedText>
       </View>
-
-      <ThemedButton
-        link
-        text="Reset"
-        onPress={() => { reset(); router.replace("/(onboarding)/welcome"); }}
-        color={colors.neutral[700]}
-      />
-    </ScrollView>
+    </OnboardingStep>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 32,
-    paddingTop: 80,
-    gap: 32,
-  },
   header: {
     gap: 8,
   },
@@ -122,8 +94,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-  },
-  footer: {
-    gap: 12,
   },
 });

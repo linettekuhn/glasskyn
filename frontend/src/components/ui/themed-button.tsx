@@ -95,13 +95,29 @@ export default function ThemedButton({
         onPress={handleLinkPress}
         style={{ alignSelf: "center", opacity: disabled ? 0.4 : 1 }}
       >
-        <ThemedText
-          type={textType}
-          weight="medium"
-          style={{ color: linkColor }}
-        >
-          {text}
-        </ThemedText>
+        <View style={styles.content}>
+          {LeftIconComponent && leftIconName && (
+            <LeftIconComponent
+              name={leftIconName}
+              size={17}
+              color={linkColor}
+            />
+          )}
+          <ThemedText
+            type={textType}
+            weight="medium"
+            style={{ color: linkColor }}
+          >
+            {text}
+          </ThemedText>
+          {RightIconComponent && rightIconName && (
+            <RightIconComponent
+              name={rightIconName}
+              size={17}
+              color={linkColor}
+            />
+          )}
+        </View>
         <Animated.View
           style={[
             styles.underline,
