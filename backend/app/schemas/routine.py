@@ -113,6 +113,7 @@ class RoutineTemplateOut(BaseModel):
     skin_type_tags: list = []
     concern_tags: list = []
     is_active: bool = True
+    seed_version: int = 1
     steps: List[RoutineTemplateStepOut] = []
     created_at: datetime
     updated_at: datetime
