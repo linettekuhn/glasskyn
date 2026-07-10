@@ -125,7 +125,7 @@ const typeStyles = StyleSheet.create({
     letterSpacing: 0.03,
   },
   h6: {
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.serif,
     fontSize: 17.89,
     lineHeight: 17.89 * 1.6,
     letterSpacing: 0.03,
