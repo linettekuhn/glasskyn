@@ -1,16 +1,12 @@
 import { useState } from "react";
 import {
   View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   useColorScheme,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
 import { createProduct, updateScanResult } from "../../api/products";
@@ -21,6 +17,7 @@ import { DEFAULT_ICON } from "../ui/icon-selector";
 import { ThemedText } from "../ui/themed-text";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "../ui/themed-button";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function StepConfirm() {
   const { scanResult, paoMonths, setPaoMonths, frontFileKey, reset } =
@@ -125,11 +122,11 @@ export default function StepConfirm() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: bgColor }]}
+      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
       edges={["top", "bottom"]}
     >
       <KeyboardAvoidingView
-        style={styles.inner}
+        style={[styles.container, { backgroundColor: bgColor }]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
@@ -189,6 +186,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  inner: { flex: 1 },
   scrollContent: { padding: 24, paddingTop: 16 },
 });
