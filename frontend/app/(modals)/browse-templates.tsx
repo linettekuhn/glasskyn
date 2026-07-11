@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
 import { listTemplates, getSuggestedTemplates } from "@/api/routines";
+import { useTemplateSelection } from "@/contexts/TemplateContext";
 import type { RoutineTemplate, SkinType } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
@@ -31,6 +32,7 @@ export default function BrowseTemplatesScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedSkinTypes, setSelectedSkinTypes] = useState<SkinType[]>([]);
   const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<"AM" | "PM">("AM");
+  const { selectedTemplateId } = useTemplateSelection();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
 
@@ -66,14 +68,17 @@ export default function BrowseTemplatesScreen() {
               selectedSkinTypes.includes(st as SkinType),
             ),
         )
-  ).sort(
-    (a, b) =>
-      (suggestedIds.has(b.id) ? 1 : 0) - (suggestedIds.has(a.id) ? 1 : 0),
-  );
+  ).sort((a, b) => {
+    if (selectedTemplateId === a.id) return -1;
+    if (selectedTemplateId === b.id) return 1;
+    return (suggestedIds.has(b.id) ? 1 : 0) - (suggestedIds.has(a.id) ? 1 : 0);
+  });
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.neutral[100] }]}
+      >
         <LoadingSpinner />
       </SafeAreaView>
     );
@@ -142,7 +147,7 @@ export default function BrowseTemplatesScreen() {
                 key={chip.key}
                 text={chip.label}
                 textType="bodySmall"
-                color={active ? colors.primary[600] : colors.primary[500]}
+                color={active ? colors.secondary[500] : colors.secondary[400]}
                 outlined={!active}
                 alignment="auto"
                 onPress={() => {
@@ -178,6 +183,7 @@ export default function BrowseTemplatesScreen() {
               template={item}
               selectedTimeOfDay={selectedTimeOfDay}
               isRecommended={suggestedIds.has(item.id)}
+              isSelected={selectedTemplateId === item.id}
               onPress={() =>
                 router.push({
                   pathname: "/(modals)/template-preview",
@@ -220,6 +226,6 @@ const styles = StyleSheet.create({
   },
   filterWrapper: {
     gap: 2,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
   },
 });

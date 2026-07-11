@@ -13,6 +13,7 @@ type Props = {
   template: RoutineTemplate;
   selectedTimeOfDay: "AM" | "PM";
   isRecommended: boolean;
+  isSelected?: boolean;
   onPress: () => void;
 };
 
@@ -28,6 +29,7 @@ export default function TemplateCard({
   template,
   selectedTimeOfDay,
   isRecommended,
+  isSelected = false,
   onPress,
 }: Props) {
   const colorScheme = useColorScheme();
@@ -48,8 +50,9 @@ export default function TemplateCard({
       style={[
         styles.card,
         {
-          borderColor: colors.neutral[400],
+          borderColor: isSelected ? colors.primary[500] : colors.neutral[400],
           backgroundColor: colors.background,
+          borderWidth: isSelected ? 2 : 1,
         },
       ]}
       onPress={onPress}
