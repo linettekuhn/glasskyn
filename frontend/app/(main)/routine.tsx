@@ -62,7 +62,10 @@ export default function RoutineScreen() {
   if (!hasRoutine) {
     return (
       <View
-        style={[styles.container, { backgroundColor: colors.neutral[100] }]}
+        style={[
+          styles.container,
+          { backgroundColor: colors.neutral[100], justifyContent: "center" },
+        ]}
       >
         <View style={styles.header}>
           <ThemedText type="h1">My Routine</ThemedText>
@@ -257,11 +260,10 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 32,
-    paddingTop: 80,
+    paddingTop: 16,
     gap: 8,
   },
   landingCards: {
-    flex: 1,
     justifyContent: "center",
     paddingHorizontal: 32,
     gap: 12,

@@ -1,5 +1,4 @@
 import { View, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useScanContext } from "../../src/contexts/ScanContext";
 import StepFront from "../../src/components/scan/step-front";

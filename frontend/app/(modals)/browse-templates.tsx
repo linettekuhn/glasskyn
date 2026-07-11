@@ -6,6 +6,7 @@ import {
   useColorScheme,
   ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
 import { listTemplates, getSuggestedTemplates } from "@/api/routines";
 import type { RoutineTemplate, SkinType } from "@/types";
@@ -67,13 +68,18 @@ export default function BrowseTemplatesScreen() {
         );
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        <LoadingSpinner />
+      </SafeAreaView>
+    );
   }
 
   if (templates.length === 0) {
     return (
-      <View
+      <SafeAreaView
         style={[styles.container, { backgroundColor: colors.neutral[100] }]}
+        edges={["top", "bottom"]}
       >
         <View style={styles.header}>
           <ThemedText type="h1">Choose a Template</ThemedText>
@@ -86,12 +92,15 @@ export default function BrowseTemplatesScreen() {
             No templates available
           </ThemedText>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.neutral[100] }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
+      edges={["top", "bottom"]}
+    >
       <View style={styles.header}>
         <ThemedText type="h1">Choose a Template</ThemedText>
         <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
@@ -176,7 +185,7 @@ export default function BrowseTemplatesScreen() {
           contentContainerStyle={styles.listContent}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

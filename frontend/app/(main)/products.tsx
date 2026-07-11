@@ -161,7 +161,6 @@ export default function MyShelfScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 32,
     paddingHorizontal: 20,
   },
   chipRow: {
