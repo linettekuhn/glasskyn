@@ -33,12 +33,8 @@ export default function TemplateCard({
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
 
-  const amSteps = template.steps.filter(
-    (s) => s.time_of_day === "AM",
-  ).length;
-  const pmSteps = template.steps.filter(
-    (s) => s.time_of_day === "PM",
-  ).length;
+  const amSteps = template.steps.filter((s) => s.time_of_day === "AM").length;
+  const pmSteps = template.steps.filter((s) => s.time_of_day === "PM").length;
   const stepLabel =
     selectedTimeOfDay === "AM"
       ? `${amSteps} morning step${amSteps !== 1 ? "s" : ""}`
@@ -52,15 +48,14 @@ export default function TemplateCard({
       style={[
         styles.card,
         {
-          borderColor: colors.neutral[600],
+          borderColor: colors.neutral[400],
           backgroundColor: colors.background,
         },
       ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={styles.cardTop}>
-        <ThemedText type="h6">{template.name}</ThemedText>
+      <View style={styles.cardContent}>
         {isRecommended && (
           <View
             style={[
@@ -82,11 +77,9 @@ export default function TemplateCard({
             </ThemedText>
           </View>
         )}
+        <ThemedText type="h4">{template.name}</ThemedText>
         <View>
-          <ThemedText
-            type="bodySmall"
-            style={{ color: colors.neutral[700] }}
-          >
+          <ThemedText type="bodySmall" style={{ color: colors.neutral[700] }}>
             {stepLabel}
           </ThemedText>
           <ThemedText italic>
@@ -94,13 +87,9 @@ export default function TemplateCard({
           </ThemedText>
         </View>
         {((template.concern_tags && template.concern_tags.length > 0) ||
-          (template.skin_type_tags &&
-            template.skin_type_tags.length > 0)) && (
+          (template.skin_type_tags && template.skin_type_tags.length > 0)) && (
           <View
-            style={[
-              styles.divider,
-              { backgroundColor: colors.neutral[200] },
-            ]}
+            style={[styles.divider, { backgroundColor: colors.neutral[300] }]}
           />
         )}
         {template.concern_tags && template.concern_tags.length > 0 && (
@@ -108,7 +97,7 @@ export default function TemplateCard({
             <ThemedText
               type="overline"
               weight="semiBold"
-              style={{ color: colors.neutral[700] }}
+              style={{ color: colors.neutral[600] }}
             >
               concerns targeted
             </ThemedText>
@@ -116,10 +105,7 @@ export default function TemplateCard({
               {template.concern_tags.map((tag) => (
                 <View
                   key={tag}
-                  style={[
-                    styles.tag,
-                    { backgroundColor: colors.primary[100] },
-                  ]}
+                  style={[styles.tag, { backgroundColor: colors.primary[100] }]}
                 >
                   <ThemedText
                     type="captionSmall"
@@ -137,7 +123,7 @@ export default function TemplateCard({
             <ThemedText
               type="overline"
               weight="semiBold"
-              style={{ color: colors.neutral[700] }}
+              style={{ color: colors.neutral[600] }}
             >
               compatible skin types
             </ThemedText>
@@ -145,10 +131,7 @@ export default function TemplateCard({
               {template.skin_type_tags.map((tag) => (
                 <View
                   key={tag}
-                  style={[
-                    styles.tag,
-                    { backgroundColor: colors.primary[100] },
-                  ]}
+                  style={[styles.tag, { backgroundColor: colors.primary[100] }]}
                 >
                   <ThemedText
                     type="captionSmall"
@@ -179,10 +162,10 @@ const styles = StyleSheet.create({
     padding: 8,
     gap: 4,
   },
-  cardTop: {
+  cardContent: {
     justifyContent: "space-between",
     alignItems: "flex-start",
-    gap: 2,
+    gap: 6,
   },
   recommendedBadge: {
     flexDirection: "row",

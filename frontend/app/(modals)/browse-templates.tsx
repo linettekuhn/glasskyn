@@ -56,7 +56,7 @@ export default function BrowseTemplatesScreen() {
     }, [fetchTemplates]),
   );
 
-  const filteredTemplates =
+  const filteredTemplates = (
     selectedSkinTypes.length === 0
       ? templates
       : templates.filter(
@@ -65,7 +65,11 @@ export default function BrowseTemplatesScreen() {
             t.skin_type_tags.some((st) =>
               selectedSkinTypes.includes(st as SkinType),
             ),
-        );
+        )
+  ).sort(
+    (a, b) =>
+      (suggestedIds.has(b.id) ? 1 : 0) - (suggestedIds.has(a.id) ? 1 : 0),
+  );
 
   if (loading) {
     return (
