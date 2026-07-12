@@ -27,6 +27,7 @@ class ProcessMultiResponse(BaseModel):
     product_name: str | None = None
     brand: str | None = None
     name_brand_method: str | None = None
+    product_type: str | None = None
     category: str | None = None
     category_method: str | None = None
     pao_months: int | None = None

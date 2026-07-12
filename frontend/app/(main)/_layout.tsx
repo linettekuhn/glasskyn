@@ -68,7 +68,7 @@ export default function MainLayout() {
         <Tabs.Screen
           name="routine"
           options={{
-            title: "My Routine",
+            title: "Routines",
             tabBarIcon: ({ focused, color }) => (
               <TabIcon
                 IconComponent={MaterialCommunityIcons}

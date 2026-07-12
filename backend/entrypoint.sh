@@ -12,6 +12,22 @@ echo "Postgres ready!"
 echo "Running Alembic migrations..."
 alembic upgrade head
 
-# --- 3: Start FastAPI with hot reload ---
+# --- 3: Seed templates ---
+echo "Seeding templates..."
+python -c "
+from app.services.seed import seed_templates
+from app.db.session import SessionLocal
+db = SessionLocal()
+try:
+    count = seed_templates(db)
+    if count:
+        print(f'[seed] Inserted/updated {count} template(s)')
+except Exception as e:
+    print(f'[seed] Error: {e}')
+finally:
+    db.close()
+"
+
+# --- 4: Start FastAPI with hot reload ---
 echo "Starting FastAPI dev server..."
 exec uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

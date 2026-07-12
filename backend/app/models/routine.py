@@ -49,6 +49,7 @@ class RoutineTemplate(Base):
     skin_type_tags = Column(JSONB, default=list)
     concern_tags = Column(JSONB, default=list)
     is_active = Column(Boolean, default=True)
+    seed_version = Column(Integer, default=1, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

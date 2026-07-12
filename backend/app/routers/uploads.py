@@ -125,6 +125,10 @@ async def process_uploaded_image(
     # Run ML classifier on the image, override category if confident
     if image_url:
         ml_category, ml_confidence = await asyncio.to_thread(raw_ml_classify, image_url)
+        logger.info(
+            "ML classifier result: category=%s confidence=%.3f",
+            ml_category, ml_confidence,
+        )
         if ml_category is not None and ml_confidence is not None and ml_confidence >= CLASSIFIER_CONFIDENCE_THRESHOLD:
             logger.info(
                 "ML classifier overrides category: %s (confidence=%.3f)",
@@ -230,7 +234,12 @@ async def process_multi_images(
         if not url:
             return None, None
         try:
-            return await asyncio.to_thread(raw_ml_classify, url)
+            cat, conf = await asyncio.to_thread(raw_ml_classify, url)
+            logger.info(
+                "ML classifier result: category=%s confidence=%.3f url=%s",
+                cat, conf, url,
+            )
+            return cat, conf
         except Exception as e:
             logger.error("ML classifier failed for %s: %s", url, e)
             return None, None
@@ -294,9 +303,10 @@ async def process_multi_images(
     db.refresh(scan)
     logger.info("Created ScanResult id=%s", scan.id)
 
-    # Determine product name and brand
+    # Determine product name, brand, and type
     product_name = None
     brand = None
+    product_type = None
     name_brand_method = None
 
     if body.barcode:
@@ -320,6 +330,7 @@ async def process_multi_images(
         llm_result = extract_name_brand(merged_text)
         product_name = llm_result["product_name"]
         brand = llm_result["brand"]
+        product_type = llm_result.get("product_type")
         if product_name or brand:
             name_brand_method = "llm_extraction"
             logger.info(
@@ -347,6 +358,7 @@ async def process_multi_images(
         product_name=product_name,
         brand=brand,
         name_brand_method=name_brand_method,
+        product_type=product_type,
         category=_category,
         category_method=_cat_method,
         pao_months=_pao,

@@ -10,7 +10,7 @@ import {
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
 import { createProduct, updateScanResult } from "../../api/products";
-import type { ProductCategory, NameBrandMethod } from "../../types";
+import type { ProductCategory, ProductType, NameBrandMethod } from "../../types";
 import { useScanContext } from "../../contexts/ScanContext";
 import ProductForm, { ProductFormData } from "../ui/product-form";
 import { DEFAULT_ICON } from "../ui/icon-selector";
@@ -19,18 +19,25 @@ import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "../ui/themed-button";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function StepConfirm() {
+interface StepConfirmProps {
+  returnTo?: string;
+  returnParams?: { templateId: string; stepId: string; stepType: string };
+}
+
+export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps) {
   const { scanResult, paoMonths, setPaoMonths, frontFileKey, reset } =
     useScanContext();
   const initialName = scanResult?.product_name || "";
   const initialBrand = scanResult?.brand || "";
   const initialCategory = (scanResult?.category as ProductCategory) || "";
+  const initialProductType = (scanResult?.product_type as ProductType) || null;
   const initialMethod = scanResult?.name_brand_method as NameBrandMethod | null;
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: initialName,
     brand: initialBrand,
     category: initialCategory,
+    productType: initialProductType,
     paoMonths: paoMonths !== null ? `${paoMonths}` : "",
     icon: DEFAULT_ICON,
   });
@@ -94,6 +101,7 @@ export default function StepConfirm() {
         name: formData.name.trim(),
         brand: formData.brand.trim() || undefined,
         category: formData.category || undefined,
+        product_type: formData.productType || undefined,
         icon: formData.icon || undefined,
         pao_months: paoValue ?? undefined,
         image_s3_key: frontFileKey || undefined,
@@ -107,7 +115,12 @@ export default function StepConfirm() {
         text2: `${formData.name.trim()} saved to your shelf`,
         position: "top",
       });
-      router.replace("/(main)/products");
+      if (returnTo && returnParams) {
+        router.dismissAll();
+        router.push({ pathname: returnTo, params: returnParams });
+      } else {
+        router.replace("/(main)/products");
+      }
     } catch {
       // interceptor shows toast
     } finally {
