@@ -35,11 +35,11 @@ def _check_rate_limit() -> None:
 def extract_name_brand(merged_text: str | None) -> dict:
     if not merged_text or not merged_text.strip():
         logger.info("No OCR text provided to LLM, skipping")
-        return {"product_name": None, "brand": None}
+        return {"product_name": None, "brand": None, "product_type": None}
 
     if not OPENAI_API_KEY:
         logger.warning("OPENAI_API_KEY not set, skipping LLM extraction")
-        return {"product_name": None, "brand": None}
+        return {"product_name": None, "brand": None, "product_type": None}
 
     truncated = merged_text.strip()[:MAX_OCR_CHARS]
     logger.info(
@@ -52,7 +52,7 @@ def extract_name_brand(merged_text: str | None) -> dict:
         _check_rate_limit()
     except RuntimeError as e:
         logger.warning("Rate limit hit, skipping LLM: %s", e)
-        return {"product_name": None, "brand": None}
+        return {"product_name": None, "brand": None, "product_type": None}
 
     client = _get_client()
 
@@ -63,8 +63,10 @@ def extract_name_brand(merged_text: str | None) -> dict:
                 {
                     "role": "system",
                     "content": (
-                        "Extract the product name and brand from the OCR text. "
-                        'Return JSON with keys "product_name" and "brand". '
+                        "Extract the product name, brand, and product type from the OCR text. "
+                        'Return JSON with keys "product_name", "brand", and "product_type". '
+                        "product_type must be one of: cleanser, toner, serum, moisturizer, "
+                        "exfoliant, mask, spot_treatment, spf, oil, other. "
                         "Use null if unknown."
                     ),
                 },
@@ -72,7 +74,7 @@ def extract_name_brand(merged_text: str | None) -> dict:
             ],
             response_format={"type": "json_object"},
             temperature=0,
-            max_tokens=100,
+            max_tokens=150,
         )
 
         usage = response.usage
@@ -87,16 +89,21 @@ def extract_name_brand(merged_text: str | None) -> dict:
         content = response.choices[0].message.content
         if not content:
             logger.warning("LLM returned empty content")
-            return {"product_name": None, "brand": None}
+            return {"product_name": None, "brand": None, "product_type": None}
 
         result = json.loads(content)
 
         product_name = result.get("product_name") or None
         brand = result.get("brand") or None
+        product_type = result.get("product_type") or None
 
-        logger.info("LLM extracted: product_name=%s, brand=%s", product_name, brand)
-        return {"product_name": product_name, "brand": brand}
+        valid_types = {"cleanser", "toner", "serum", "moisturizer", "exfoliant", "mask", "spot_treatment", "spf", "oil", "other"}
+        if product_type and product_type not in valid_types:
+            product_type = None
+
+        logger.info("LLM extracted: product_name=%s, brand=%s, product_type=%s", product_name, brand, product_type)
+        return {"product_name": product_name, "brand": brand, "product_type": product_type}
 
     except Exception as e:
         logger.error("LLM extraction failed: %s", e)
-        return {"product_name": None, "brand": None}
+        return {"product_name": None, "brand": None, "product_type": None}

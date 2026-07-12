@@ -25,6 +25,7 @@ def create_product(
         category=body.category,
         icon=body.icon,
         pao_months=body.pao_months,
+        product_type=body.product_type,
         user_id=current_user.id,
     )
 

@@ -1,3 +1,7 @@
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
