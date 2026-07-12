@@ -32,6 +32,7 @@ export default function ModalLayout() {
             name="scan"
             options={{
               headerShown: false,
+              presentation: "fullScreenModal",
             }}
           />
           <Stack.Screen
@@ -42,6 +43,18 @@ export default function ModalLayout() {
           />
           <Stack.Screen
             name="template-preview"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="edit-template"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="product-picker"
             options={{
               headerShown: false,
             }}

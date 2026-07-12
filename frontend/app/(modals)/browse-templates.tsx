@@ -17,6 +17,7 @@ import ThemedButton from "@/components/ui/themed-button";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import DayNightToggle from "@/components/ui/day-night-toggle";
 import TemplateCard from "@/components/template-card";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const skinTypeChips: { key: "all" | SkinType; label: string }[] = [
   { key: "all", label: "All" },
@@ -73,6 +74,14 @@ export default function BrowseTemplatesScreen() {
     if (selectedTemplateId === b.id) return 1;
     return (suggestedIds.has(b.id) ? 1 : 0) - (suggestedIds.has(a.id) ? 1 : 0);
   });
+
+  const handleSelectTemplate = () => {
+    if (!selectedTemplateId) return;
+    router.push({
+      pathname: "/(modals)/edit-template",
+      params: { templateId: selectedTemplateId },
+    });
+  };
 
   if (loading) {
     return (
@@ -195,6 +204,13 @@ export default function BrowseTemplatesScreen() {
           contentContainerStyle={styles.listContent}
         />
       )}
+      <ThemedButton
+        text="Select Template"
+        onPress={handleSelectTemplate}
+        disabled={!selectedTemplateId}
+        rightIconName="arrow-forward"
+        RightIconComponent={MaterialIcons}
+      />
     </SafeAreaView>
   );
 }
@@ -202,10 +218,10 @@ export default function BrowseTemplatesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 24,
   },
   header: {
     paddingTop: 16,
-    paddingHorizontal: 24,
     gap: 4,
   },
   chipRow: {
@@ -220,12 +236,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   listContent: {
-    paddingHorizontal: 24,
     paddingBottom: 40,
+    paddingHorizontal: 16,
     gap: 12,
   },
   filterWrapper: {
     gap: 2,
-    paddingHorizontal: 24,
   },
 });

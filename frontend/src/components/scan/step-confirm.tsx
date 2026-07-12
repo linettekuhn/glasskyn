@@ -19,7 +19,12 @@ import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "../ui/themed-button";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function StepConfirm() {
+interface StepConfirmProps {
+  returnTo?: string;
+  returnParams?: { routineId: string; stepId: string; stepType: string };
+}
+
+export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps) {
   const { scanResult, paoMonths, setPaoMonths, frontFileKey, reset } =
     useScanContext();
   const initialName = scanResult?.product_name || "";
@@ -107,7 +112,11 @@ export default function StepConfirm() {
         text2: `${formData.name.trim()} saved to your shelf`,
         position: "top",
       });
-      router.replace("/(main)/products");
+      if (returnTo && returnParams) {
+        router.replace({ pathname: returnTo, params: returnParams });
+      } else {
+        router.replace("/(main)/products");
+      }
     } catch {
       // interceptor shows toast
     } finally {
