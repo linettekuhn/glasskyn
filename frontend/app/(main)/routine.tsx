@@ -1,27 +1,19 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   View,
-  FlatList,
   StyleSheet,
   useColorScheme,
   TouchableOpacity,
 } from "react-native";
 import { useFocusEffect, router } from "expo-router";
 import { listRoutines } from "@/api/routines";
+import { useProducts } from "@/hooks/use-products";
 import type { Routine } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import LoadingSpinner from "@/components/ui/loading-spinner";
-
-const STEP_TYPE_LABELS: Record<string, string> = {
-  cleanse: "Cleanse",
-  tone: "Tone",
-  treat: "Treat",
-  moisturize: "Moisturize",
-  spf: "SPF",
-  other: "Other",
-};
+import RoutineCard from "@/components/ui/routine-card";
 
 export default function RoutineScreen() {
   const [routine, setRoutine] = useState<Routine | null>(null);
@@ -29,6 +21,12 @@ export default function RoutineScreen() {
   const [hasRoutine, setHasRoutine] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+  const { products } = useProducts();
+
+  const productMap = useMemo(
+    () => new Map(products.map((p) => [p.id, p])),
+    [products],
+  );
 
   const fetchRoutine = useCallback(async () => {
     setLoading(true);
@@ -203,46 +201,21 @@ export default function RoutineScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.neutral[100] }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.neutral[100],
+          justifyContent: "space-between",
+        },
+      ]}
+    >
       <View style={styles.header}>
-        <ThemedText type="h1">{routine?.name || "My Routine"}</ThemedText>
+        <ThemedText type="h1">My Routine</ThemedText>
       </View>
 
       {routine?.steps && routine.steps.length > 0 ? (
-        <FlatList
-          data={routine.steps}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.stepCard,
-                {
-                  borderColor: colors.primary[200],
-                  backgroundColor: colors.background,
-                },
-              ]}
-            >
-              <View style={styles.stepHeader}>
-                <ThemedText type="body" weight="semiBold">
-                  {STEP_TYPE_LABELS[item.step_type] || item.step_type}
-                </ThemedText>
-                <ThemedText
-                  type="caption"
-                  style={{ color: colors.primary[600] }}
-                >
-                  {item.time_of_day} &middot; {item.frequency}
-                </ThemedText>
-              </View>
-              <ThemedText
-                type="bodySmall"
-                style={{ color: colors.neutral[700] }}
-              >
-                {item.product_id ? "Product assigned" : "No product assigned"}
-              </ThemedText>
-            </View>
-          )}
-          contentContainerStyle={styles.listContent}
-        />
+        <RoutineCard routine={routine} productMap={productMap} />
       ) : (
         <View style={styles.emptySteps}>
           <ThemedText type="bodyLarge" style={{ color: colors.neutral[700] }}>
@@ -257,9 +230,9 @@ export default function RoutineScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 32,
   },
   header: {
-    paddingHorizontal: 32,
     paddingTop: 16,
     gap: 8,
   },
@@ -286,22 +259,6 @@ const styles = StyleSheet.create({
   landingText: {
     flex: 1,
     gap: 2,
-  },
-  stepCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    gap: 4,
-  },
-  stepHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  listContent: {
-    padding: 32,
-    gap: 12,
-    paddingBottom: 96,
   },
   emptySteps: {
     flex: 1,

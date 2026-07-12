@@ -1,26 +1,26 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   StyleSheet,
   useColorScheme,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
-import { getTemplate, cloneTemplate, updateRoutineStep } from "@/api/routines";
+import { getRoutine, deleteRoutine, updateRoutineStep } from "@/api/routines";
 import { useProducts } from "@/hooks/use-products";
-import { useTemplateSelection } from "@/contexts/TemplateContext";
-import type { RoutineTemplate, StepType } from "@/types";
+import type { Routine, StepType } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
-import { STEP_TO_PRODUCT_TYPES } from "@/constants/routine";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
 import LoadingSpinner from "@/components/ui/loading-spinner";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import DraggableFlatList, {
   ScaleDecorator,
   RenderItemParams,
 } from "react-native-draggable-flatlist";
+import { ScrollView } from "react-native-gesture-handler";
 
 const STEP_LABELS: Record<StepType, string> = {
   cleanse: "Cleanse",
@@ -40,94 +40,95 @@ interface StepDisplay {
   product_name: string | null;
 }
 
-export default function EditTemplateScreen() {
-  const { templateId } = useLocalSearchParams<{ templateId: string }>();
-  const [template, setTemplate] = useState<RoutineTemplate | null>(null);
+export default function EditRoutineScreen() {
+  const { routineId } = useLocalSearchParams<{ routineId: string }>();
+  const [routine, setRoutine] = useState<Routine | null>(null);
   const [localStepOrder, setLocalStepOrder] = useState<number[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const {
-    pendingProductChanges,
-    pendingOrderChanges,
-    setPendingProduct,
-    setPendingOrder,
-    clearPendingChanges,
-  } = useTemplateSelection();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const { products } = useProducts();
-  const matchedRef = useRef(false);
 
-  const fetchTemplate = useCallback(async () => {
-    if (!templateId) return;
+  const [pendingProductChanges, setPendingProductChanges] = useState<
+    Map<number, number>
+  >(new Map());
+
+  const [pendingOrderChanges, setPendingOrderChanges] = useState<
+    Map<number, number>
+  >(new Map());
+
+  const setPendingProduct = useCallback((stepId: number, productId: number) => {
+    setPendingProductChanges((prev) => {
+      const next = new Map(prev);
+      next.set(stepId, productId);
+      return next;
+    });
+  }, []);
+
+  const setPendingOrder = useCallback((stepId: number, newOrder: number) => {
+    setPendingOrderChanges((prev) => {
+      const next = new Map(prev);
+      next.set(stepId, newOrder);
+      return next;
+    });
+  }, []);
+
+  const fetchRoutine = useCallback(async () => {
+    if (!routineId) return;
     setLoading(true);
     setLocalStepOrder(null);
-    matchedRef.current = false;
+    setPendingProductChanges(new Map());
+    setPendingOrderChanges(new Map());
     try {
-      const templateData = await getTemplate(Number(templateId));
-      setTemplate(templateData);
+      const data = await getRoutine(Number(routineId));
+      setRoutine(data);
     } catch {
-      setTemplate(null);
+      setRoutine(null);
     } finally {
       setLoading(false);
     }
-  }, [templateId]);
+  }, [routineId]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchTemplate();
-    }, [fetchTemplate]),
+      fetchRoutine();
+    }, [fetchRoutine]),
   );
 
-  useEffect(() => {
-    if (!template || products.length === 0 || matchedRef.current) return;
-    matchedRef.current = true;
-    template.steps.forEach((s) => {
-      const allowed = STEP_TO_PRODUCT_TYPES[s.step_type] ?? [];
-      const match = products.find(
-        (p) =>
-          p.product_type !== null &&
-          allowed.includes(p.product_type) &&
-          p.category === template.routine_type,
-      );
-      if (match) {
-        setPendingProduct(s.id, match.id);
-      }
-    });
-  }, [template, products]);
-
   const enrichedSteps: StepDisplay[] = (() => {
-    if (!template) return [];
-    const base = template.steps.map((s) => {
+    if (!routine) return [];
+    return routine.steps.map((s) => {
       const pendingProductId = pendingProductChanges.get(s.id);
-      const product = pendingProductId
-        ? products.find((p) => p.id === pendingProductId)
+      const effectiveProductId = pendingProductId ?? s.product_id;
+      const product = effectiveProductId
+        ? products.find((p) => p.id === effectiveProductId)
         : null;
       return {
         id: s.id,
         step_order: s.step_order,
         step_type: s.step_type,
         time_of_day: s.time_of_day,
-        product_id: pendingProductId ?? null,
+        product_id: effectiveProductId,
         product_name: product?.name ?? null,
       };
     });
+  })();
+
+  const sortedSteps = (() => {
     if (localStepOrder) {
       const orderMap = new Map(localStepOrder.map((id, i) => [id, i]));
-      return [...base].sort(
+      return [...enrichedSteps].sort(
         (a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0),
       );
     }
-    return base;
+    return [...enrichedSteps].sort((a, b) => a.step_order - b.step_order);
   })();
 
-  const morningSteps = enrichedSteps.filter((s) => s.time_of_day === "AM");
-  const nightSteps = enrichedSteps.filter((s) => s.time_of_day === "PM");
+  const morningSteps = sortedSteps.filter((s) => s.time_of_day === "AM");
+  const nightSteps = sortedSteps.filter((s) => s.time_of_day === "PM");
 
-  const handleDragEnd = (
-    timeOfDay: "AM" | "PM",
-    newOrder: StepDisplay[],
-  ) => {
+  const handleDragEnd = (timeOfDay: "AM" | "PM", newOrder: StepDisplay[]) => {
     const reordered = newOrder.map((s, i) => ({ ...s, step_order: i + 1 }));
     reordered.forEach((s) => setPendingOrder(s.id, s.step_order));
 
@@ -152,27 +153,51 @@ export default function EditTemplateScreen() {
   };
 
   const handleDone = async () => {
+    if (!routineId) return;
     setSaving(true);
     try {
-      const routine = await cloneTemplate(Number(templateId));
-
       const promises: Promise<void>[] = [];
       pendingOrderChanges.forEach((newOrder, stepId) => {
         promises.push(
-          updateRoutineStep(routine.id, stepId, { step_order: newOrder }),
+          updateRoutineStep(Number(routineId), stepId, {
+            step_order: newOrder,
+          }),
         );
       });
       pendingProductChanges.forEach((productId, stepId) => {
         promises.push(
-          updateRoutineStep(routine.id, stepId, { product_id: productId }),
+          updateRoutineStep(Number(routineId), stepId, {
+            product_id: productId,
+          }),
         );
       });
       await Promise.all(promises);
-      clearPendingChanges();
-      router.dismissAll();
+      router.back();
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Routine",
+      `Delete "${routine?.name}"? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteRoutine(Number(routineId));
+              router.dismissAll();
+            } catch {
+              // toast shown by interceptor
+            }
+          },
+        },
+      ],
+    );
   };
 
   if (loading) {
@@ -183,14 +208,14 @@ export default function EditTemplateScreen() {
     );
   }
 
-  if (!template) {
+  if (!routine) {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.neutral[100] }]}
         edges={["top", "bottom"]}
       >
         <View style={styles.center}>
-          <ThemedText type="bodyLarge">Template not found</ThemedText>
+          <ThemedText type="bodyLarge">Routine not found</ThemedText>
           <ThemedButton text="Go Back" link onPress={() => router.back()} />
         </View>
       </SafeAreaView>
@@ -219,11 +244,7 @@ export default function EditTemplateScreen() {
           ]}
         >
           <TouchableOpacity onLongPress={drag} disabled={isActive}>
-            <MaterialIcons
-              name="list"
-              size={24}
-              color={colors.neutral[500]}
-            />
+            <MaterialIcons name="list" size={24} color={colors.neutral[500]} />
           </TouchableOpacity>
 
           <View style={styles.stepContent}>
@@ -242,8 +263,8 @@ export default function EditTemplateScreen() {
                 params: {
                   stepId: item.id,
                   stepType: item.step_type,
-                  returnTo: "/(modals)/edit-template",
-                  templateId,
+                  returnTo: "/(modals)/edit-routine",
+                  routineId,
                 },
               })
             }
@@ -251,9 +272,7 @@ export default function EditTemplateScreen() {
             <MaterialIcons
               name={hasProduct ? "edit" : "warning"}
               size={20}
-              color={
-                hasProduct ? colors.primary[600] : "#e65100"
-              }
+              color={hasProduct ? colors.primary[600] : "#e65100"}
             />
           </TouchableOpacity>
         </TouchableOpacity>
@@ -289,17 +308,13 @@ export default function EditTemplateScreen() {
       style={[styles.container, { backgroundColor: colors.neutral[100] }]}
       edges={["top", "bottom"]}
     >
-      <View style={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <View>
-          <ThemedText type="h1">Edit Template</ThemedText>
-          <ThemedText
-            type="bodyLarge"
-            style={{ color: colors.secondary[600] }}
-          >
-            Fill up each step with a product from your shelf
+          <ThemedText type="h1">Edit Routine</ThemedText>
+          <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
+            Reorder steps or swap products from your shelf
           </ThemedText>
         </View>
-
         {renderSection(
           "morning steps",
           <MaterialIcons name="sunny" size={12} color={colors.text} />,
@@ -317,7 +332,7 @@ export default function EditTemplateScreen() {
           nightSteps,
           "PM",
         )}
-      </View>
+      </ScrollView>
 
       <View
         style={[
@@ -328,6 +343,16 @@ export default function EditTemplateScreen() {
           },
         ]}
       >
+        <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+          <MaterialCommunityIcons
+            name="delete-outline"
+            size={18}
+            color={colors.neutral[600]}
+          />
+          <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
+            Delete
+          </ThemedText>
+        </TouchableOpacity>
         <ThemedButton
           text="Done"
           onPress={handleDone}
@@ -372,5 +397,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderTopWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  deleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
 });

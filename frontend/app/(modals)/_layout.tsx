@@ -59,6 +59,12 @@ export default function ModalLayout() {
               headerShown: false,
             }}
           />
+          <Stack.Screen
+            name="edit-routine"
+            options={{
+              headerShown: false,
+            }}
+          />
         </Stack>
       </TemplateProvider>
     </ScanProvider>

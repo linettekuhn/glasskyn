@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useMemo } from "react";
 import {
   View,
   FlatList,
@@ -7,10 +7,10 @@ import {
   useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
-import { getProducts } from "@/api/products";
+import { useLocalSearchParams, router } from "expo-router";
 import { useTemplateSelection } from "@/contexts/TemplateContext";
-import type { Product, StepType } from "@/types";
+import { useProducts } from "@/hooks/use-products";
+import type { Product } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { STEP_TO_PRODUCT_TYPES } from "@/constants/routine";
 import { ThemedText } from "@/components/ui/themed-text";
@@ -26,33 +26,17 @@ export default function ProductPickerScreen() {
     returnTo: string;
     templateId: string;
   }>();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const { setPendingProduct } = useTemplateSelection();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+  const { products: allProducts, loading } = useProducts();
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const all = await getProducts();
-      const allowed = STEP_TO_PRODUCT_TYPES[stepType ?? "other"] ?? ["other"];
-      const compatible = all.filter(
-        (p: Product) => p.product_type && allowed.includes(p.product_type),
-      );
-      setProducts(compatible);
-    } catch {
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [stepType]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchProducts();
-    }, [fetchProducts]),
-  );
+  const products = useMemo(() => {
+    const allowed = STEP_TO_PRODUCT_TYPES[stepType ?? "other"] ?? ["other"];
+    return allProducts.filter(
+      (p: Product) => p.product_type && allowed.includes(p.product_type),
+    );
+  }, [allProducts, stepType]);
 
   const handleSelect = (product: Product) => {
     if (!stepId) return;
