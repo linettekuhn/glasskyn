@@ -10,7 +10,7 @@ import {
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
 import { createProduct, updateScanResult } from "../../api/products";
-import type { ProductCategory, NameBrandMethod } from "../../types";
+import type { ProductCategory, ProductType, NameBrandMethod } from "../../types";
 import { useScanContext } from "../../contexts/ScanContext";
 import ProductForm, { ProductFormData } from "../ui/product-form";
 import { DEFAULT_ICON } from "../ui/icon-selector";
@@ -21,7 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 interface StepConfirmProps {
   returnTo?: string;
-  returnParams?: { routineId: string; stepId: string; stepType: string };
+  returnParams?: { templateId: string; stepId: string; stepType: string };
 }
 
 export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps) {
@@ -30,12 +30,14 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
   const initialName = scanResult?.product_name || "";
   const initialBrand = scanResult?.brand || "";
   const initialCategory = (scanResult?.category as ProductCategory) || "";
+  const initialProductType = (scanResult?.product_type as ProductType) || null;
   const initialMethod = scanResult?.name_brand_method as NameBrandMethod | null;
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: initialName,
     brand: initialBrand,
     category: initialCategory,
+    productType: initialProductType,
     paoMonths: paoMonths !== null ? `${paoMonths}` : "",
     icon: DEFAULT_ICON,
   });
@@ -99,6 +101,7 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
         name: formData.name.trim(),
         brand: formData.brand.trim() || undefined,
         category: formData.category || undefined,
+        product_type: formData.productType || undefined,
         icon: formData.icon || undefined,
         pao_months: paoValue ?? undefined,
         image_s3_key: frontFileKey || undefined,
@@ -113,7 +116,8 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
         position: "top",
       });
       if (returnTo && returnParams) {
-        router.replace({ pathname: returnTo, params: returnParams });
+        router.dismissAll();
+        router.push({ pathname: returnTo, params: returnParams });
       } else {
         router.replace("/(main)/products");
       }

@@ -1,0 +1,212 @@
+import { Colors, Fonts, getTheme } from "@/constants/theme";
+import { ComponentType, useState } from "react";
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+  ViewStyle,
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+export interface DropdownOption {
+  label: string;
+  value: string;
+}
+
+interface ThemedDropdownProps {
+  options: DropdownOption[];
+  value: string | null;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  IconComponent?: ComponentType<any>;
+  iconName?: string;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
+}
+
+export default function ThemedDropdown({
+  options,
+  value,
+  onChange,
+  placeholder = "Select an option",
+  IconComponent,
+  iconName,
+  disabled,
+  style,
+}: ThemedDropdownProps) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[getTheme(colorScheme)];
+  const bgDefault = colors.background;
+  const defaultColor = colors.neutral[700];
+  const focusColor = colors.secondary[500];
+  const color = colors.text;
+  const [focused, setFocused] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const selected = options.find((o) => o.value === value);
+  const displayText = selected ? selected.label : placeholder;
+  const hasValue = !!selected;
+
+  return (
+    <>
+      <Pressable
+        style={style}
+        onPress={() => {
+          if (!disabled) setOpen(true);
+        }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        disabled={disabled}
+      >
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: bgDefault,
+              borderColor: focused ? focusColor : defaultColor,
+              opacity: disabled ? 0.5 : 1,
+            },
+          ]}
+        >
+          {IconComponent && iconName && (
+            <IconComponent name={iconName} size={17} color={color + "88"} />
+          )}
+          <Text
+            style={[
+              styles.text,
+              {
+                color: hasValue ? color : color + "88",
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {displayText}
+          </Text>
+          <MaterialCommunityIcons
+            name="chevron-down"
+            size={20}
+            color={color + "88"}
+          />
+        </View>
+      </Pressable>
+
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOpen(false)}
+      >
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => setOpen(false)}
+        >
+          <Pressable
+            style={[
+              styles.dropdownCard,
+              {
+                backgroundColor: bgDefault,
+                borderColor: defaultColor,
+              },
+            ]}
+            onPress={() => {}}
+          >
+            <FlatList
+              data={options}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => {
+                const isSelected = item.value === value;
+                return (
+                  <Pressable
+                    style={[
+                      styles.option,
+                      {
+                        backgroundColor: isSelected
+                          ? colors.secondary[500] + "18"
+                          : "transparent",
+                      },
+                    ]}
+                    onPress={() => {
+                      onChange(item.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        {
+                          color: isSelected
+                            ? colors.secondary[600]
+                            : color,
+                          fontFamily: isSelected
+                            ? Fonts.sansSemiBold
+                            : Fonts.sans,
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.label}
+                    </Text>
+                    {isSelected && (
+                      <MaterialCommunityIcons
+                        name="check"
+                        size={18}
+                        color={colors.secondary[600]}
+                      />
+                    )}
+                  </Pressable>
+                );
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    gap: 10,
+  },
+  text: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: Fonts.sans,
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  dropdownCard: {
+    width: "100%",
+    maxWidth: 340,
+    borderRadius: 10,
+    borderWidth: 1,
+    maxHeight: "60%",
+    overflow: "hidden",
+  },
+  option: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  optionText: {
+    fontSize: 16,
+  },
+});

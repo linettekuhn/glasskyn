@@ -12,6 +12,7 @@ import { getProducts } from "@/api/products";
 import { useTemplateSelection } from "@/contexts/TemplateContext";
 import type { RoutineTemplate, Product, StepType } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
+import { STEP_TO_PRODUCT_TYPES } from "@/constants/routine";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
 import LoadingSpinner from "@/components/ui/loading-spinner";
@@ -49,6 +50,7 @@ export default function EditTemplateScreen() {
   const {
     pendingProductChanges,
     pendingOrderChanges,
+    setPendingProduct,
     setPendingOrder,
     clearPendingChanges,
   } = useTemplateSelection();
@@ -66,6 +68,19 @@ export default function EditTemplateScreen() {
       ]);
       setTemplate(templateData);
       setProducts(allProducts);
+
+      templateData.steps.forEach((s) => {
+        const allowed = STEP_TO_PRODUCT_TYPES[s.step_type] ?? [];
+        const match = allProducts.find(
+          (p: Product) =>
+            p.product_type !== null &&
+            allowed.includes(p.product_type) &&
+            p.category === templateData.routine_type,
+        );
+        if (match) {
+          setPendingProduct(s.id, match.id);
+        }
+      });
     } catch {
       setTemplate(null);
       setProducts([]);
@@ -226,6 +241,8 @@ export default function EditTemplateScreen() {
                 params: {
                   stepId: item.id,
                   stepType: item.step_type,
+                  returnTo: "/(modals)/edit-template",
+                  templateId,
                 },
               })
             }

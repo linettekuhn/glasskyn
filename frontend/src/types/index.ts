@@ -39,6 +39,7 @@ export interface ProcessMultiResult {
   product_name: string | null;
   brand: string | null;
   name_brand_method: "barcode_lookup" | "llm_extraction" | null;
+  product_type: string | null;
   category: string | null;
   category_method: string | null;
   pao_months: number | null;

@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 import { createProduct, updateProduct } from "../../src/api/products";
-import type { ProductCategory } from "../../src/types";
+import type { ProductCategory, ProductType } from "../../src/types";
 import ProductForm, {
   ProductFormData,
 } from "../../src/components/ui/product-form";
@@ -26,6 +26,7 @@ export default function AddProductScreen() {
     name?: string;
     brand?: string;
     category?: string;
+    product_type?: string;
     icon?: string;
     pao_months?: string;
     imageS3Key?: string;
@@ -37,6 +38,7 @@ export default function AddProductScreen() {
     name: params.name ?? "",
     brand: params.brand ?? "",
     category: (params.category as ProductCategory) || "",
+    productType: (params.product_type as ProductType) || null,
     paoMonths: params.pao_months ?? "",
     icon: params.icon || DEFAULT_ICON,
   });
@@ -52,6 +54,7 @@ export default function AddProductScreen() {
       name: "",
       brand: "",
       category: null,
+      productType: null,
       paoMonths: "",
       icon: DEFAULT_ICON,
     });
@@ -78,6 +81,7 @@ export default function AddProductScreen() {
         name: formData.name.trim(),
         brand: formData.brand.trim() || undefined,
         category: formData.category || undefined,
+        product_type: formData.productType || undefined,
         icon: formData.icon || undefined,
         pao_months: paoMonths,
         image_s3_key: params.imageS3Key || undefined,

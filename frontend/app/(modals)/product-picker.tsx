@@ -12,25 +12,19 @@ import { getProducts } from "@/api/products";
 import { useTemplateSelection } from "@/contexts/TemplateContext";
 import type { Product, StepType } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
+import { STEP_TO_PRODUCT_TYPES } from "@/constants/routine";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import { MaterialIcons } from "@expo/vector-icons";
 
-const STEP_TO_PRODUCT_TYPES: Record<string, string[]> = {
-  cleanse: ["cleanser"],
-  tone: ["toner"],
-  treat: ["serum", "exfoliant", "mask", "spot_treatment"],
-  moisturize: ["moisturizer", "oil"],
-  spf: ["spf"],
-  other: ["other"],
-};
-
 export default function ProductPickerScreen() {
-  const { routineId, stepId, stepType } = useLocalSearchParams<{
+  const { routineId, stepId, stepType, returnTo, templateId } = useLocalSearchParams<{
     routineId: string;
     stepId: string;
     stepType: string;
+    returnTo: string;
+    templateId: string;
   }>();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,8 +95,8 @@ export default function ProductPickerScreen() {
               router.push({
                 pathname: "/(modals)/scan",
                 params: {
-                  returnTo: "/(modals)/product-picker",
-                  routineId,
+                  returnTo: returnTo || "/(modals)/product-picker",
+                  templateId,
                   stepId,
                   stepType,
                 },

@@ -8,9 +8,9 @@ import StepConfirm from "../../src/components/scan/step-confirm";
 
 export default function ScanScreen() {
   const { step, reset } = useScanContext();
-  const { returnTo, routineId, stepId, stepType } = useLocalSearchParams<{
+  const { returnTo, templateId, stepId, stepType } = useLocalSearchParams<{
     returnTo?: string;
-    routineId?: string;
+    templateId?: string;
     stepId?: string;
     stepType?: string;
   }>();
@@ -37,8 +37,8 @@ export default function ScanScreen() {
         <StepConfirm
           returnTo={returnTo}
           returnParams={
-            routineId && stepId && stepType
-              ? { routineId, stepId, stepType }
+            templateId && stepId && stepType
+              ? { templateId, stepId, stepType }
               : undefined
           }
         />

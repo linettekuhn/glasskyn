@@ -22,6 +22,7 @@ export async function createProduct(data: {
   name: string;
   brand?: string;
   category?: string;
+  product_type?: string;
   image_s3_key?: string;
   icon?: string;
   pao_months?: number;
@@ -40,6 +41,7 @@ export async function updateProduct(id: number, data: {
   name?: string;
   brand?: string;
   category?: string;
+  product_type?: string;
   image_s3_key?: string;
   icon?: string;
   pao_months?: number;
