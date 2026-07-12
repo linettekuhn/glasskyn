@@ -83,7 +83,7 @@ export default function RoutineScreen() {
                 backgroundColor: colors.background,
               },
             ]}
-            onPress={() => {}}
+            onPress={() => router.push("/(modals)/routine-manual")}
             activeOpacity={0.7}
           >
             <View
