@@ -10,15 +10,19 @@ import { listRoutines } from "@/api/routines";
 import { useProducts } from "@/hooks/use-products";
 import type { Routine } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
+import { CREATE_ROUTINE_OPTIONS } from "@/constants/routine";
 import { ThemedText } from "@/components/ui/themed-text";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import LoadingSpinner from "@/components/ui/loading-spinner";
-import RoutineCard from "@/components/ui/routine-card";
+import RoutinePager from "@/components/ui/routine-pager";
+import CreateRoutineSheet from "@/components/ui/create-routine-sheet";
+import CreateRoutineOptionRow from "@/components/ui/create-routine-option";
+import IconButton from "@/components/ui/icon-button";
 
 export default function RoutineScreen() {
-  const [routine, setRoutine] = useState<Routine | null>(null);
+  const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasRoutine, setHasRoutine] = useState(false);
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const { products } = useProducts();
@@ -28,20 +32,13 @@ export default function RoutineScreen() {
     [products],
   );
 
-  const fetchRoutine = useCallback(async () => {
+  const fetchRoutines = useCallback(async () => {
     setLoading(true);
     try {
-      const routines = await listRoutines("skincare");
-      if (routines.length > 0) {
-        const active = routines.find((r) => r.is_active);
-        setRoutine(active || routines[0]);
-        setHasRoutine(true);
-      } else {
-        setRoutine(null);
-        setHasRoutine(false);
-      }
+      const data = await listRoutines("skincare");
+      setRoutines(data);
     } catch {
-      setHasRoutine(false);
+      setRoutines([]);
     } finally {
       setLoading(false);
     }
@@ -49,180 +46,66 @@ export default function RoutineScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchRoutine();
-    }, [fetchRoutine]),
+      fetchRoutines();
+    }, [fetchRoutines]),
   );
 
   if (loading) {
     return <LoadingSpinner />;
   }
 
-  if (!hasRoutine) {
-    return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: colors.neutral[100], justifyContent: "center" },
-        ]}
-      >
-        <View style={styles.header}>
-          <ThemedText type="h1">My Routine</ThemedText>
-          <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
-            You haven't created a routine yet
-          </ThemedText>
-        </View>
-
-        <View style={styles.landingCards}>
-          <TouchableOpacity
-            style={[
-              styles.landingCard,
-              {
-                borderColor: colors.primary[200],
-                backgroundColor: colors.background,
-              },
-            ]}
-            onPress={() => router.push("/(modals)/routine-manual")}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.landingIcon,
-                { backgroundColor: colors.primary[100] },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="playlist-plus"
-                size={28}
-                color={colors.primary[600]}
-              />
-            </View>
-            <View style={styles.landingText}>
-              <ThemedText type="bodyLarge" weight="semiBold">
-                Create from Scratch
-              </ThemedText>
-              <ThemedText
-                type="bodySmall"
-                style={{ color: colors.neutral[700] }}
-              >
-                Build your own routine
-              </ThemedText>
-            </View>
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={24}
-              color={colors.neutral[600]}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.landingCard,
-              {
-                borderColor: colors.primary[200],
-                backgroundColor: colors.background,
-              },
-            ]}
-            onPress={() => router.push("/(modals)/browse-templates")}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.landingIcon,
-                { backgroundColor: colors.primary[100] },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="clipboard-list-outline"
-                size={28}
-                color={colors.primary[600]}
-              />
-            </View>
-            <View style={styles.landingText}>
-              <ThemedText type="bodyLarge" weight="semiBold">
-                Browse Templates
-              </ThemedText>
-              <ThemedText
-                type="bodySmall"
-                style={{ color: colors.neutral[700] }}
-              >
-                Start with a premade routine
-              </ThemedText>
-            </View>
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={24}
-              color={colors.neutral[600]}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.landingCard,
-              {
-                borderColor: colors.primary[200],
-                backgroundColor: colors.background,
-              },
-            ]}
-            onPress={() => {}}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.landingIcon,
-                { backgroundColor: colors.primary[100] },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="auto-fix"
-                size={28}
-                color={colors.primary[600]}
-              />
-            </View>
-            <View style={styles.landingText}>
-              <ThemedText type="bodyLarge" weight="semiBold">
-                Create with AI
-              </ThemedText>
-              <ThemedText
-                type="bodySmall"
-                style={{ color: colors.neutral[700] }}
-              >
-                Let AI build a routine for you
-              </ThemedText>
-            </View>
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={24}
-              color={colors.neutral[600]}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
+  const hasRoutine = routines.length > 0;
+  const hasMultipleRoutines = routines.length > 1;
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: colors.neutral[100],
-          justifyContent: "space-between",
-        },
-      ]}
-    >
+    <View style={[styles.container, { backgroundColor: colors.neutral[100] }]}>
       <View style={styles.header}>
-        <ThemedText type="h1">My Routine</ThemedText>
+        <View style={styles.headerLeft}>
+          <ThemedText type="h1">{`My Routine${hasMultipleRoutines ? "s" : ""}`}</ThemedText>
+          {hasMultipleRoutines && (
+            <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
+              Swipe to switch routines
+            </ThemedText>
+          )}
+        </View>
+        <IconButton
+          onPress={() => setShowCreateSheet(true)}
+          IconComponent={MaterialCommunityIcons}
+          iconName="plus"
+          backgroundColor={colors.primary[600]}
+        />
       </View>
 
-      {routine?.steps && routine.steps.length > 0 ? (
-        <RoutineCard routine={routine} productMap={productMap} />
+      {hasRoutine ? (
+        <RoutinePager routines={routines} productMap={productMap} />
       ) : (
-        <View style={styles.emptySteps}>
-          <ThemedText type="bodyLarge" style={{ color: colors.neutral[700] }}>
-            No steps in this routine yet
+        <View style={styles.emptyState}>
+          <ThemedText
+            type="bodyLarge"
+            style={{ color: colors.neutral[600], marginBottom: 24 }}
+          >
+            You haven&apos;t created a routine yet
           </ThemedText>
+
+          <View style={styles.landingCards}>
+            {CREATE_ROUTINE_OPTIONS.map((option) => (
+              <CreateRoutineOptionRow
+                key={option.title}
+                option={option}
+                onPress={() => option.route && router.push(option.route as any)}
+                iconSize={28}
+                chevronSize={24}
+                style={{ backgroundColor: colors.background }}
+              />
+            ))}
+          </View>
         </View>
       )}
+
+      <CreateRoutineSheet
+        visible={showCreateSheet}
+        onClose={() => setShowCreateSheet(false)}
+      />
     </View>
   );
 }
@@ -230,39 +113,26 @@ export default function RoutineScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 32,
   },
   header: {
-    paddingTop: 16,
-    gap: 8,
-  },
-  landingCards: {
-    justifyContent: "center",
-    paddingHorizontal: 32,
-    gap: 12,
-  },
-  landingCard: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 32,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  landingIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  landingText: {
-    flex: 1,
+  headerLeft: {
     gap: 2,
   },
-  emptySteps: {
+  emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  landingCards: {
+    paddingHorizontal: 32,
+    gap: 12,
+    width: "100%",
   },
 });

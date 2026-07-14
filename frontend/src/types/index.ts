@@ -62,6 +62,15 @@ export type StepType = "cleanse" | "tone" | "treat" | "moisturize" | "spf" | "ot
 
 export type TimeOfDay = "AM" | "PM";
 
+export interface StepDisplay {
+  id: number;
+  step_order: number;
+  step_type: StepType;
+  time_of_day: TimeOfDay;
+  product_id: number | null;
+  product_name: string | null;
+}
+
 export type Frequency = "daily" | "every_other_day" | "weekly";
 
 export type RoutineSource = "manual" | "template" | "llm_generated";

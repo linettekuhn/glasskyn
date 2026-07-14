@@ -1,44 +1,14 @@
 import { useState, useCallback } from "react";
-import {
-  View,
-  StyleSheet,
-  useColorScheme,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useColorScheme, TouchableOpacity, Alert, View } from "react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import { getRoutine, deleteRoutine, updateRoutineStep } from "@/api/routines";
 import { useProducts } from "@/hooks/use-products";
-import type { Routine, StepType } from "@/types";
+import type { Routine, StepDisplay } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
-import LoadingSpinner from "@/components/ui/loading-spinner";
-import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
-import DraggableFlatList, {
-  ScaleDecorator,
-  RenderItemParams,
-} from "react-native-draggable-flatlist";
-import { ScrollView } from "react-native-gesture-handler";
-
-const STEP_LABELS: Record<StepType, string> = {
-  cleanse: "Cleanse",
-  tone: "Tone",
-  treat: "Treat",
-  moisturize: "Moisturize",
-  spf: "SPF",
-  other: "Other",
-};
-
-interface StepDisplay {
-  id: number;
-  step_order: number;
-  step_type: StepType;
-  time_of_day: "AM" | "PM";
-  product_id: number | null;
-  product_name: string | null;
-}
+import RoutineStepEditor from "@/components/ui/routine-step-editor";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 
 export default function EditRoutineScreen() {
   const { routineId } = useLocalSearchParams<{ routineId: string }>();
@@ -125,9 +95,6 @@ export default function EditRoutineScreen() {
     return [...enrichedSteps].sort((a, b) => a.step_order - b.step_order);
   })();
 
-  const morningSteps = sortedSteps.filter((s) => s.time_of_day === "AM");
-  const nightSteps = sortedSteps.filter((s) => s.time_of_day === "PM");
-
   const handleDragEnd = (timeOfDay: "AM" | "PM", newOrder: StepDisplay[]) => {
     const reordered = newOrder.map((s, i) => ({ ...s, step_order: i + 1 }));
     reordered.forEach((s) => setPendingOrder(s.id, s.step_order));
@@ -171,10 +138,11 @@ export default function EditRoutineScreen() {
           }),
         );
       });
-      await Promise.all(promises);
-      router.back();
+      await Promise.all(promises).catch(() => {});
     } finally {
       setSaving(false);
+      router.dismissAll();
+      router.replace("/(main)/routine");
     }
   };
 
@@ -200,216 +168,55 @@ export default function EditRoutineScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-        <LoadingSpinner />
-      </SafeAreaView>
-    );
-  }
-
-  if (!routine) {
-    return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-        edges={["top", "bottom"]}
-      >
-        <View style={styles.center}>
-          <ThemedText type="bodyLarge">Routine not found</ThemedText>
-          <ThemedButton text="Go Back" link onPress={() => router.back()} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const renderStep = ({
-    item,
-    drag,
-    isActive,
-  }: RenderItemParams<StepDisplay>) => {
-    const hasProduct = item.product_id !== null;
-    return (
-      <ScaleDecorator>
-        <TouchableOpacity
-          onLongPress={drag}
-          disabled={isActive}
+  return (
+    <RoutineStepEditor
+      title="Edit Routine"
+      subtitle="Reorder steps or swap products from your shelf"
+      steps={sortedSteps}
+      loading={loading}
+      notFound={!routine && !loading}
+      notFoundMessage="Routine not found"
+      productPickerReturnTo="/(modals)/edit-routine"
+      productPickerExtraParam={{ key: "routineId", value: routineId ?? "" }}
+      onDragEnd={handleDragEnd}
+      bottomBar={
+        <View
           style={[
-            styles.stepRow,
+            styles.bottomBar,
             {
-              borderColor: colors.neutral[300],
-              backgroundColor: isActive
-                ? colors.primary[100]
-                : colors.background,
+              backgroundColor: colors.background,
             },
           ]}
         >
-          <TouchableOpacity onLongPress={drag} disabled={isActive}>
-            <MaterialIcons name="list" size={24} color={colors.neutral[500]} />
-          </TouchableOpacity>
-
-          <View style={styles.stepContent}>
-            <ThemedText type="body">
-              {STEP_LABELS[item.step_type] ?? item.step_type}
-              {hasProduct
-                ? ` with ${item.product_name}`
-                : " with no product found"}
-            </ThemedText>
-          </View>
-
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/(modals)/product-picker",
-                params: {
-                  stepId: item.id,
-                  stepType: item.step_type,
-                  returnTo: "/(modals)/edit-routine",
-                  routineId,
-                },
-              })
-            }
-          >
-            <MaterialIcons
-              name={hasProduct ? "edit" : "warning"}
-              size={20}
-              color={hasProduct ? colors.primary[600] : "#e65100"}
-            />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </ScaleDecorator>
-    );
-  };
-
-  const renderSection = (
-    label: string,
-    icon: React.ReactNode,
-    data: StepDisplay[],
-    timeOfDay: "AM" | "PM",
-  ) => {
-    if (data.length === 0) return null;
-    return (
-      <View style={styles.section}>
-        <ThemedText type="overline" weight="bold">
-          {icon} {label}
-        </ThemedText>
-        <DraggableFlatList
-          data={data}
-          renderItem={renderStep}
-          keyExtractor={(item) => item.id.toString()}
-          onDragEnd={({ data }) => handleDragEnd(timeOfDay, data)}
-          scrollEnabled={false}
-        />
-      </View>
-    );
-  };
-
-  return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      edges={["top", "bottom"]}
-    >
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View>
-          <ThemedText type="h1">Edit Routine</ThemedText>
-          <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
-            Reorder steps or swap products from your shelf
-          </ThemedText>
-        </View>
-        {renderSection(
-          "morning steps",
-          <MaterialIcons name="sunny" size={12} color={colors.text} />,
-          morningSteps,
-          "AM",
-        )}
-
-        {renderSection(
-          "night steps",
-          <MaterialIcons
-            name="nightlight-round"
-            size={12}
-            color={colors.text}
-          />,
-          nightSteps,
-          "PM",
-        )}
-      </ScrollView>
-
-      <View
-        style={[
-          styles.bottomBar,
-          {
-            backgroundColor: colors.background,
-            borderTopColor: colors.neutral[300],
-          },
-        ]}
-      >
-        <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-          <MaterialCommunityIcons
-            name="delete-outline"
-            size={18}
-            color={colors.neutral[600]}
+          <ThemedButton
+            text="Done"
+            onPress={handleDone}
+            disabled={saving}
+            loading={saving}
+            color={colors.primary[600]}
           />
-          <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
-            Delete
-          </ThemedText>
-        </TouchableOpacity>
-        <ThemedButton
-          text="Done"
-          onPress={handleDone}
-          disabled={saving}
-          loading={saving}
-          color={colors.primary[600]}
-        />
-      </View>
-    </SafeAreaView>
+          <ThemedButton
+            link
+            text="Delete Routine"
+            leftIconName="delete-outline"
+            LeftIconComponent={MaterialCommunityIcons}
+            onPress={handleDelete}
+            color={colors.neutral[800]}
+          />
+        </View>
+      }
+    />
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 24,
-    gap: 24,
-    paddingBottom: 24,
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-  },
-  section: {
-    gap: 8,
-  },
-  stepRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  stepContent: {
-    flex: 1,
-  },
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
+const styles = {
   deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
-});
+  bottomBar: {
+    gap: 12,
+    paddingHorizontal: 24,
+  },
+};

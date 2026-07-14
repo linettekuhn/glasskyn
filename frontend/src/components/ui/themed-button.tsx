@@ -38,7 +38,7 @@ type Props = {
     | "captionLarge"
     | "captionSmall"
     | "overline";
-  alignment?: "auto" | FlexAlignType | undefined;
+  alignment?: "auto" | FlexAlignType;
   outlined?: boolean;
   link?: boolean;
   disabled?: boolean;
@@ -54,7 +54,7 @@ export default function ThemedButton({
   onPress,
   color,
   textType = "bodyLarge",
-  alignment = "stretch",
+  alignment,
   outlined = false,
   link = false,
   disabled = false,
@@ -93,7 +93,10 @@ export default function ThemedButton({
       <TouchableOpacity
         disabled={disabled}
         onPress={handleLinkPress}
-        style={{ alignSelf: "center", opacity: disabled ? 0.4 : 1 }}
+        style={{
+          alignSelf: alignment ?? "center",
+          opacity: disabled ? 0.4 : 1,
+        }}
       >
         <View style={styles.content}>
           {LeftIconComponent && leftIconName && (
@@ -152,7 +155,7 @@ export default function ThemedButton({
           opacity: disabled ? 0.6 : 1,
           backgroundColor: bgColor,
           borderColor: outlined ? c : bgColor,
-          alignSelf: alignment,
+          alignSelf: alignment ?? "stretch",
         },
       ]}
     >

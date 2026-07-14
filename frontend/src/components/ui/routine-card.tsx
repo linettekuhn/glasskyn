@@ -91,7 +91,7 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
                 ? "checkbox-multiple-blank-circle-outline"
                 : "checkbox-multiple-marked-circle"
             }
-            iconSize={20}
+            iconSize={24}
             iconColor={colors.primary[600]}
             backgroundColor="rgba(0,0,0,0.2)"
           />
@@ -106,7 +106,7 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
             }
             IconComponent={MaterialIcons}
             iconName="edit"
-            iconSize={18}
+            iconSize={24}
             iconColor={colors.primary[600]}
             backgroundColor="rgba(0,0,0,0.2)"
           />
@@ -183,6 +183,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     gap: 12,
+    paddingBottom: 40,
   },
   emptySteps: {
     flex: 1,

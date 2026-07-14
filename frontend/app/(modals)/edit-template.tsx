@@ -1,44 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import {
-  View,
-  StyleSheet,
-  useColorScheme,
-  TouchableOpacity,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useColorScheme } from "react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import { getTemplate, cloneTemplate, updateRoutineStep } from "@/api/routines";
 import { useProducts } from "@/hooks/use-products";
 import { useTemplateSelection } from "@/contexts/TemplateContext";
-import type { RoutineTemplate, StepType } from "@/types";
+import type { RoutineTemplate, StepDisplay } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { STEP_TO_PRODUCT_TYPES } from "@/constants/routine";
-import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
-import LoadingSpinner from "@/components/ui/loading-spinner";
-import { MaterialIcons } from "@expo/vector-icons";
-import DraggableFlatList, {
-  ScaleDecorator,
-  RenderItemParams,
-} from "react-native-draggable-flatlist";
-
-const STEP_LABELS: Record<StepType, string> = {
-  cleanse: "Cleanse",
-  tone: "Tone",
-  treat: "Treat",
-  moisturize: "Moisturize",
-  spf: "SPF",
-  other: "Other",
-};
-
-interface StepDisplay {
-  id: number;
-  step_order: number;
-  step_type: StepType;
-  time_of_day: "AM" | "PM";
-  product_id: number | null;
-  product_name: string | null;
-}
+import RoutineStepEditor from "@/components/ui/routine-step-editor";
 
 export default function EditTemplateScreen() {
   const { templateId } = useLocalSearchParams<{ templateId: string }>();
@@ -121,13 +91,7 @@ export default function EditTemplateScreen() {
     return base;
   })();
 
-  const morningSteps = enrichedSteps.filter((s) => s.time_of_day === "AM");
-  const nightSteps = enrichedSteps.filter((s) => s.time_of_day === "PM");
-
-  const handleDragEnd = (
-    timeOfDay: "AM" | "PM",
-    newOrder: StepDisplay[],
-  ) => {
+  const handleDragEnd = (timeOfDay: "AM" | "PM", newOrder: StepDisplay[]) => {
     const reordered = newOrder.map((s, i) => ({ ...s, step_order: i + 1 }));
     reordered.forEach((s) => setPendingOrder(s.id, s.step_order));
 
@@ -156,178 +120,53 @@ export default function EditTemplateScreen() {
     try {
       const routine = await cloneTemplate(Number(templateId));
 
+      const templateToRoutine = new Map<number, number>();
+      template!.steps.forEach((ts, i) => {
+        templateToRoutine.set(ts.id, routine.steps[i].id);
+      });
+
       const promises: Promise<void>[] = [];
-      pendingOrderChanges.forEach((newOrder, stepId) => {
-        promises.push(
-          updateRoutineStep(routine.id, stepId, { step_order: newOrder }),
-        );
+      pendingOrderChanges.forEach((newOrder, templateStepId) => {
+        const routineStepId = templateToRoutine.get(templateStepId);
+        if (routineStepId != null) {
+          promises.push(
+            updateRoutineStep(routine.id, routineStepId, {
+              step_order: newOrder,
+            }),
+          );
+        }
       });
-      pendingProductChanges.forEach((productId, stepId) => {
-        promises.push(
-          updateRoutineStep(routine.id, stepId, { product_id: productId }),
-        );
+      pendingProductChanges.forEach((productId, templateStepId) => {
+        const routineStepId = templateToRoutine.get(templateStepId);
+        if (routineStepId != null) {
+          promises.push(
+            updateRoutineStep(routine.id, routineStepId, {
+              product_id: productId,
+            }),
+          );
+        }
       });
-      await Promise.all(promises);
+      await Promise.all(promises).catch(() => {});
       clearPendingChanges();
-      router.dismissAll();
     } finally {
       setSaving(false);
+      router.dismissAll();
+      router.replace("/(main)/routine");
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-        <LoadingSpinner />
-      </SafeAreaView>
-    );
-  }
-
-  if (!template) {
-    return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-        edges={["top", "bottom"]}
-      >
-        <View style={styles.center}>
-          <ThemedText type="bodyLarge">Template not found</ThemedText>
-          <ThemedButton text="Go Back" link onPress={() => router.back()} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const renderStep = ({
-    item,
-    drag,
-    isActive,
-  }: RenderItemParams<StepDisplay>) => {
-    const hasProduct = item.product_id !== null;
-    return (
-      <ScaleDecorator>
-        <TouchableOpacity
-          onLongPress={drag}
-          disabled={isActive}
-          style={[
-            styles.stepRow,
-            {
-              borderColor: colors.neutral[300],
-              backgroundColor: isActive
-                ? colors.primary[100]
-                : colors.background,
-            },
-          ]}
-        >
-          <TouchableOpacity onLongPress={drag} disabled={isActive}>
-            <MaterialIcons
-              name="list"
-              size={24}
-              color={colors.neutral[500]}
-            />
-          </TouchableOpacity>
-
-          <View style={styles.stepContent}>
-            <ThemedText type="body">
-              {STEP_LABELS[item.step_type] ?? item.step_type}
-              {hasProduct
-                ? ` with ${item.product_name}`
-                : " with no product found"}
-            </ThemedText>
-          </View>
-
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/(modals)/product-picker",
-                params: {
-                  stepId: item.id,
-                  stepType: item.step_type,
-                  returnTo: "/(modals)/edit-template",
-                  templateId,
-                },
-              })
-            }
-          >
-            <MaterialIcons
-              name={hasProduct ? "edit" : "warning"}
-              size={20}
-              color={
-                hasProduct ? colors.primary[600] : "#e65100"
-              }
-            />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </ScaleDecorator>
-    );
-  };
-
-  const renderSection = (
-    label: string,
-    icon: React.ReactNode,
-    data: StepDisplay[],
-    timeOfDay: "AM" | "PM",
-  ) => {
-    if (data.length === 0) return null;
-    return (
-      <View style={styles.section}>
-        <ThemedText type="overline" weight="bold">
-          {icon} {label}
-        </ThemedText>
-        <DraggableFlatList
-          data={data}
-          renderItem={renderStep}
-          keyExtractor={(item) => item.id.toString()}
-          onDragEnd={({ data }) => handleDragEnd(timeOfDay, data)}
-          scrollEnabled={false}
-        />
-      </View>
-    );
-  };
-
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      edges={["top", "bottom"]}
-    >
-      <View style={styles.scrollContent}>
-        <View>
-          <ThemedText type="h1">Edit Template</ThemedText>
-          <ThemedText
-            type="bodyLarge"
-            style={{ color: colors.secondary[600] }}
-          >
-            Fill up each step with a product from your shelf
-          </ThemedText>
-        </View>
-
-        {renderSection(
-          "morning steps",
-          <MaterialIcons name="sunny" size={12} color={colors.text} />,
-          morningSteps,
-          "AM",
-        )}
-
-        {renderSection(
-          "night steps",
-          <MaterialIcons
-            name="nightlight-round"
-            size={12}
-            color={colors.text}
-          />,
-          nightSteps,
-          "PM",
-        )}
-      </View>
-
-      <View
-        style={[
-          styles.bottomBar,
-          {
-            backgroundColor: colors.background,
-            borderTopColor: colors.neutral[300],
-          },
-        ]}
-      >
+    <RoutineStepEditor
+      title="Edit Template"
+      subtitle="Fill up each step with a product from your shelf"
+      steps={enrichedSteps}
+      loading={loading}
+      notFound={!template && !loading}
+      notFoundMessage="Template not found"
+      productPickerReturnTo="/(modals)/edit-template"
+      productPickerExtraParam={{ key: "templateId", value: templateId ?? "" }}
+      onDragEnd={handleDragEnd}
+      bottomBar={
         <ThemedButton
           text="Done"
           onPress={handleDone}
@@ -335,42 +174,7 @@ export default function EditTemplateScreen() {
           loading={saving}
           color={colors.primary[600]}
         />
-      </View>
-    </SafeAreaView>
+      }
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flex: 1,
-    padding: 24,
-    gap: 24,
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-  },
-  section: {
-    gap: 8,
-  },
-  stepRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  stepContent: {
-    flex: 1,
-  },
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-  },
-});
