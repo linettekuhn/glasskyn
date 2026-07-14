@@ -308,7 +308,10 @@ export default function EditRoutineScreen() {
       style={[styles.container, { backgroundColor: colors.neutral[100] }]}
       edges={["top", "bottom"]}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View>
           <ThemedText type="h1">Edit Routine</ThemedText>
           <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
@@ -369,10 +372,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     padding: 24,
     gap: 24,
+    paddingBottom: 24,
   },
   center: {
     flex: 1,

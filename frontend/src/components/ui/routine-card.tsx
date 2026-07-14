@@ -13,6 +13,7 @@ import { ThemedText } from "./themed-text";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import DayNightToggle from "./day-night-toggle";
 import ThemedButton from "./themed-button";
+import IconButton from "./icon-button";
 
 const STEP_TYPE_LABELS: Record<string, string> = {
   cleanse: "Cleanse",
@@ -82,33 +83,32 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
             value={selectedTimeOfDay === "AM"}
             onValueChange={(am) => setSelectedTimeOfDay(am ? "AM" : "PM")}
           />
+          <IconButton
+            onPress={toggleAll}
+            IconComponent={MaterialCommunityIcons}
+            iconName={
+              allChecked
+                ? "checkbox-multiple-blank-circle-outline"
+                : "checkbox-multiple-marked-circle"
+            }
+            iconSize={20}
+            iconColor={colors.primary[600]}
+            backgroundColor="rgba(0,0,0,0.2)"
+          />
         </View>
         <View style={styles.cardHeaderRight}>
-          <TouchableOpacity
+          <IconButton
             onPress={() =>
               router.push({
                 pathname: "/(modals)/edit-routine",
                 params: { routineId: routine.id },
               })
             }
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <MaterialIcons
-              name="edit"
-              size={20}
-              color={colors.primary[600]}
-            />
-          </TouchableOpacity>
-          <ThemedButton
-            text={allChecked ? "Uncheck All" : "Check All"}
-            textType="overline"
-            onPress={toggleAll}
-            leftIconName={
-              allChecked
-                ? "checkbox-multiple-blank-circle-outline"
-                : "checkbox-multiple-marked-circle"
-            }
-            LeftIconComponent={MaterialCommunityIcons}
+            IconComponent={MaterialIcons}
+            iconName="edit"
+            iconSize={18}
+            iconColor={colors.primary[600]}
+            backgroundColor="rgba(0,0,0,0.2)"
           />
         </View>
       </View>
