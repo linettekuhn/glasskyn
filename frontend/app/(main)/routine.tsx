@@ -62,29 +62,33 @@ export default function RoutineScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <ThemedText type="h1">{`My Routine${hasMultipleRoutines ? "s" : ""}`}</ThemedText>
-          {hasMultipleRoutines && (
-            <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
-              Swipe to switch routines
+          {hasRoutine && (
+            <ThemedText
+              type="bodyLarge"
+              style={{ color: colors.secondary[600] }}
+            >
+              {hasMultipleRoutines
+                ? "Swipe to switch between your routines"
+                : "Track your steps and stay consistent"}
             </ThemedText>
           )}
         </View>
-        <IconButton
-          onPress={() => setShowCreateSheet(true)}
-          IconComponent={MaterialCommunityIcons}
-          iconName="plus"
-          backgroundColor={colors.primary[600]}
-        />
+        {hasRoutine && (
+          <IconButton
+            onPress={() => setShowCreateSheet(true)}
+            IconComponent={MaterialCommunityIcons}
+            iconName="plus"
+            backgroundColor={colors.primary[600]}
+          />
+        )}
       </View>
 
       {hasRoutine ? (
         <RoutinePager routines={routines} productMap={productMap} />
       ) : (
         <View style={styles.emptyState}>
-          <ThemedText
-            type="bodyLarge"
-            style={{ color: colors.neutral[600], marginBottom: 24 }}
-          >
-            You haven&apos;t created a routine yet
+          <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
+            Build your first routine to get started
           </ThemedText>
 
           <View style={styles.landingCards}>
@@ -113,25 +117,24 @@ export default function RoutineScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: "center",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     paddingHorizontal: 32,
     paddingTop: 16,
-    paddingBottom: 8,
   },
   headerLeft: {
     gap: 2,
   },
   emptyState: {
-    flex: 1,
     justifyContent: "center",
-    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 32,
   },
   landingCards: {
-    paddingHorizontal: 32,
     gap: 12,
     width: "100%",
   },

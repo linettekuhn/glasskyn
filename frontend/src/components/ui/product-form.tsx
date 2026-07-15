@@ -65,33 +65,6 @@ export default function ProductForm({
           weight="bold"
           style={{ color: colors.primary[700] }}
         >
-          PREVIEW
-        </ThemedText>
-        <ProductCard
-          product={{
-            id: -1,
-            name: value.name,
-            brand: value.brand,
-            category: value.category,
-            product_type: value.productType,
-            icon: value.icon,
-            image_s3_key: null,
-            image_url: null,
-            created_at: "",
-            user_id: -1,
-            pao_months: value.paoMonths ? parseInt(value.paoMonths, 10) : null,
-          }}
-          onDelete={() => {}}
-          isPreview
-        />
-      </View>
-
-      <View style={styles.inputWrapper}>
-        <ThemedText
-          type="caption"
-          weight="bold"
-          style={{ color: colors.primary[700] }}
-        >
           CATEGORY
         </ThemedText>
         <View style={styles.segmentedControl}>

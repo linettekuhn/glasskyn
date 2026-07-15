@@ -134,11 +134,11 @@ export default function AddProductScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <ThemedText type="h2">
+            <ThemedText type="h1">
               {isEditing ? "Edit Product Details" : "Add a New Product"}
             </ThemedText>
             <ThemedText
-              type="bodySmall"
+              type="bodyLarge"
               style={{ color: colors.secondary[600] }}
             >
               {isEditing

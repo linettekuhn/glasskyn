@@ -81,6 +81,7 @@ export default function EditRoutineScreen() {
         time_of_day: s.time_of_day,
         product_id: effectiveProductId,
         product_name: product?.name ?? null,
+        frequency: s.frequency ?? null,
       };
     });
   })();

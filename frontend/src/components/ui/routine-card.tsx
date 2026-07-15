@@ -9,6 +9,7 @@ import {
 import { router } from "expo-router";
 import type { Routine, Product } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
+import { FREQUENCY_LABELS } from "@/constants/routine";
 import { ThemedText } from "./themed-text";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import DayNightToggle from "./day-night-toggle";
@@ -75,41 +76,46 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
   return (
     <View style={[styles.card, { backgroundColor: colors.neutral[200] }]}>
       <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderLeft}>
-          <ThemedText type="h2" italic>
-            Steps{" "}
-          </ThemedText>
+        <ThemedText type="h2" italic>
+          {routine.name}
+        </ThemedText>
+        <View style={styles.cardHeaderControls}>
           <DayNightToggle
             value={selectedTimeOfDay === "AM"}
             onValueChange={(am) => setSelectedTimeOfDay(am ? "AM" : "PM")}
           />
-          <IconButton
-            onPress={toggleAll}
-            IconComponent={MaterialCommunityIcons}
-            iconName={
-              allChecked
-                ? "checkbox-multiple-blank-circle-outline"
-                : "checkbox-multiple-marked-circle"
-            }
-            iconSize={24}
-            iconColor={colors.primary[600]}
-            backgroundColor="rgba(0,0,0,0.2)"
-          />
-        </View>
-        <View style={styles.cardHeaderRight}>
-          <IconButton
-            onPress={() =>
-              router.push({
-                pathname: "/(modals)/edit-routine",
-                params: { routineId: routine.id },
-              })
-            }
-            IconComponent={MaterialIcons}
-            iconName="edit"
-            iconSize={24}
-            iconColor={colors.primary[600]}
-            backgroundColor="rgba(0,0,0,0.2)"
-          />
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 4,
+            }}
+          >
+            <IconButton
+              onPress={toggleAll}
+              IconComponent={MaterialCommunityIcons}
+              iconName={
+                allChecked
+                  ? "checkbox-multiple-blank-circle-outline"
+                  : "checkbox-multiple-marked-circle"
+              }
+              iconSize={24}
+              iconColor={colors.primary[600]}
+              backgroundColor="rgba(0,0,0,0.2)"
+            />
+            <IconButton
+              onPress={() =>
+                router.push({
+                  pathname: "/(modals)/edit-routine",
+                  params: { routineId: routine.id },
+                })
+              }
+              IconComponent={MaterialIcons}
+              iconName="edit"
+              iconSize={24}
+              iconColor={colors.primary[600]}
+              backgroundColor="rgba(0,0,0,0.2)"
+            />
+          </View>
         </View>
       </View>
       <FlatList
@@ -140,6 +146,9 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
                 <ThemedText type="bodyLarge" weight="semiBold">
                   {index + 1}.{" "}
                   {STEP_TYPE_LABELS[item.step_type] || item.step_type}
+                  {item.frequency
+                    ? ` ${FREQUENCY_LABELS[item.frequency] ?? item.frequency}`
+                    : ""}
                 </ThemedText>
                 <ThemedText>
                   {productName ? `with ${productName}` : ""}
@@ -162,19 +171,13 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 0,
   },
   cardHeader: {
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  cardHeaderControls: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-  },
-  cardHeaderLeft: {
-    flexDirection: "row",
-    gap: 4,
-    alignItems: "center",
-  },
-  cardHeaderRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    width: "100%",
   },
   stepCard: {
     flexDirection: "row",

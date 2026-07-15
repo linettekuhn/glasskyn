@@ -7,7 +7,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Colors, getTheme } from "@/constants/theme";
-import { STEP_LABELS } from "@/constants/routine";
+import { STEP_LABELS, FREQUENCY_LABELS } from "@/constants/routine";
 import type { StepDisplay } from "@/types";
 import { ThemedText } from "./themed-text";
 import ThemedButton from "./themed-button";
@@ -30,6 +30,9 @@ interface RoutineStepEditorProps {
   productPickerExtraParam?: { key: string; value: string };
   onDragEnd: (timeOfDay: "AM" | "PM", newOrder: StepDisplay[]) => void;
   bottomBar?: React.ReactNode;
+  onDeleteStep?: (id: number) => void;
+  headerContent?: React.ReactNode;
+  onAddStep?: (timeOfDay: "AM" | "PM") => void;
 }
 
 export default function RoutineStepEditor({
@@ -43,6 +46,9 @@ export default function RoutineStepEditor({
   productPickerExtraParam,
   onDragEnd,
   bottomBar,
+  onDeleteStep,
+  headerContent,
+  onAddStep,
 }: RoutineStepEditorProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -102,6 +108,7 @@ export default function RoutineStepEditor({
           <View style={styles.stepContent}>
             <ThemedText type="body">
               {STEP_LABELS[item.step_type] ?? item.step_type}
+              {item.frequency ? ` ${FREQUENCY_LABELS[item.frequency]}` : ""}
               {hasProduct
                 ? ` with ${item.product_name}`
                 : " with no product found"}
@@ -132,6 +139,16 @@ export default function RoutineStepEditor({
               color={hasProduct ? colors.primary[600] : "#e65100"}
             />
           </TouchableOpacity>
+
+          {onDeleteStep && (
+            <TouchableOpacity onPress={() => onDeleteStep(item.id)}>
+              <MaterialIcons
+                name="delete-outline"
+                size={20}
+                color={colors.neutral[500]}
+              />
+            </TouchableOpacity>
+          )}
         </TouchableOpacity>
       </ScaleDecorator>
     );
@@ -143,19 +160,30 @@ export default function RoutineStepEditor({
     data: StepDisplay[],
     timeOfDay: "AM" | "PM",
   ) => {
-    if (data.length === 0) return null;
+    if (data.length === 0 && !onAddStep) return null;
     return (
       <View style={styles.section}>
         <ThemedText type="overline" weight="bold">
           {icon} {label}
         </ThemedText>
-        <DraggableFlatList
-          data={data}
-          renderItem={renderStep}
-          keyExtractor={(item) => item.id.toString()}
-          onDragEnd={({ data }) => onDragEnd(timeOfDay, data)}
-          scrollEnabled={false}
-        />
+        {data.length > 0 && (
+          <DraggableFlatList
+            data={data}
+            renderItem={renderStep}
+            keyExtractor={(item) => item.id.toString()}
+            onDragEnd={({ data }) => onDragEnd(timeOfDay, data)}
+            scrollEnabled={false}
+          />
+        )}
+        {onAddStep && (
+          <ThemedButton
+            link
+            text="+ Add Step"
+            textType="bodySmall"
+            onPress={() => onAddStep(timeOfDay)}
+            alignment="flex-start"
+          />
+        )}
       </View>
     );
   };
@@ -184,6 +212,8 @@ export default function RoutineStepEditor({
             {subtitle}
           </ThemedText>
         </View>
+
+        {headerContent}
 
         {renderSection(
           "morning steps",

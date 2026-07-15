@@ -6,6 +6,7 @@ import { getTemplate } from "@/api/routines";
 import { useTemplateSelection } from "@/contexts/TemplateContext";
 import type { RoutineTemplate, StepType } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
+import { FREQUENCY_LABELS } from "@/constants/routine";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
 import LoadingSpinner from "@/components/ui/loading-spinner";
@@ -116,6 +117,9 @@ export default function TemplatePreviewScreen() {
               >
                 <ThemedText type="body">
                   {index + 1}. {STEP_LABELS[step.step_type] ?? step.step_type}
+                  {step.frequency
+                    ? ` ${FREQUENCY_LABELS[step.frequency] ?? step.frequency}`
+                    : ""}
                 </ThemedText>
               </View>
             ))}
@@ -139,6 +143,9 @@ export default function TemplatePreviewScreen() {
               >
                 <ThemedText type="body">
                   {index + 1}. {STEP_LABELS[step.step_type] ?? step.step_type}
+                  {step.frequency
+                    ? ` ${FREQUENCY_LABELS[step.frequency] ?? step.frequency}`
+                    : ""}
                 </ThemedText>
               </View>
             ))}

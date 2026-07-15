@@ -69,6 +69,7 @@ export interface StepDisplay {
   time_of_day: TimeOfDay;
   product_id: number | null;
   product_name: string | null;
+  frequency: Frequency | null;
 }
 
 export type Frequency = "daily" | "every_other_day" | "weekly";

@@ -80,6 +80,7 @@ export default function EditTemplateScreen() {
         time_of_day: s.time_of_day,
         product_id: pendingProductId ?? null,
         product_name: product?.name ?? null,
+        frequency: s.frequency ?? null,
       };
     });
     if (localStepOrder) {

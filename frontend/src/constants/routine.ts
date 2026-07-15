@@ -1,4 +1,4 @@
-import type { StepType } from "@/types";
+import type { StepType, Frequency } from "@/types";
 import type { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export const STEP_LABELS: Record<StepType, string> = {
@@ -17,6 +17,12 @@ export const STEP_TO_PRODUCT_TYPES: Record<string, string[]> = {
   moisturize: ["moisturizer", "oil"],
   spf: ["spf"],
   other: ["other"],
+};
+
+export const FREQUENCY_LABELS: Record<Frequency, string> = {
+  daily: "daily",
+  every_other_day: "every other day",
+  weekly: "weekly",
 };
 
 type MaterialCommunityIconName = React.ComponentProps<

@@ -100,6 +100,15 @@ export default function BrowseTemplatesScreen() {
         edges={["top", "bottom"]}
       >
         <View style={styles.header}>
+          <ThemedButton
+            link
+            text="Go Back"
+            leftIconName="arrow-back"
+            LeftIconComponent={MaterialIcons}
+            onPress={() => router.back()}
+            color={colors.neutral[800]}
+            alignment="flex-start"
+          />
           <ThemedText type="h1">Choose a Template</ThemedText>
           <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
             Find a routine that works for your skin
@@ -120,6 +129,15 @@ export default function BrowseTemplatesScreen() {
       edges={["top", "bottom"]}
     >
       <View style={styles.header}>
+        <ThemedButton
+          link
+          text="Go Back"
+          leftIconName="arrow-back"
+          LeftIconComponent={MaterialIcons}
+          onPress={() => router.back()}
+          color={colors.neutral[800]}
+          alignment="flex-start"
+        />
         <ThemedText type="h1">Choose a Template</ThemedText>
         <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
           Find a routine that works for your skin

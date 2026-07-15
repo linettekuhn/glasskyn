@@ -3,6 +3,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   useColorScheme,
+  View,
 } from "react-native";
 import { router } from "expo-router";
 import { Colors, getTheme } from "@/constants/theme";
@@ -43,15 +44,12 @@ export default function CreateRoutineSheet({
           activeOpacity={1}
           style={[styles.sheet, { backgroundColor: colors.background }]}
         >
-          <ThemedText type="h3" weight="bold">
-            New Routine
-          </ThemedText>
-          <ThemedText
-            type="bodySmall"
-            style={{ color: colors.neutral[600], marginBottom: 8 }}
-          >
-            Choose how you&apos;d like to start
-          </ThemedText>
+          <View>
+            <ThemedText type="h2">New Routine</ThemedText>
+            <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
+              Choose how you&apos;d like to start
+            </ThemedText>
+          </View>
 
           {CREATE_ROUTINE_OPTIONS.map((option) => (
             <CreateRoutineOptionRow
@@ -72,7 +70,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 32,
+    padding: 24,
   },
   sheet: {
     width: "100%",

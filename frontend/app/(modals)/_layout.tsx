@@ -9,7 +9,7 @@ export default function ModalLayout() {
         <Stack
           screenOptions={{
             presentation: "modal",
-            headerShown: true,
+            headerShown: false,
             headerTitle: "",
             headerTintColor: "#6c63ff",
             headerBackTitle: "Back",
@@ -24,47 +24,22 @@ export default function ModalLayout() {
           <Stack.Screen
             name="add-product"
             options={{
-              headerShown: false,
               contentStyle: { backgroundColor: "#fff" },
             }}
           />
           <Stack.Screen
             name="scan"
             options={{
-              headerShown: false,
               presentation: "fullScreenModal",
             }}
           />
-          <Stack.Screen
-            name="browse-templates"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="template-preview"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="edit-template"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="product-picker"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="edit-routine"
-            options={{
-              headerShown: false,
-            }}
-          />
+          <Stack.Screen name="browse-templates" />
+          <Stack.Screen name="template-preview" />
+          <Stack.Screen name="edit-template" />
+          <Stack.Screen name="product-picker" />
+          <Stack.Screen name="routine-manual" />
+          <Stack.Screen name="add-step" />
+          <Stack.Screen name="edit-routine" />
         </Stack>
       </TemplateProvider>
     </ScanProvider>
