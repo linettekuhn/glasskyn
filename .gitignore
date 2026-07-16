@@ -22,3 +22,4 @@ credentials/
 **/data/raw/
 **/data/unlabeled/
 **/data/processed/
+**/data/chromadb/
