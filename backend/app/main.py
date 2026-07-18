@@ -11,6 +11,7 @@ from app.routers import products as products_router
 from app.routers import uploads as uploads_router
 from app.routers import classify as classify_router
 from app.routers import routines as routines_router
+from app.routers import ingredients as ingredients_router
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -29,6 +30,7 @@ app.include_router(products_router.router)
 app.include_router(uploads_router.router)
 app.include_router(classify_router.router)
 app.include_router(routines_router.router)
+app.include_router(ingredients_router.router)
 
 
 @app.get("/items")
