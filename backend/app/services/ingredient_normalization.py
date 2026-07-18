@@ -109,19 +109,19 @@ def _match_token(
     token: str, alias_map: dict[str, dict]
 ) -> dict:
     if _is_color_index(token):
-        return {"canonical_name": None, "raw_text": token, "match_type": "skipped", "confidence": 0}
+        return {"canonical_name": None, "id": None, "raw_text": token, "match_type": "skipped", "confidence": 0}
 
     cleaned = _clean_token(token)
     if not cleaned:
-        return {"canonical_name": None, "raw_text": token, "match_type": "skipped", "confidence": 0}
+        return {"canonical_name": None, "id": None, "raw_text": token, "match_type": "skipped", "confidence": 0}
 
     lower = cleaned.lower()
 
     if lower in alias_map:
         record = alias_map[lower]
         if lower == record["ingredient_name"].lower():
-            return {"canonical_name": record["ingredient_name"], "raw_text": token, "match_type": "exact", "confidence": 1.0}
-        return {"canonical_name": record["ingredient_name"], "raw_text": token, "match_type": "alias", "confidence": 1.0}
+            return {"canonical_name": record["ingredient_name"], "id": record["id"], "raw_text": token, "match_type": "exact", "confidence": 1.0}
+        return {"canonical_name": record["ingredient_name"], "id": record["id"], "raw_text": token, "match_type": "alias", "confidence": 1.0}
 
     canonical_keys = {r["ingredient_name"].lower() for r in alias_map.values()}
 
@@ -129,15 +129,15 @@ def _match_token(
         if key in canonical_keys:
             continue
         if len(key) > 3 and key in lower:
-            return {"canonical_name": record["ingredient_name"], "raw_text": token, "match_type": "partial", "confidence": 0.9}
+            return {"canonical_name": record["ingredient_name"], "id": record["id"], "raw_text": token, "match_type": "partial", "confidence": 0.9}
 
     for key, record in alias_map.items():
         if key not in canonical_keys:
             continue
         if len(lower) > 3 and lower in key:
-            return {"canonical_name": record["ingredient_name"], "raw_text": token, "match_type": "partial", "confidence": 0.9}
+            return {"canonical_name": record["ingredient_name"], "id": record["id"], "raw_text": token, "match_type": "partial", "confidence": 0.9}
 
-    return {"canonical_name": None, "raw_text": token, "match_type": "not_found", "confidence": 0}
+    return {"canonical_name": None, "id": None, "raw_text": token, "match_type": "not_found", "confidence": 0}
 
 
 def normalize_ingredients(raw_text: str | None) -> list[dict]:
