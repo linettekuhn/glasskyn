@@ -364,6 +364,7 @@ async def process_multi_images(
         pao_months=_pao,
         expiry_date=_expiry,
         extraction_method=_ext_method,
+        raw_ocr_text=merged_text,
     )
 
 

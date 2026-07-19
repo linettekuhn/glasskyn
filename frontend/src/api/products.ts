@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { ProcessMultiResult, ProcessPaoResult } from '../types';
+import type { ProcessMultiResult, ProcessPaoResult, IngredientAnalysisResponse } from '../types';
 
 export interface ProcessImageResult {
   name: string | null;
@@ -103,5 +103,21 @@ export async function updateScanResult(
 ) {
   console.log("[API] updateScanResult called", { scanId, data });
   const response = await apiClient.patch(`/uploads/scan/${scanId}`, data);
+  return response.data;
+}
+
+export async function analyzeIngredients(
+  ingredientText: string,
+): Promise<IngredientAnalysisResponse> {
+  const response = await apiClient.post('/ingredients/analyze', {
+    ingredient_text: ingredientText,
+  }, { timeout: 60000 });
+  return response.data;
+}
+
+export async function getProductScanText(
+  productId: number,
+): Promise<{ raw_ocr_text: string | null }> {
+  const response = await apiClient.get(`/products/${productId}/scan-text`);
   return response.data;
 }

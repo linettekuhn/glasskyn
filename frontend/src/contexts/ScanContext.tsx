@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import type { ProcessMultiResult, ScanStep } from "../types";
+import type { ProcessMultiResult, ScanStep, IngredientAnalysisResponse } from "../types";
 
 interface ScanContextType {
   step: ScanStep;
@@ -10,6 +10,8 @@ interface ScanContextType {
   barcode: string | null;
   scanResult: ProcessMultiResult | null;
   paoMonths: number | null;
+  ingredientAnalysis: IngredientAnalysisResponse | null;
+  analyzingIngredients: boolean;
   setStep: (v: ScanStep) => void;
   setFrontImageUri: (v: string | null) => void;
   setBackImageUri: (v: string | null) => void;
@@ -18,6 +20,8 @@ interface ScanContextType {
   setBarcode: (v: string | null) => void;
   setScanResult: (v: ProcessMultiResult | null) => void;
   setPaoMonths: (v: number | null) => void;
+  setIngredientAnalysis: (v: IngredientAnalysisResponse | null) => void;
+  setAnalyzingIngredients: (v: boolean) => void;
   reset: () => void;
 }
 
@@ -32,6 +36,8 @@ export function ScanProvider({ children }: { children: ReactNode }) {
   const [barcode, setBarcode] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ProcessMultiResult | null>(null);
   const [paoMonths, setPaoMonths] = useState<number | null>(null);
+  const [ingredientAnalysis, setIngredientAnalysis] = useState<IngredientAnalysisResponse | null>(null);
+  const [analyzingIngredients, setAnalyzingIngredients] = useState(false);
 
   const reset = useCallback(() => {
     setStep("front");
@@ -42,6 +48,8 @@ export function ScanProvider({ children }: { children: ReactNode }) {
     setBarcode(null);
     setScanResult(null);
     setPaoMonths(null);
+    setIngredientAnalysis(null);
+    setAnalyzingIngredients(false);
   }, []);
 
   return (
@@ -55,6 +63,8 @@ export function ScanProvider({ children }: { children: ReactNode }) {
         barcode,
         scanResult,
         paoMonths,
+        ingredientAnalysis,
+        analyzingIngredients,
         setStep,
         setFrontImageUri,
         setBackImageUri,
@@ -63,6 +73,8 @@ export function ScanProvider({ children }: { children: ReactNode }) {
         setBarcode,
         setScanResult,
         setPaoMonths,
+        setIngredientAnalysis,
+        setAnalyzingIngredients,
         reset,
       }}
     >

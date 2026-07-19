@@ -33,6 +33,7 @@ class ProcessMultiResponse(BaseModel):
     pao_months: int | None = None
     expiry_date: str | None = None
     extraction_method: str | None = None
+    raw_ocr_text: str | None = None
 
 
 class ProcessPaoRequest(BaseModel):

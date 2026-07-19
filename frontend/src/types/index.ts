@@ -45,6 +45,7 @@ export interface ProcessMultiResult {
   pao_months: number | null;
   expiry_date: string | null;
   extraction_method: string | null;
+  raw_ocr_text: string | null;
 }
 
 export interface ProcessPaoResult {
@@ -136,4 +137,43 @@ export interface RoutineTemplate {
   steps: RoutineTemplateStep[];
   created_at: string;
   updated_at: string;
+}
+
+export interface FlaggedIngredient {
+  name: string;
+  reason: string;
+}
+
+export interface MatchedIngredient {
+  ingredient_name: string;
+  raw_text: string;
+  safety_score: number;
+  known_risks: string[];
+  benefits: string[];
+  confidence: number;
+  match_type: string;
+}
+
+export interface NotFoundIngredient {
+  raw_text: string;
+  confidence: number;
+}
+
+export interface AnalysisStats {
+  total: number;
+  matched: number;
+  not_found: number;
+  avg_safety_score: number;
+  total_known_risks: number;
+}
+
+export interface IngredientAnalysisResponse {
+  method: string;
+  analysis: string | null;
+  matched: MatchedIngredient[];
+  not_found: NotFoundIngredient[];
+  stats: AnalysisStats;
+  overall_safety_score: number | null;
+  flags: string[];
+  source_attribution: string[];
 }

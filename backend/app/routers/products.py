@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.schemas.product import ProductOut, ProductCreate, ProductUpdate
 from app.schemas.openbeautyfacts import BarcodeLookupResult
@@ -107,6 +108,38 @@ def delete_product(
     db.commit()
 
     return None
+
+
+class ProductScanTextResponse(BaseModel):
+    raw_ocr_text: str | None = None
+
+
+@router.get("/{product_id}/scan-text", response_model=ProductScanTextResponse)
+def get_product_scan_text(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = (
+        db.query(Product)
+        .filter(Product.id == product_id, Product.user_id == current_user.id)
+        .first()
+    )
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
+        )
+
+    scan = (
+        db.query(ScanResult)
+        .filter(ScanResult.product_id == product_id)
+        .order_by(ScanResult.scan_date.desc())
+        .first()
+    )
+
+    return ProductScanTextResponse(
+        raw_ocr_text=scan.raw_ocr_text if scan else None,
+    )
 
 
 @router.get("/lookup/{barcode}", response_model=BarcodeLookupResult)

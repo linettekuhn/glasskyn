@@ -40,6 +40,12 @@ export default function ModalLayout() {
           <Stack.Screen name="routine-manual" />
           <Stack.Screen name="add-step" />
           <Stack.Screen name="edit-routine" />
+          <Stack.Screen
+            name="product-detail"
+            options={{
+              contentStyle: { backgroundColor: "#fff" },
+            }}
+          />
         </Stack>
       </TemplateProvider>
     </ScanProvider>
