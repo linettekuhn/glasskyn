@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 
 from app.services.ingredient_normalization import normalize_ingredients
-from app.services.vector_store import get_collection, query_ingredients
+from app.services.vector_store import get_collection, query_ingredients, query_ingredients_batch
 
 logger = logging.getLogger(__name__)
 
 HIGH_CONFIDENCE = 0.8
-LOW_CONFIDENCE = 0.5
+LOW_CONFIDENCE = 0.65
 MAX_DISTANCE = 1.5
 
 
@@ -61,6 +61,7 @@ def retrieve_safety_records(
 
     matched: list[dict] = []
     not_found: list[dict] = []
+    unknowns: list[dict] = []
 
     for item in normalized:
         ingredient_id = item.get("id")
@@ -74,13 +75,34 @@ def retrieve_safety_records(
             else:
                 not_found.append({"raw_text": item["raw_text"], "confidence": 0})
         else:
-            record = _fuzzy_lookup(item["raw_text"], min_confidence)
-            if record:
-                record["raw_text"] = item["raw_text"]
-                record["canonical_name"] = record["metadata"].get("ingredient_name")
-                matched.append(record)
+            unknowns.append(item)
+
+    if unknowns:
+        unknown_texts = [item["raw_text"] for item in unknowns]
+        batch_results = query_ingredients_batch(unknown_texts, n_results=1)
+
+        for item in unknowns:
+            raw_text = item["raw_text"]
+            results = batch_results.get(raw_text, [])
+            if results:
+                top = results[0]
+                distance = top["distance"]
+                confidence = _confidence_from_distance(distance)
+                if confidence >= min_confidence:
+                    record = {
+                        "id": top["id"],
+                        "document": top["document"],
+                        "metadata": top["metadata"],
+                        "confidence": round(confidence, 3),
+                        "match_type": "semantic",
+                        "raw_text": raw_text,
+                        "canonical_name": top["metadata"].get("ingredient_name") if top.get("metadata") else None,
+                    }
+                    matched.append(record)
+                else:
+                    not_found.append({"raw_text": raw_text, "confidence": 0})
             else:
-                not_found.append({"raw_text": item["raw_text"], "confidence": 0})
+                not_found.append({"raw_text": raw_text, "confidence": 0})
 
     scores = [m["metadata"]["safety_score"] for m in matched if m.get("metadata")]
     risks = sum(m["metadata"].get("known_risks_count", 0) for m in matched if m.get("metadata"))

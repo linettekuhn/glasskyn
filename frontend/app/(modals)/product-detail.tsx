@@ -33,9 +33,12 @@ export default function ProductDetailScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
 
-  const [rawOcrText, setRawOcrText] = useState<string | null>(null);
-  const [flaggedIngredients, setFlaggedIngredients] = useState<FlaggedIngredient[] | null>(null);
+  const [allIngredients, setAllIngredients] = useState<string[] | null>(null);
+  const [flaggedIngredients, setFlaggedIngredients] = useState<
+    FlaggedIngredient[] | null
+  >(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(true);
+  const [safetyScore, setSafetyScore] = useState<number | null>(null);
 
   const paoMonths = params.paoMonths ? parseInt(params.paoMonths, 10) : null;
 
@@ -44,7 +47,20 @@ export default function ProductDetailScreen() {
     const created = new Date(params.createdAt);
     const expiry = new Date(created);
     expiry.setMonth(expiry.getMonth() + paoMonths);
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
     return `${months[expiry.getMonth()]} ${expiry.getDate()} ${expiry.getFullYear()}`;
   })();
 
@@ -58,13 +74,32 @@ export default function ProductDetailScreen() {
     setIsLoadingAnalysis(true);
     try {
       const { raw_ocr_text } = await getProductScanText(productId);
-      setRawOcrText(raw_ocr_text);
       if (raw_ocr_text) {
         const result = await analyzeIngredients(raw_ocr_text);
-        const flags: FlaggedIngredient[] = result.flags.map((f) => ({
-          name: f.split(":")[0] || f,
-          reason: f.includes(":") ? f.split(":").slice(1).join(":").trim() : "Flagged by analysis",
-        }));
+        console.log(result);
+        const ingredients = [
+          ...result.matched.map((m) => m.raw_text),
+          ...result.not_found.map((n) => n.raw_text),
+        ];
+        console.log(ingredients);
+        setAllIngredients(ingredients.length > 0 ? ingredients : null);
+        setSafetyScore(result.overall_safety_score);
+        const flags: FlaggedIngredient[] = result.flags.map((f) => {
+          const flagName = f.split(":")[0] || f;
+          const reason = f.includes(":")
+            ? f.split(":").slice(1).join(":").trim()
+            : "Flagged by analysis";
+          const matched = result.matched.find(
+            (m) =>
+              m.raw_text.toLowerCase() === flagName.toLowerCase() ||
+              m.ingredient_name.toLowerCase() === flagName.toLowerCase(),
+          );
+          return {
+            name: flagName,
+            reason,
+            known_risks: matched?.known_risks ?? [],
+          };
+        });
         setFlaggedIngredients(flags.length > 0 ? flags : []);
       }
     } catch {
@@ -85,7 +120,9 @@ export default function ProductDetailScreen() {
     : null;
 
   const productTypeLabel = params.productType
-    ? params.productType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    ? params.productType
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase())
     : null;
 
   return (
@@ -108,9 +145,18 @@ export default function ProductDetailScreen() {
 
         <View style={styles.hero}>
           {params.imageUrl ? (
-            <Image source={{ uri: params.imageUrl }} style={styles.productImage} resizeMode="cover" />
+            <Image
+              source={{ uri: params.imageUrl }}
+              style={styles.productImage}
+              resizeMode="cover"
+            />
           ) : iconConfig ? (
-            <View style={[styles.iconBox, { backgroundColor: colors.secondary[200] }]}>
+            <View
+              style={[
+                styles.iconBox,
+                { backgroundColor: colors.secondary[200] },
+              ]}
+            >
               <MaterialCommunityIcons
                 name={iconConfig.name as any}
                 size={40}
@@ -123,17 +169,16 @@ export default function ProductDetailScreen() {
         <View style={styles.infoSection}>
           <ThemedText type="h2">{params.name || "Product"}</ThemedText>
           {params.brand && (
-            <ThemedText
-              type="bodyLarge"
-              style={{ color: colors.neutral[600] }}
-            >
+            <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
               {params.brand}
             </ThemedText>
           )}
 
           <View style={styles.metaRow}>
             {categoryLabel && (
-              <View style={[styles.chip, { backgroundColor: colors.primary[100] }]}>
+              <View
+                style={[styles.chip, { backgroundColor: colors.primary[100] }]}
+              >
                 <ThemedText
                   type="caption"
                   weight="medium"
@@ -144,13 +189,52 @@ export default function ProductDetailScreen() {
               </View>
             )}
             {productTypeLabel && (
-              <View style={[styles.chip, { backgroundColor: colors.secondary[100] }]}>
+              <View
+                style={[
+                  styles.chip,
+                  { backgroundColor: colors.secondary[100] },
+                ]}
+              >
                 <ThemedText
                   type="caption"
                   weight="medium"
                   style={{ color: colors.secondary[700] }}
                 >
                   {productTypeLabel}
+                </ThemedText>
+              </View>
+            )}
+            {safetyScore !== null && (
+              <View
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor:
+                      safetyScore <= 2
+                        ? colors.primary[100]
+                        : safetyScore <= 4
+                          ? colors.neutral[300]
+                          : safetyScore <= 6
+                            ? colors.secondary[100]
+                            : "#A10000",
+                  },
+                ]}
+              >
+                <ThemedText
+                  type="caption"
+                  weight="medium"
+                  style={{
+                    color:
+                      safetyScore <= 2
+                        ? colors.primary[700]
+                        : safetyScore <= 4
+                          ? colors.neutral[700]
+                          : safetyScore <= 6
+                            ? colors.secondary[700]
+                            : "#FFFFFF",
+                  }}
+                >
+                  {safetyScore.toFixed(1)}
                 </ThemedText>
               </View>
             )}
@@ -163,7 +247,10 @@ export default function ProductDetailScreen() {
                 size={16}
                 color={colors.neutral[600]}
               />
-              <ThemedText type="bodySmall" style={{ color: colors.neutral[700] }}>
+              <ThemedText
+                type="bodySmall"
+                style={{ color: colors.neutral[700] }}
+              >
                 PAO: {paoMonths} month{paoMonths !== 1 ? "s" : ""}
               </ThemedText>
             </View>
@@ -176,21 +263,26 @@ export default function ProductDetailScreen() {
                 size={16}
                 color={colors.neutral[600]}
               />
-              <ThemedText type="bodySmall" style={{ color: colors.neutral[700] }}>
+              <ThemedText
+                type="bodySmall"
+                style={{ color: colors.neutral[700] }}
+              >
                 Expires: {expiryLabel}
               </ThemedText>
             </View>
           )}
         </View>
 
-        <View style={[styles.divider, { backgroundColor: colors.neutral[300] }]} />
+        <View
+          style={[styles.divider, { backgroundColor: colors.neutral[300] }]}
+        />
 
         <View style={styles.section}>
           <ThemedText type="h3" weight="semiBold">
             Ingredient Analysis
           </ThemedText>
           <IngredientAnalysisSection
-            rawIngredientText={rawOcrText}
+            ingredients={allIngredients}
             flaggedIngredients={flaggedIngredients}
             isLoading={isLoadingAnalysis}
             onRetry={fetchAndAnalyze}

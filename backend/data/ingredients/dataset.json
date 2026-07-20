@@ -998,5 +998,105 @@
     },
     "regulatory_status": "EU allowed, CIR safe",
     "sources": ["EWG Skin Deep"]
+  },
+  {
+    "id": "homosalate",
+    "ingredient_name": "Homosalate",
+    "aliases": ["Homomenthyl Salicylate", "3,3,5-Trimethylcyclohexyl Salicylate"],
+    "safety_score": 4,
+    "data_availability": "robust",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["Endocrine disruption concerns (weak estrogenic activity)", "Enhances penetration of other chemicals", "Breaks down in sunlight", "Absorbed through skin in significant amounts"],
+    "benefits": ["UVB filter", "Stabilizes other sunscreen agents", "Lightweight texture"],
+    "functions": ["sunscreen agent"],
+    "skin_type_considerations": {
+      "sensitive": "May cause irritation in sensitive individuals",
+      "dry": "Safe",
+      "oily": "Lightweight, suitable for oily skin",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed (max 15%), FDA OTC sunscreen",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "octisalate",
+    "ingredient_name": "Octisalate",
+    "aliases": ["Ethylhexyl Salicylate", "Octyl Salicylate", "2-Ethylhexyl Salicylate"],
+    "safety_score": 3,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["Low-level endocrine activity (less concerning than other chemical filters)", "Can enhance absorption of other ingredients"],
+    "benefits": ["UVB filter", "Stabilizes Avobenzone", "Lightweight emollient", "Helps water-resistant formulations"],
+    "functions": ["sunscreen agent", "emollient"],
+    "skin_type_considerations": {
+      "sensitive": "Generally well tolerated, low irritation potential",
+      "dry": "Provides mild moisturizing benefits",
+      "oily": "Lightweight, suitable for oily skin",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed (max 5%), FDA OTC sunscreen",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "octocrylene",
+    "ingredient_name": "Octocrylene",
+    "aliases": ["Ethylhexyl Cyanoacrylate", "Octocrilene", "Uvinul N 539"],
+    "safety_score": 3,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 1,
+    "known_risks": ["Degrades into benzophenone over time (potential endocrine disruptor)", "UVB filter", "Environmental concerns (coral reef impact under study)", "May accumulate in ocean environments"],
+    "benefits": ["UVB filter", "Photostabilizer for Avobenzone", "Enhances water resistance", "Lightweight texture"],
+    "functions": ["sunscreen agent", "stabilizer"],
+    "skin_type_considerations": {
+      "sensitive": "Generally well tolerated, low irritation potential",
+      "dry": "Safe, mild emollient properties",
+      "oily": "Lightweight, suitable for oily skin",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed (max 10%), FDA OTC sunscreen",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "oxybenzone",
+    "ingredient_name": "Oxybenzone",
+    "aliases": ["Benzophenone-3", "Octyldimethyl PABA", "Uvinul M40"],
+    "safety_score": 6,
+    "data_availability": "robust",
+    "irritancy": 2,
+    "comedogenicity": 0,
+    "known_risks": ["Significant endocrine disruption concerns (estrogenic, anti-androgenic)", "Allergic contact dermatitis", "Harms coral reefs (banned in Hawaii/Palau/Virgin Islands)", "High skin absorption rates", "Detectable in blood after topical application"],
+    "benefits": ["Broad spectrum UVA/UVB protection", "Absorbs UV light effectively", "Helps protect product from UV degradation"],
+    "functions": ["sunscreen agent"],
+    "skin_type_considerations": {
+      "sensitive": "Higher irritation risk, avoid if reactive",
+      "dry": "Safe but may be drying",
+      "oily": "Safe",
+      "combination": "Patch test recommended for sensitive areas"
+    },
+    "regulatory_status": "EU allowed (max 6%), FDA OTC sunscreen, banned in Hawaii/Palau/Virgin Islands (coral)",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "ensulizole",
+    "ingredient_name": "Ensulizole",
+    "aliases": ["Phenylbenzimidazole Sulfonic Acid", "PBSA"],
+    "safety_score": 3,
+    "data_availability": "good",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["Low-level endocrine activity (minimal concern)", "Water-soluble so provides less water resistance"],
+    "benefits": ["UVB filter", "Water-soluble (lightweight feel)", "Does not leave white cast", "Good for daily wear under makeup"],
+    "functions": ["sunscreen agent"],
+    "skin_type_considerations": {
+      "sensitive": "Low irritation potential, water-soluble formula is gentle",
+      "dry": "Non-drying, lightweight",
+      "oily": "Excellent choice, non-greasy water-soluble formula",
+      "combination": "Safe, lightweight feel"
+    },
+    "regulatory_status": "EU allowed (max 5%), FDA OTC sunscreen",
+    "sources": ["EWG Skin Deep", "CIR"]
   }
 ]

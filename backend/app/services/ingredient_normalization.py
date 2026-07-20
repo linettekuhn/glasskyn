@@ -36,6 +36,26 @@ _MULTI_SPACE_RE = re.compile(r"\s+")
 
 _STAR_RE = re.compile(r"[*•●]")
 
+_INCI_MARKER_RE = re.compile(
+    r"\b(?:ingredients?|ingrédients?|ingredient\s*list|lista\s*de?\s*ingredientes?)\s*[:/\-]?\s*",
+    re.IGNORECASE,
+)
+
+_MIN_INCI_TOKENS = 4
+_MAX_TOKEN_LENGTH = 50
+
+_OCR_DOTS_RE = re.compile(r"\.{2,}")
+
+_DRUG_FACTS_HEADER_RE = re.compile(
+    r"\bDrug\s*Facts\b",
+    re.IGNORECASE,
+)
+
+_NON_INGREDIENT_START_RE = re.compile(
+    r"^(?:helps?|prevent|if|for|get|see|use|warnings?|purpose|center|exp|plastic|bottle|here|open|outer|package|full|drug|facts|swallow|medical|right|away|only|external|rinse|stop|ask|doctor)\b",
+    re.IGNORECASE,
+)
+
 _NORMALIZATIONS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"[\u00A0\u2000-\u200B\u202F\u205F\u3000]"), " "),
     (re.compile(r"[\u2010\u2011\u2012\u2013\u2014\u2015]"), "-"),
@@ -86,6 +106,7 @@ def _strip_prefix(text: str) -> str:
 
 def _clean_token(token: str) -> str:
     token = _normalize_unicode(token)
+    token = _OCR_DOTS_RE.sub(" ", token)
     token = _STAR_RE.sub("", token)
     token = _PARENTHETICAL_RE.sub("", token)
     token = _PERCENTAGE_RE.sub("", token)
@@ -105,6 +126,65 @@ def _is_color_index(token: str) -> bool:
     return bool(_COLOR_INDEX_RE.match(token)) or bool(_NON_INGREDIENT_RE.match(token))
 
 
+def _is_valid_ingredient_token(cleaned: str) -> bool:
+    if len(cleaned) > _MAX_TOKEN_LENGTH:
+        return False
+    if len(cleaned) < 2:
+        return False
+    if re.fullmatch(r"[\d\s.,/%\-:]+", cleaned):
+        return False
+    if "." in cleaned:
+        return False
+    if ":" in cleaned:
+        return False
+    if _NON_INGREDIENT_START_RE.match(cleaned):
+        return False
+    word_count = len(cleaned.split())
+    if word_count > 5:
+        return False
+    return True
+
+
+def _extract_inci_section(raw_text: str) -> str | None:
+    normalized = _normalize_unicode(raw_text)
+
+    marker_match = _INCI_MARKER_RE.search(normalized)
+    if marker_match:
+        return normalized[marker_match.end():]
+
+    normalized = _OCR_DOTS_RE.sub(" ", normalized)
+
+    header_match = _DRUG_FACTS_HEADER_RE.search(normalized)
+    if header_match:
+        normalized = normalized[:header_match.start()]
+
+    if not marker_match and not header_match:
+        return None
+
+    candidates = _SPLIT_RE.split(normalized)
+    candidates = [c.strip() for c in candidates if c.strip()]
+
+    best_section: str | None = None
+    best_count = 0
+
+    for i, token in enumerate(candidates):
+        if not _is_valid_ingredient_token(token):
+            continue
+        count = 0
+        j = i
+        while j < len(candidates) and _is_valid_ingredient_token(candidates[j]):
+            count += 1
+            j += 1
+        if count >= best_count:
+            best_count = count
+            best_section = ", ".join(candidates[i:j])
+
+    if best_section and best_count >= _MIN_INCI_TOKENS:
+        return best_section
+
+    return None
+
+
 def _match_token(
     token: str, alias_map: dict[str, dict]
 ) -> dict:
@@ -113,6 +193,9 @@ def _match_token(
 
     cleaned = _clean_token(token)
     if not cleaned:
+        return {"canonical_name": None, "id": None, "raw_text": token, "match_type": "skipped", "confidence": 0}
+
+    if not _is_valid_ingredient_token(cleaned):
         return {"canonical_name": None, "id": None, "raw_text": token, "match_type": "skipped", "confidence": 0}
 
     lower = cleaned.lower()
@@ -144,8 +227,12 @@ def normalize_ingredients(raw_text: str | None) -> list[dict]:
     if not raw_text or not raw_text.strip():
         return []
 
+    inci_text = _extract_inci_section(raw_text)
+    if inci_text is None:
+        return []
+
     alias_map = _get_alias_map()
-    tokens = _split_ingredients(raw_text)
+    tokens = _split_ingredients(inci_text)
 
     seen_canonical: set[str] = set()
     results: list[dict] = []

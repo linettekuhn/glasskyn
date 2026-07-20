@@ -87,6 +87,8 @@ def _build_metadata(record: dict) -> dict:
         "comedogenicity": record.get("comedogenicity", 0),
         "category": functions[0] if functions else "unknown",
         "known_risks_count": len(record.get("known_risks", [])),
+        "known_risks": json.dumps(record.get("known_risks", [])),
+        "benefits": json.dumps(record.get("benefits", [])),
     }
 
 
@@ -148,6 +150,43 @@ def query_ingredients(text: str, n_results: int = 5) -> list[dict]:
             "metadata": metadatas[i] if i < len(metadatas) else None,
             "distance": distances[i] if i < len(distances) else None,
         })
+
+    return output
+
+
+def query_ingredients_batch(texts: list[str], n_results: int = 1) -> dict[str, list[dict]]:
+    if not texts:
+        return {}
+
+    collection = get_collection()
+
+    results = collection.query(
+        query_texts=texts,
+        n_results=n_results,
+        include=["documents", "metadatas", "distances"],
+    )
+
+    output: dict[str, list[dict]] = {}
+    all_ids = results.get("ids", [])
+    all_documents = results.get("documents", [])
+    all_metadatas = results.get("metadatas", [])
+    all_distances = results.get("distances", [])
+
+    for idx, text in enumerate(texts):
+        doc_ids = all_ids[idx] if idx < len(all_ids) else []
+        docs = all_documents[idx] if idx < len(all_documents) else []
+        metas = all_metadatas[idx] if idx < len(all_metadatas) else []
+        dists = all_distances[idx] if idx < len(all_distances) else []
+
+        entries = []
+        for i, doc_id in enumerate(doc_ids):
+            entries.append({
+                "id": doc_id,
+                "document": docs[i] if i < len(docs) else None,
+                "metadata": metas[i] if i < len(metas) else None,
+                "distance": dists[i] if i < len(dists) else None,
+            })
+        output[text] = entries
 
     return output
 

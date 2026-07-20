@@ -4,6 +4,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  LayoutAnimation,
+  UIManager,
   useColorScheme,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -11,22 +13,41 @@ import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "../ui/themed-text";
 import type { FlaggedIngredient } from "../../types";
 
+if (
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 interface IngredientAnalysisSectionProps {
-  rawIngredientText: string | null;
+  ingredients: string[] | null;
   flaggedIngredients: FlaggedIngredient[] | null;
   isLoading: boolean;
   onRetry?: () => void;
 }
 
 export default function IngredientAnalysisSection({
-  rawIngredientText,
+  ingredients,
   flaggedIngredients,
   isLoading,
   onRetry,
 }: IngredientAnalysisSectionProps) {
-  const [showFullList, setShowFullList] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  const toggleExpand = (index: number) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
 
   if (isLoading) {
     return (
@@ -44,7 +65,7 @@ export default function IngredientAnalysisSection({
     );
   }
 
-  if (rawIngredientText === null) {
+  if (ingredients === null) {
     if (!onRetry) return null;
     return (
       <View style={styles.container}>
@@ -70,10 +91,16 @@ export default function IngredientAnalysisSection({
   }
 
   const flagged = flaggedIngredients ?? [];
-  const ingredientCount = rawIngredientText
-    ? rawIngredientText.split(/[,;]\s*/).filter(Boolean).length
-    : 0;
   const hasFlags = flagged.length > 0;
+
+  const findFlag = (name: string): FlaggedIngredient | undefined => {
+    const lower = name.toLowerCase();
+    return flagged.find(
+      (f) =>
+        lower.includes(f.name.toLowerCase()) ||
+        f.name.toLowerCase().includes(lower),
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -88,7 +115,7 @@ export default function IngredientAnalysisSection({
           weight="medium"
           style={{ color: colors.neutral[700] }}
         >
-          {ingredientCount} ingredient{ingredientCount !== 1 ? "s" : ""}
+          {ingredients.length} ingredient{ingredients.length !== 1 ? "s" : ""}
         </ThemedText>
         <ThemedText type="bodySmall" style={{ color: colors.neutral[500] }}>
           {" "}·{" "}
@@ -104,62 +131,83 @@ export default function IngredientAnalysisSection({
         </ThemedText>
       </View>
 
-      {hasFlags && (
-        <View style={styles.flagList}>
-          {flagged.map((item, i) => (
-            <View key={i} style={styles.flagRow}>
-              <MaterialCommunityIcons
-                name="alert-circle-outline"
-                size={14}
-                color={colors.secondary[600]}
-              />
-              <View style={styles.flagContent}>
-                <ThemedText
-                  type="bodySmall"
-                  weight="medium"
-                  style={{ color: colors.neutral[800] }}
-                >
-                  {item.name}
-                </ThemedText>
-                <ThemedText
-                  type="caption"
-                  style={{ color: colors.neutral[600] }}
-                >
-                  {item.reason}
-                </ThemedText>
-              </View>
+      <View style={styles.ingredientList}>
+        {ingredients.map((name, i) => {
+          const flag = findFlag(name);
+          const isExpanded = flag ? expanded.has(i) : false;
+          const hasRisks = flag && flag.known_risks.length > 0;
+
+          return (
+            <View key={i}>
+              <TouchableOpacity
+                activeOpacity={hasRisks ? 0.6 : 1}
+                onPress={hasRisks ? () => toggleExpand(i) : undefined}
+                style={styles.ingredientRow}
+              >
+                {flag ? (
+                  <MaterialCommunityIcons
+                    name="alert-circle-outline"
+                    size={14}
+                    color={colors.secondary[600]}
+                  />
+                ) : (
+                  <View style={styles.spacer} />
+                )}
+                <View style={styles.ingredientContent}>
+                  <ThemedText
+                    type="bodySmall"
+                    weight={flag ? "medium" : undefined}
+                    style={{
+                      color: flag ? colors.secondary[700] : colors.neutral[700],
+                    }}
+                  >
+                    {name}
+                  </ThemedText>
+                  {flag && (
+                    <ThemedText
+                      type="caption"
+                      style={{ color: colors.neutral[600] }}
+                    >
+                      {flag.reason}
+                    </ThemedText>
+                  )}
+                </View>
+                {hasRisks && (
+                  <MaterialCommunityIcons
+                    name={isExpanded ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color={colors.neutral[500]}
+                  />
+                )}
+              </TouchableOpacity>
+
+              {isExpanded && flag && flag.known_risks.length > 0 && (
+                <View style={styles.riskPanel}>
+                  {flag.known_risks.map((risk, j) => (
+                    <View key={j} style={styles.riskRow}>
+                      <View
+                        style={[
+                          styles.riskDot,
+                          { backgroundColor: colors.secondary[600] },
+                        ]}
+                      />
+                      <ThemedText
+                        type="caption"
+                        style={{
+                          color: colors.neutral[700],
+                          flex: 1,
+                        }}
+                      >
+                        {risk}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
-          ))}
-        </View>
-      )}
-
-      <TouchableOpacity
-        style={styles.toggleRow}
-        onPress={() => setShowFullList((prev) => !prev)}
-        activeOpacity={0.7}
-      >
-        <ThemedText
-          type="captionLarge"
-          weight="medium"
-          style={{ color: colors.primary[600] }}
-        >
-          {showFullList ? "Hide full ingredient list" : "Show full ingredient list"}
-        </ThemedText>
-        <MaterialCommunityIcons
-          name={showFullList ? "chevron-up" : "chevron-down"}
-          size={18}
-          color={colors.primary[600]}
-        />
-      </TouchableOpacity>
-
-      {showFullList && (
-        <ThemedText
-          type="caption"
-          style={{ color: colors.neutral[700], lineHeight: 20 }}
-        >
-          {rawIngredientText}
-        </ThemedText>
-      )}
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -173,21 +221,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  flagList: {
-    gap: 8,
+  ingredientList: {
+    gap: 6,
   },
-  flagRow: {
+  ingredientRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
   },
-  flagContent: {
+  spacer: {
+    width: 14,
+  },
+  ingredientContent: {
     flex: 1,
     gap: 2,
   },
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  riskPanel: {
+    marginLeft: 22,
+    marginTop: 4,
     gap: 4,
+    paddingLeft: 8,
+    paddingVertical: 6,
+  },
+  riskRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  riskDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    marginTop: 4,
   },
 });

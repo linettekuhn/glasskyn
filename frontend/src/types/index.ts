@@ -142,6 +142,7 @@ export interface RoutineTemplate {
 export interface FlaggedIngredient {
   name: string;
   reason: string;
+  known_risks: string[];
 }
 
 export interface MatchedIngredient {

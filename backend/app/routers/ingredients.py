@@ -51,6 +51,28 @@ def _check_rate_limit() -> None:
     _rate_history.append(now)
 
 
+def _compute_score(stats: dict) -> float | None:
+    if stats["matched"] == 0:
+        return None
+    return round(stats["avg_safety_score"], 1)
+
+
+def _compute_flags(matched: list[dict], not_found: list[dict]) -> list[str]:
+    flags = []
+    for m in matched:
+        meta = m.get("metadata", {})
+        name = m.get("canonical_name") or meta.get("ingredient_name") or m.get("id", "?")
+        score = meta.get("safety_score", 0)
+        if score >= 4:
+            risks = json.loads(meta.get("known_risks", "[]")) if meta else []
+            reason = risks[0] if risks else ("high safety concern" if score >= 6 else "moderate safety concern")
+            flags.append(f"{name}: {reason}")
+    if not_found:
+        for nf in not_found:
+            flags.append(f"{nf['raw_text']}: no verified safety data")
+    return flags
+
+
 def _get_user_skin_type(user_id: int, db: Session) -> str | None:
     profile = db.query(SkinProfile).filter(SkinProfile.user_id == user_id).first()
     return profile.skin_type if profile else None
@@ -64,7 +86,8 @@ def _build_rag_system_prompt(skin_type: str | None, matched: list[dict], not_fou
         meta = m.get("metadata", {})
         name = m.get("canonical_name") or meta.get("ingredient_name") or m.get("id", "?")
         score = meta.get("safety_score", "?")
-        risks_count = meta.get("known_risks_count", 0)
+        risks = json.loads(meta.get("known_risks", "[]")) if meta else []
+        risks_count = len(risks)
         conf = m.get("confidence", 1.0)
         mtype = m.get("match_type", "?")
         conf_note = "" if conf >= 0.8 else " (approximate match — treat as uncertain)"
@@ -86,16 +109,12 @@ def _build_rag_system_prompt(skin_type: str | None, matched: list[dict], not_fou
         "Based on the verified safety data below, provide:\n"
         "1. A safety summary in plain language (2-4 sentences)\n"
         "2. Key concerns for the user's skin type (if any)\n"
-        "3. Notable benefits (if any)\n"
-        "4. An overall safety score from 1 (safest) to 10 (most concerning)\n"
-        "5. A list of flags (short phrases highlighting key points)\n\n"
+        "3. Notable benefits (if any)\n\n"
         "Verified safety data:\n"
         + "\n".join(matched_lines)
         + not_found_section
         + "\n\n"
-        'Respond in JSON: {"analysis": "markdown summary", '
-        '"overall_safety_score": number|null, '
-        '"flags": ["flag1", "flag2"]}'
+        'Respond in JSON: {"analysis": "markdown summary"}'
     )
 
 
@@ -109,9 +128,7 @@ def _build_llm_only_system_prompt(skin_type: str | None, ingredient_text: str) -
         "Provide your best general-knowledge analysis based on cosmetic chemistry principles.\n"
         "Include a disclaimer that this analysis is not from a verified safety database.\n\n"
         f"Ingredients: {ingredient_text}\n\n"
-        'Respond in JSON: {"analysis": "markdown summary with disclaimer", '
-        '"overall_safety_score": null, '
-        '"flags": ["Note: analysis based on general knowledge only"]}'
+        'Respond in JSON: {"analysis": "markdown summary with disclaimer"}'
     )
 
 
@@ -130,7 +147,7 @@ def _call_llm(messages: list[dict]) -> dict | None:
                 model=OPENAI_MODEL,
                 messages=messages,
                 response_format={"type": "json_object"},
-                temperature=0.3,
+                temperature=0,
                 max_tokens=500,
             )
 
@@ -176,8 +193,8 @@ def _format_response(
             ingredient_name=m.get("canonical_name") or meta.get("ingredient_name") or m.get("id", "?"),
             raw_text=m.get("raw_text", "?"),
             safety_score=meta.get("safety_score", 0),
-            known_risks=[],  # risks are in the document text, not metadata
-            benefits=[],
+            known_risks=json.loads(meta.get("known_risks", "[]")) if meta else [],
+            benefits=json.loads(meta.get("benefits", "[]")) if meta else [],
             confidence=m.get("confidence", 0),
             match_type=m.get("match_type", "?"),
         ))
@@ -193,8 +210,8 @@ def _format_response(
         matched=formatted_matched,
         not_found=formatted_not_found,
         stats=AnalysisStats(**stats),
-        overall_safety_score=llm_result.get("overall_safety_score") if llm_result else None,
-        flags=llm_result.get("flags", []) if llm_result else [],
+        overall_safety_score=_compute_score(stats),
+        flags=_compute_flags(matched, not_found),
         source_attribution=["EWG Skin Deep", "INCIDecoder", "ChromaDB"] if method == "rag" else [],
     )
 
