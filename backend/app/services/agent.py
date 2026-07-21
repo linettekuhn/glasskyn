@@ -82,7 +82,7 @@ def create_chat_agent(db: Session, user_id: int):
     agent = create_agent(
         llm,
         tools,
-        prompt=system_prompt,
+        system_prompt=system_prompt,
     )
 
     return agent

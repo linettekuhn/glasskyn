@@ -20,3 +20,4 @@ torchvision>=0.16.0
 langchain
 langchain-openai
 langgraph
+jupyter

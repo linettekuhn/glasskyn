@@ -86,3 +86,61 @@ The CV pipeline is triggered automatically when the user completes the multi-ste
 - OCR: Google Cloud Vision API
 - Backend: FastAPI, SQLAlchemy, PostgreSQL
 - Storage: AWS S3 (presigned URLs)
+- Agent: LangChain, LangGraph, OpenAI GPT-4o-mini
+
+---
+
+## Agent Architecture
+
+ShelfLove uses a LangChain agent to power the chat assistant. The agent uses a ReAct loop (Reason + Act) to decide which tools to call based on the user's question, then synthesizes a response from the tool results.
+
+### Tools
+
+| Tool | Description | Backed by |
+|------|-------------|-----------|
+| `lookup_ingredient_safety` | Look up safety scores, risks, and benefits for cosmetic ingredients | ChromaDB (ingredient safety embeddings) |
+| `query_user_products` | Query the user's saved products, filterable by type or category | PostgreSQL (`products` table) |
+| `summarize_safety` | Convert raw ingredient data into a plain-language safety summary | GPT-4o-mini |
+
+### Flow
+
+```mermaid
+flowchart TD
+    A["User message"] --> B["Agent (GPT-4o-mini)"]
+    B --> C{"Which tool?"}
+    C -->|"Ingredient question"| D["lookup_ingredient_safety"]
+    C -->|"Product question"| E["query_user_products"]
+    C -->|"Summary request"| F["summarize_safety"]
+    C -->|"General question"| G["Direct response"]
+    D --> H["ChromaDB"]
+    E --> I["PostgreSQL"]
+    F --> J["GPT-4o-mini"]
+    D --> K["Agent synthesizes response"]
+    E --> K
+    F --> K
+    G --> K
+    K --> L["Response + persisted to chat_messages"]
+```
+
+### Multi-turn conversations
+
+The agent maintains conversation history across messages:
+1. User sends a message with a `session_id`
+2. Backend loads previous messages for that session from `chat_messages`
+3. History is passed to the agent as context
+4. Agent can reference earlier tool calls and responses
+5. All new messages (user, assistant, tool calls, tool results) are persisted
+
+### Skin profile personalization
+
+The agent's system prompt is dynamically built with the user's skin profile (skin type, concerns, goals, sensitivity). This lets the agent personalize responses without needing a tool call.
+
+### Key files
+
+| File | Purpose |
+|------|---------|
+| `app/services/agent.py` | Agent factory, system prompt, skin profile injection |
+| `app/services/agent_tools.py` | Tool definitions (LangChain `@tool` decorators) |
+| `app/routers/chat.py` | Chat API endpoints (POST /chat, GET messages, DELETE session) |
+| `app/models/chat.py` | `ChatMessage` model (conversation persistence) |
+| `app/schemas/chat.py` | Pydantic request/response schemas |
