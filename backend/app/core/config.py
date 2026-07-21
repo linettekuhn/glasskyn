@@ -40,6 +40,7 @@ S3_BUCKET_NAME: str = os.environ.get("S3_BUCKET_NAME", "")
 
 OPENAI_API_KEY: str = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL: str = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+AGENT_MODEL: str = os.environ.get("AGENT_MODEL", "gpt-4o-mini")
 
 CHROMADB_PATH: str = str(BACKEND_DIR / "data" / "chromadb")
 EMBEDDING_MODEL: str = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
