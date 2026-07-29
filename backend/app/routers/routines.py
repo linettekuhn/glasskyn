@@ -9,8 +9,13 @@ from app.schemas.routine import (
     RoutineCreate, RoutineUpdate, RoutineOut, RoutineStepOut, RoutineStepUpdate,
     RoutineTemplateOut, TemplateCloneRequest,
 )
+import json
+
+import openai
+from app.core.config import OPENAI_API_KEY, OPENAI_MODEL
+from app.models.product import Product
 from app.services.routine import clone_template_to_routine
-from typing import List
+from typing import List, Optional
 
 router = APIRouter(prefix="/routines", tags=["routines"])
 
@@ -105,6 +110,128 @@ def clone_template(
 
     routine = clone_template_to_routine(db, current_user.id, template, name=body.name)
     routine.steps = db.query(RoutineStep).filter(RoutineStep.routine_id == routine.id).order_by(RoutineStep.step_order).all()
+    return routine
+
+
+@router.post("/generate", response_model=RoutineOut, status_code=201)
+def generate_routine(
+    goals: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Generate a skincare routine using AI based on the user's skin profile
+    and existing products, then save it."""
+    profile = db.query(SkinProfile).filter(SkinProfile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complete your skin profile first before generating a routine.",
+        )
+
+    products = db.query(Product).filter(Product.user_id == current_user.id).all()
+
+    concerns = ", ".join(profile.concerns or [])
+    goals_list = ", ".join(profile.goals or [])
+    profile_str = (
+        f"Skin type: {profile.skin_type or 'unknown'}\n"
+        f"Sensitive: {'yes' if profile.is_sensitive else 'no'}\n"
+        f"Concerns: {concerns or 'none'}\n"
+        f"Goals: {goals_list or 'none'}"
+    )
+    if goals:
+        profile_str += f"\nUser's additional goals: {goals}"
+
+    products_str = "No products saved yet."
+    if products:
+        lines = [f"User owns {len(products)} product(s):"]
+        for p in products:
+            lines.append(f"- id={p.id}, name={p.name}, type={p.product_type}, category={p.category}")
+        products_str = "\n".join(lines)
+
+    system_prompt = (
+        "You are a professional esthetician and skincare routine designer. "
+        "Given a user's skin profile and their existing products, design a "
+        "personalized skincare routine.\n\n"
+        "Return ONLY valid JSON with no markdown fencing, no explanation. "
+        "The JSON must have this exact structure:\n"
+        "{\n"
+        '  "name": "Descriptive routine name",\n'
+        '  "steps": [\n'
+        "    {\n"
+        '      "step_order": 1,\n'
+        '      "step_type": "cleanse|tone|treat|moisturize|spf|other",\n'
+        '      "time_of_day": "AM|PM",\n'
+        '      "frequency": "daily|every_other_day|weekly",\n'
+        '      "product_id": null or integer,\n'
+        '      "product_name": "exact product name if matched, else null",\n'
+        '      "suggested_product_type": null or "product type to look for"\n'
+        "    }\n"
+        "  ]\n"
+        "}\n\n"
+        "Rules:\n"
+        "- Correct step order for AM: cleanse, tone, treat, moisturize, spf\n"
+        "- Correct step order for PM: (double) cleanse, tone, treat, moisturize\n"
+        "- If user owns a matching product, set product_id to its id\n"
+        "- If no matching product, set product_id to null and suggest what to look for\n"
+        "- Include SPF in AM routine\n"
+        "- Cover both AM and PM unless user specifies otherwise\n"
+        "- Suit the skin type, concerns, and goals\n"
+        f"\nUser Profile:\n{profile_str}\n\n{products_str}"
+    )
+
+    try:
+        client = openai.OpenAI(api_key=OPENAI_API_KEY, timeout=30)
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": "Design a skincare routine for me."},
+            ],
+            temperature=0.3,
+            max_tokens=1000,
+        )
+        content = response.choices[0].message.content.strip()
+        parsed = json.loads(content)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to parse generated routine",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AI generation failed: {e}",
+        )
+
+    routine = Routine(
+        user_id=current_user.id,
+        name=parsed.get("name", "AI-Generated Routine"),
+        source="llm_generated",
+        routine_type="skincare",
+        is_active=True,
+    )
+    db.add(routine)
+    db.flush()
+
+    for s in parsed.get("steps", []):
+        step = RoutineStep(
+            routine_id=routine.id,
+            step_order=s["step_order"],
+            product_id=s.get("product_id"),
+            step_type=s["step_type"],
+            time_of_day=s["time_of_day"],
+            frequency=s.get("frequency", "daily"),
+        )
+        db.add(step)
+
+    db.commit()
+    db.refresh(routine)
+    routine.steps = (
+        db.query(RoutineStep)
+        .filter(RoutineStep.routine_id == routine.id)
+        .order_by(RoutineStep.step_order)
+        .all()
+    )
     return routine
 
 

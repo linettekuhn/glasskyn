@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import OPENAI_API_KEY, OPENAI_MODEL
 from app.models.product import Product
+from app.models.routine import SkinProfile, Routine, RoutineStep
 from app.services.rag_retrieval import retrieve_single, retrieve_safety_records
 
 logger = logging.getLogger(__name__)
@@ -197,4 +198,295 @@ def create_agent_tools(db: Session, user_id: int) -> list:
             logger.error("summarize_safety LLM call failed: %s", e)
             return f"Error generating summary: {e}. Here is the raw data to review:\n{ingredient_data}"
 
-    return [lookup_ingredient_safety, query_user_products, summarize_safety]
+    @tool
+    def generate_routine(goals: str = "") -> str:
+        """Generate a complete skincare routine based on the user's skin profile
+        and their existing products. Call this when the user asks you to create,
+        build, or generate a routine for them.
+
+        The tool will:
+        1. Look up the user's skin profile (type, concerns, goals)
+        2. Look up their existing products
+        3. Use an AI expert to design a personalized routine
+        4. Fill gaps with suggested product types where the user has nothing suitable
+
+        Returns a structured routine with steps ordered correctly for AM/PM,
+        with step types (cleanse, tone, treat, moisturize, spf), times of day,
+        frequencies, and product assignments where possible."""
+        try:
+            profile = db.query(SkinProfile).filter(SkinProfile.user_id == user_id).first()
+            products = db.query(Product).filter(Product.user_id == user_id).all()
+
+            profile_str = "No skin profile on file."
+            if profile:
+                concerns = ", ".join(profile.concerns or [])
+                goals_list = ", ".join(profile.goals or [])
+                profile_str = (
+                    f"Skin type: {profile.skin_type or 'unknown'}\n"
+                    f"Sensitive: {'yes' if profile.is_sensitive else 'no'}\n"
+                    f"Concerns: {concerns or 'none'}\n"
+                    f"Goals: {goals_list or 'none'}"
+                )
+                if goals:
+                    profile_str += f"\nUser's additional goals: {goals}"
+
+            products_str = "No products saved yet."
+            if products:
+                lines = [f"User owns {len(products)} product(s):"]
+                for p in products:
+                    lines.append(f"- {p.name} (id={p.id}, type={p.product_type}, category={p.category})")
+                products_str = "\n".join(lines)
+
+            system_prompt = (
+                "You are a professional esthetician and skincare routine designer. "
+                "Given a user's skin profile and their existing products, design a "
+                "personalized skincare routine.\n\n"
+                "Return ONLY valid JSON with no markdown fencing, no explanation. "
+                "The JSON must have this exact structure:\n"
+                "{\n"
+                '  "name": "Routine name (descriptive)",\n'
+                '  "steps": [\n'
+                "    {\n"
+                '      "step_order": 1,\n'
+                '      "step_type": "cleanse|tone|treat|moisturize|spf|other",\n'
+                '      "time_of_day": "AM|PM",\n'
+                '      "frequency": "daily|every_other_day|weekly",\n'
+                '      "product_id": null or integer,\n'
+                '      "product_name": "exact product name if matched, else null",\n'
+                '      "suggested_product_type": null or "product type to look for"\n'
+                "    }\n"
+                "  ]\n"
+                "}\n\n"
+                "Rules:\n"
+                "- Order steps correctly (cleanse, tone, treat, moisturize, spf for AM; "
+                "cleanse, treat, moisturize for PM)\n"
+                "- If the user owns a product matching the step type, set product_id to its id\n"
+                "- If they don't own a matching product, set product_id to null and suggest what to look for\n"
+                "- Include SPF in AM routine\n"
+                "- Cover both AM and PM unless user specifies otherwise\n"
+                "- Suit the user's skin type, concerns, and goals\n"
+                f"\nUser Profile:\n{profile_str}\n\n{products_str}"
+            )
+
+            client = openai.OpenAI(api_key=OPENAI_API_KEY, timeout=LLM_TIMEOUT_SECS)
+            response = client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "Design a skincare routine for me."},
+                ],
+                temperature=0.3,
+                max_tokens=1000,
+            )
+            content = response.choices[0].message.content.strip()
+            try:
+                parsed = json.loads(content)
+                steps = parsed.get("steps", [])
+                summary = f"**{parsed.get('name', 'Your Personalized Routine')}**\n\n"
+                for s in steps:
+                    product = ""
+                    if s.get("product_id"):
+                        product = f" \u2192 {s.get('product_name', '')}"
+                    elif s.get("suggested_product_type"):
+                        product = f" \u2192 *need: {s['suggested_product_type']}*"
+                    summary += (
+                        f"{s['time_of_day']} | {s['step_type']}{product} "
+                        f"({s['frequency']})\n"
+                    )
+                summary += f"\n\nRaw data:\n{content}"
+                return summary
+            except json.JSONDecodeError:
+                return f"Generated routine data:\n{content}"
+
+        except Exception as e:
+            logger.error("generate_routine failed: %s", e)
+            return f"Error generating routine: {e}"
+
+    @tool
+    def recommend_products(
+        step_type: str,
+        skin_type: str = "",
+        concerns: str = "",
+    ) -> str:
+        """Recommend products from the user's shelf for a specific routine step type.
+
+        Use when the user asks what products they have for a step, what to use,
+        or wants suggestions based on their skin type/concerns.
+
+        Args:
+            step_type: The routine step type (cleanse, tone, treat, moisturize, spf)
+            skin_type: Optional skin type context (dry, oily, combination, sensitive)
+            concerns: Optional comma-separated concerns (acne, aging, redness, etc.)"""
+        try:
+            step_to_types = {
+                "cleanse": ["cleanser"],
+                "tone": ["toner"],
+                "treat": ["serum", "exfoliant", "mask", "spot_treatment"],
+                "moisturize": ["moisturizer", "oil"],
+                "spf": ["spf"],
+            }
+            product_types = step_to_types.get(step_type, [step_type])
+
+            products = (
+                db.query(Product)
+                .filter(
+                    Product.user_id == user_id,
+                    Product.product_type.in_(product_types),
+                )
+                .all()
+            )
+
+            if not products:
+                return (
+                    f"You don't have any products for the '{step_type}' step. "
+                    f"Look for a {', '.join(product_types)} that suits your skin type."
+                )
+
+            lines = [f"Products for **{step_type}** step:"]
+            for p in products:
+                lines.append(f"\n**{p.name}**" + (f" by {p.brand}" if p.brand else ""))
+                try:
+                    record = retrieve_single(p.name)
+                    if record:
+                        meta = record.get("metadata", {})
+                        risks = json.loads(meta.get("known_risks", "[]")) if meta.get("known_risks") else []
+                        benefits = json.loads(meta.get("benefits", "[]")) if meta.get("benefits") else []
+                        if benefits:
+                            lines.append(f"  Benefits: {', '.join(benefits[:3])}")
+                        if risks:
+                            lines.append(f"  Note: {', '.join(risks[:2])}")
+                except Exception:
+                    pass
+
+            if skin_type:
+                lines.append(f"\nTip: For {skin_type} skin, choose products "
+                             "with soothing ingredients and avoid harsh actives.")
+
+            return "\n".join(lines)
+
+        except Exception as e:
+            logger.error("recommend_products failed: %s", e)
+            return f"Error recommending products: {e}"
+
+    @tool
+    def modify_routine(request: str) -> str:
+        """Modify the user's current active routine based on a natural language request.
+
+        Use when the user asks to change, swap, replace, add, or remove a step
+        in their routine. Examples: 'swap my moisturizer for something lighter',
+        'change my cleanser', 'add a serum to my PM routine', 'remove the toner step'.
+
+        This tool directly updates the database.
+
+        Args:
+            request: Natural language description of the desired change"""
+        try:
+            routine = (
+                db.query(Routine)
+                .filter(
+                    Routine.user_id == user_id,
+                    Routine.is_active == True,
+                )
+                .first()
+            )
+            if not routine:
+                return "You don't have an active routine. Create one first with generate_routine."
+
+            steps = (
+                db.query(RoutineStep)
+                .filter(RoutineStep.routine_id == routine.id)
+                .order_by(RoutineStep.step_order)
+                .all()
+            )
+
+            products = db.query(Product).filter(Product.user_id == user_id).all()
+
+            steps_str = "\n".join(
+                f"Step {s.step_order}: {s.time_of_day} {s.step_type} "
+                f"(product_id={s.product_id}, freq={s.frequency})"
+                for s in steps
+            )
+            products_str = "\n".join(
+                f"id={p.id}: {p.name} ({p.product_type})" for p in products
+            )
+
+            system_prompt = (
+                "You are a routine modification assistant. Given the user's request, "
+                "current routine, and their available products, determine what change to make.\n\n"
+                f"Current routine '{routine.name}':\n{steps_str}\n\n"
+                f"Available products:\n{products_str}\n\n"
+                "Return ONLY valid JSON with no markdown:\n"
+                "{\n"
+                '  "action": "swap|add|remove|replace_step_type",\n'
+                '  "step_id": integer or null,\n'
+                '  "target_step_type": "cleanse|tone|treat|moisturize|spf" or null,\n'
+                '  "time_of_day": "AM|PM" or null,\n'
+                '  "product_id": integer or null,\n'
+                '  "product_name": "name" or null,\n'
+                '  "new_step_type": "step type" or null,\n'
+                '  "explanation": "brief description of what changed"\n'
+                "}\n"
+                f"User's request: {request}"
+            )
+
+            client = openai.OpenAI(api_key=OPENAI_API_KEY, timeout=LLM_TIMEOUT_SECS)
+            response = client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Modify the routine: {request}"},
+                ],
+                temperature=0,
+                max_tokens=500,
+            )
+            content = response.choices[0].message.content.strip()
+            parsed = json.loads(content)
+            action = parsed.get("action")
+
+            if action == "swap" or action == "replace_step_type":
+                step_id = parsed.get("step_id")
+                product_id = parsed.get("product_id")
+                step = next((s for s in steps if s.id == step_id), None)
+                if step:
+                    if product_id:
+                        step.product_id = product_id
+                    if parsed.get("new_step_type"):
+                        step.step_type = parsed["new_step_type"]
+                    if parsed.get("time_of_day"):
+                        step.time_of_day = parsed["time_of_day"]
+                    db.commit()
+                    return f"Done. {parsed.get('explanation', 'Routine updated.')}"
+                return f"Step {step_id} not found."
+
+            elif action == "add":
+                new_step = RoutineStep(
+                    routine_id=routine.id,
+                    step_order=len(steps) + 1,
+                    product_id=parsed.get("product_id"),
+                    step_type=parsed.get("target_step_type", "other"),
+                    time_of_day=parsed.get("time_of_day", "AM"),
+                    frequency=parsed.get("frequency", "daily"),
+                )
+                db.add(new_step)
+                db.commit()
+                return f"Done. {parsed.get('explanation', 'Step added.')}"
+
+            elif action == "remove":
+                step_id = parsed.get("step_id")
+                step = next((s for s in steps if s.id == step_id), None)
+                if step:
+                    db.delete(step)
+                    db.commit()
+                    return f"Done. {parsed.get('explanation', 'Step removed.')}"
+                return f"Step {step_id} not found."
+
+            return f"Applied change: {parsed.get('explanation', content)}"
+
+        except json.JSONDecodeError:
+            return f"Could not parse modification. Raw response: {content}"
+        except Exception as e:
+            logger.error("modify_routine failed: %s", e)
+            return f"Error modifying routine: {e}"
+
+    return [lookup_ingredient_safety, query_user_products, summarize_safety,
+            generate_routine, recommend_products, modify_routine]
