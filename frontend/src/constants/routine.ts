@@ -53,5 +53,6 @@ export const CREATE_ROUTINE_OPTIONS: CreateRoutineOption[] = [
     icon: "auto-fix",
     title: "Create with AI",
     subtitle: "Let AI build a routine for you",
+    route: "/(main)/chat?generate=1",
   },
 ];
