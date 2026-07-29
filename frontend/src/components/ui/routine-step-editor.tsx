@@ -31,6 +31,7 @@ interface RoutineStepEditorProps {
   onDragEnd: (timeOfDay: "AM" | "PM", newOrder: StepDisplay[]) => void;
   bottomBar?: React.ReactNode;
   onDeleteStep?: (id: number) => void;
+  onGoBack?: () => void;
   headerContent?: React.ReactNode;
   onAddStep?: (timeOfDay: "AM" | "PM") => void;
 }
@@ -48,6 +49,7 @@ export default function RoutineStepEditor({
   bottomBar,
   onDeleteStep,
   headerContent,
+  onGoBack,
   onAddStep,
 }: RoutineStepEditorProps) {
   const colorScheme = useColorScheme();
@@ -203,7 +205,7 @@ export default function RoutineStepEditor({
             text="Go Back"
             leftIconName="arrow-back"
             LeftIconComponent={MaterialIcons}
-            onPress={() => router.back()}
+            onPress={onGoBack ?? (() => router.back())}
             color={colors.neutral[800]}
             alignment="flex-start"
           />

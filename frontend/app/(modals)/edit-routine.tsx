@@ -8,7 +8,7 @@ import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
 import RoutineStepEditor from "@/components/ui/routine-step-editor";
-import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function EditRoutineScreen() {
   const { routineId, returnTo } = useLocalSearchParams<{ routineId: string; returnTo?: string }>();
@@ -143,14 +143,36 @@ export default function EditRoutineScreen() {
     } finally {
       setSaving(false);
       router.dismissAll();
-      router.replace(returnTo ?? "/(main)/routine");
+      if (returnTo) {
+        router.replace(`${returnTo}?routineSaved=1`);
+      } else {
+        router.replace("/(main)/routine");
+      }
     }
   };
 
   const handleBackToChat = () => {
-    router.dismissAll();
-    if (returnTo) router.replace(returnTo);
-    else router.back();
+    Alert.alert(
+      "Discard Routine",
+      "Discard this routine? This will delete the generated routine.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Discard",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteRoutine(Number(routineId));
+            } catch {
+              // toast shown by interceptor
+            }
+            router.dismissAll();
+            if (returnTo) router.replace(`${returnTo}?routineDiscarded=1`);
+            else router.back();
+          },
+        },
+      ],
+    );
   };
 
   const handleDelete = () => {
@@ -186,19 +208,7 @@ export default function EditRoutineScreen() {
       productPickerReturnTo="/(modals)/edit-routine"
       productPickerExtraParam={{ key: "routineId", value: routineId ?? "" }}
       onDragEnd={handleDragEnd}
-      headerContent={
-        returnTo ? (
-          <TouchableOpacity
-            onPress={handleBackToChat}
-            style={styles.backToChat}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.neutral[800]} />
-            <ThemedText type="bodySmall" weight="medium" style={{ color: colors.neutral[800] }}>
-              Back to Chat
-            </ThemedText>
-          </TouchableOpacity>
-        ) : undefined
-      }
+      onGoBack={returnTo ? handleBackToChat : undefined}
       bottomBar={
         <View
           style={[
@@ -238,11 +248,5 @@ const styles = {
   bottomBar: {
     gap: 12,
     paddingHorizontal: 24,
-  },
-  backToChat: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 4,
-    marginBottom: 8,
   },
 };

@@ -129,11 +129,9 @@ async def send_message(
 
     db.commit()
 
-    assistant_messages = [m for m in saved if m.role == "assistant"]
-
     return ChatResponse(
         session_id=session_id,
-        messages=[ChatMessageOut.model_validate(m) for m in assistant_messages],
+        messages=[ChatMessageOut.model_validate(m) for m in saved],
     )
 
 

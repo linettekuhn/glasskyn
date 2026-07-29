@@ -37,7 +37,11 @@ export default function ChatScreen() {
   const routineSavedRef = useRef(false);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const { generate } = useLocalSearchParams<{ generate?: string }>();
+  const { generate, routineSaved, routineDiscarded } = useLocalSearchParams<{
+    generate?: string;
+    routineSaved?: string;
+    routineDiscarded?: string;
+  }>();
 
   useEffect(() => {
     setSessionId(Crypto.randomUUID());
@@ -50,7 +54,34 @@ export default function ChatScreen() {
         autoTriggeredRef.current = false;
         handleSend("Generate a skincare routine for me based on my profile");
       }
-    }, [sessionId, generate]),
+      if (routineSaved === "1") {
+        router.setParams({} as any);
+        const msg: ChatMessageOut = {
+          id: Date.now(),
+          session_id: sessionId,
+          role: "assistant",
+          content: "✅ Routine saved!",
+          tool_calls: null,
+          tool_call_id: null,
+          created_at: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, msg]);
+      }
+      if (routineDiscarded === "1") {
+        router.setParams({} as any);
+        routineSavedRef.current = false;
+        const msg: ChatMessageOut = {
+          id: Date.now(),
+          session_id: sessionId,
+          role: "assistant",
+          content: "The routine was not saved. Would you like to try again?",
+          tool_calls: null,
+          tool_call_id: null,
+          created_at: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, msg]);
+      }
+    }, [sessionId, generate, routineSaved, routineDiscarded]),
   );
 
   const handleSend = async (text?: string) => {
@@ -76,22 +107,12 @@ export default function ChatScreen() {
       setMessages((prev) => [...prev, ...response.messages]);
 
       const hasRoutine = response.messages.some(
-        (m) => m.role === "assistant" && m.content && /\b(AM \||PM \|)/.test(m.content),
+        (m) => m.content && /\b(AM \||PM \|)/.test(m.content),
       );
       if (hasRoutine && !routineSavedRef.current) {
         routineSavedRef.current = true;
         try {
           const routine = await generateRoutine();
-          const summary: ChatMessageOut = {
-            id: Date.now() + 1,
-            session_id: sessionId,
-            role: "assistant",
-            content: `✅ Routine "${routine.name}" created — ${routine.steps.length} steps. Tap View/Edit below to review.`,
-            tool_calls: null,
-            tool_call_id: null,
-            created_at: new Date().toISOString(),
-          };
-          setMessages((prev) => [...prev, summary]);
           setTimeout(() => {
             router.push(`/(modals)/edit-routine?routineId=${routine.id}&returnTo=/(main)/chat`);
           }, 100);
@@ -191,6 +212,10 @@ export default function ChatScreen() {
     );
   };
 
+  const displayMessages = messages.filter(
+    (m) => m.role === "user" || m.role === "assistant",
+  );
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.neutral[100] }]}
@@ -206,7 +231,7 @@ export default function ChatScreen() {
 
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={displayMessages}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderMessage}
         ListFooterComponent={renderFooter}
