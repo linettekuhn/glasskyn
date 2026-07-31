@@ -23,3 +23,4 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     session_id: str
     messages: List[ChatMessageOut]
+    routine_generated: bool = False

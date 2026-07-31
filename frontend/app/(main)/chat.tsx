@@ -8,33 +8,46 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { useFocusEffect, router, useLocalSearchParams } from "expo-router";
-import * as Crypto from "expo-crypto";
 import { Colors, Fonts, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedTextInput from "@/components/ui/themed-text-input";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   sendMessage,
+  getMessages,
+  deleteSession,
   generateRoutine,
   type ChatMessageOut,
 } from "@/api/chat";
+import { useChatSession } from "@/contexts/ChatSessionContext";
 
 const QUICK_ACTIONS = [
   { label: "Generate Routine", message: "Generate a skincare routine for me" },
-  { label: "Swap moisturizer", message: "Swap my moisturizer for something lighter for my skin type" },
+  {
+    label: "Swap moisturizer",
+    message: "Swap my moisturizer for something lighter for my skin type",
+  },
   { label: "My products", message: "What products do I have for my routine?" },
 ];
 
 export default function ChatScreen() {
-  const [sessionId, setSessionId] = useState("");
+  const { sessionId, resetSession } = useChatSession();
   const [messages, setMessages] = useState<ChatMessageOut[]>([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
-  const autoTriggeredRef = useRef(false);
   const routineSavedRef = useRef(false);
+  const sendingRef = useRef(false);
+  const hydratedSessionRef = useRef<string | null>(null);
+  const skipHydrationRef = useRef(false);
+  const prevParamsRef = useRef<{
+    generate?: string;
+    routineSaved?: string;
+    routineDiscarded?: string;
+  }>({});
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const { generate, routineSaved, routineDiscarded } = useLocalSearchParams<{
@@ -44,20 +57,27 @@ export default function ChatScreen() {
   }>();
 
   useEffect(() => {
-    setSessionId(Crypto.randomUUID());
-  }, []);
+    setMessages([]);
+    hydratedSessionRef.current = null;
+  }, [sessionId]);
 
   useFocusEffect(
     useCallback(() => {
-      if (generate === "1" && sessionId) {
-        router.setParams({} as any);
-        autoTriggeredRef.current = false;
+      const prev = prevParamsRef.current;
+
+      if (generate === "1" && sessionId && prev.generate !== "1") {
+        prev.generate = "1";
+        router.setParams({ generate: undefined } as any);
         handleSend("Generate a skincare routine for me based on my profile");
+      } else if (!generate) {
+        prev.generate = undefined;
       }
-      if (routineSaved === "1") {
-        router.setParams({} as any);
+
+      if (routineSaved === "1" && prev.routineSaved !== "1") {
+        prev.routineSaved = "1";
+        router.setParams({ routineSaved: undefined } as any);
         const msg: ChatMessageOut = {
-          id: Date.now(),
+          id: -Date.now(),
           session_id: sessionId,
           role: "assistant",
           content: "✅ Routine saved!",
@@ -65,13 +85,17 @@ export default function ChatScreen() {
           tool_call_id: null,
           created_at: new Date().toISOString(),
         };
-        setMessages((prev) => [...prev, msg]);
+        setMessages((prevMsgs) => [...prevMsgs, msg]);
+      } else if (!routineSaved) {
+        prev.routineSaved = undefined;
       }
-      if (routineDiscarded === "1") {
-        router.setParams({} as any);
+
+      if (routineDiscarded === "1" && prev.routineDiscarded !== "1") {
+        prev.routineDiscarded = "1";
+        router.setParams({ routineDiscarded: undefined } as any);
         routineSavedRef.current = false;
         const msg: ChatMessageOut = {
-          id: Date.now(),
+          id: -Date.now(),
           session_id: sessionId,
           role: "assistant",
           content: "The routine was not saved. Would you like to try again?",
@@ -79,20 +103,59 @@ export default function ChatScreen() {
           tool_call_id: null,
           created_at: new Date().toISOString(),
         };
-        setMessages((prev) => [...prev, msg]);
+        setMessages((prevMsgs) => [...prevMsgs, msg]);
+      } else if (!routineDiscarded) {
+        prev.routineDiscarded = undefined;
       }
     }, [sessionId, generate, routineSaved, routineDiscarded]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!sessionId) return;
+      if (skipHydrationRef.current) {
+        skipHydrationRef.current = false;
+        hydratedSessionRef.current = sessionId;
+        return;
+      }
+      if (hydratedSessionRef.current === sessionId) return;
+      let cancelled = false;
+      getMessages(sessionId)
+        .then((history) => {
+          if (cancelled) return;
+          hydratedSessionRef.current = sessionId;
+          if (history.length > 0) {
+            setMessages((prev) => {
+              const localOnly = prev.filter(
+                (m) =>
+                  !history.some(
+                    (h) => h.role === m.role && h.content === m.content,
+                  ),
+              );
+              return [...history, ...localOnly];
+            });
+          }
+        })
+        .catch(() => {
+          if (cancelled) return;
+          hydratedSessionRef.current = sessionId;
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [sessionId]),
   );
 
   const handleSend = async (text?: string) => {
     const msg = (text ?? inputText).trim();
     if (!msg || !sessionId) return;
-
+    if (sendingRef.current) return;
+    sendingRef.current = true;
     setInputText("");
     setLoading(true);
 
     const userMessage: ChatMessageOut = {
-      id: Date.now(),
+      id: -Date.now(),
       session_id: sessionId,
       role: "user",
       content: msg,
@@ -104,24 +167,46 @@ export default function ChatScreen() {
 
     try {
       const response = await sendMessage(sessionId, msg, 60000);
-      setMessages((prev) => [...prev, ...response.messages]);
-
-      const hasRoutine = response.messages.some(
-        (m) => m.content && /\b(AM \||PM \|)/.test(m.content),
+      const routineGenerated = response.routine_generated;
+      let newMessages = response.messages.filter(
+        (m) => m.role === "assistant" && !!m.content,
       );
-      if (hasRoutine && !routineSavedRef.current) {
+      if (routineGenerated) {
+        newMessages = newMessages.filter(
+          (m) => !m.content || !/\b(AM \||PM \|)/.test(m.content),
+        );
+        if (newMessages.length === 0) {
+          const fallback: ChatMessageOut = {
+            id: -Date.now() - 1,
+            session_id: sessionId,
+            role: "assistant",
+            content:
+              "I've created a routine for you. I'll take you to the edit routine page to confirm or make changes.",
+            tool_calls: null,
+            tool_call_id: null,
+            created_at: new Date().toISOString(),
+          };
+          newMessages = [fallback];
+        }
+      }
+      setMessages((prev) => [...prev, ...newMessages]);
+
+      if (routineGenerated && !routineSavedRef.current) {
         routineSavedRef.current = true;
         try {
           const routine = await generateRoutine();
           setTimeout(() => {
-            router.push(`/(modals)/edit-routine?routineId=${routine.id}&returnTo=/(main)/chat`);
+            router.push(
+              `/(modals)/edit-routine?routineId=${routine.id}&returnTo=/(main)/chat`,
+            );
           }, 100);
         } catch {
           const errMsg: ChatMessageOut = {
-            id: Date.now() + 2,
+            id: -Date.now() - 1,
             session_id: sessionId,
             role: "assistant",
-            content: "Could not save the routine. Make sure you've completed your skin profile in Settings first.",
+            content:
+              "Could not save the routine. Make sure you've completed your skin profile in Settings first.",
             tool_calls: null,
             tool_call_id: null,
             created_at: new Date().toISOString(),
@@ -131,7 +216,7 @@ export default function ChatScreen() {
       }
     } catch {
       const errorMsg: ChatMessageOut = {
-        id: Date.now() + 1,
+        id: -Date.now() - 1,
         session_id: sessionId,
         role: "assistant",
         content: "Sorry, I couldn't process that. Please try again.",
@@ -141,8 +226,35 @@ export default function ChatScreen() {
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
+      sendingRef.current = false;
       setLoading(false);
     }
+  };
+
+  const handleNewChat = () => {
+    if (loading) return;
+    Alert.alert(
+      "Start a new chat?",
+      "This clears the current conversation.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "New Chat",
+          style: "destructive",
+          onPress: () => {
+            const oldSessionId = sessionId;
+            setMessages([]);
+            setInputText("");
+            routineSavedRef.current = false;
+            skipHydrationRef.current = true;
+            if (oldSessionId) {
+              deleteSession(oldSessionId).catch(() => {});
+            }
+            resetSession();
+          },
+        },
+      ],
+    );
   };
 
   const renderMessage = ({ item }: { item: ChatMessageOut }) => {
@@ -158,7 +270,9 @@ export default function ChatScreen() {
           style={[
             styles.bubble,
             {
-              backgroundColor: isUser ? colors.primary[600] : colors.neutral[200],
+              backgroundColor: isUser
+                ? colors.primary[600]
+                : colors.neutral[200],
             },
           ]}
         >
@@ -213,7 +327,7 @@ export default function ChatScreen() {
   };
 
   const displayMessages = messages.filter(
-    (m) => m.role === "user" || m.role === "assistant",
+    (m) => m.role === "user" || (m.role === "assistant" && !!m.content),
   );
 
   return (
@@ -223,16 +337,35 @@ export default function ChatScreen() {
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       <View style={styles.header}>
-        <ThemedText type="h1">Chat</ThemedText>
-        <ThemedText type="bodySmall" style={{ color: colors.secondary[600] }}>
-          Ask about products, ingredients, or your routine
-        </ThemedText>
+        <View style={styles.headerRow}>
+          <View style={styles.headerText}>
+            <ThemedText type="h1">Chat</ThemedText>
+            <ThemedText type="bodySmall" style={{ color: colors.secondary[600] }}>
+              Ask about products, ingredients, or your routine
+            </ThemedText>
+          </View>
+          <TouchableOpacity
+            onPress={handleNewChat}
+            disabled={loading}
+            style={[
+              styles.newChatButton,
+              loading && { opacity: 0.4 },
+            ]}
+            accessibilityLabel="Start a new chat"
+          >
+            <MaterialCommunityIcons
+              name="chat-plus-outline"
+              size={24}
+              color={colors.primary[700]}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
         ref={flatListRef}
         data={displayMessages}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={(item: ChatMessageOut) => String(item.id)}
         renderItem={renderMessage}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={
@@ -309,6 +442,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingTop: 16,
     paddingBottom: 8,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  headerText: {
+    flex: 1,
+  },
+  newChatButton: {
+    padding: 8,
+    marginTop: -4,
+    borderRadius: 20,
   },
   listContent: {
     paddingHorizontal: 16,

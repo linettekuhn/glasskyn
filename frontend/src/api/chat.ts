@@ -14,6 +14,7 @@ export interface ChatMessageOut {
 export interface ChatResponse {
   session_id: string;
   messages: ChatMessageOut[];
+  routine_generated: boolean;
 }
 
 export async function sendMessage(

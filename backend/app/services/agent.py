@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import logging
 
+import openai
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from sqlalchemy.orm import Session
 
-from app.core.config import AGENT_MODEL, OPENAI_API_KEY
+from app.core.config import AGENT_MODEL, OPENAI_API_KEY, OPENAI_MODEL
 from app.models.routine import SkinProfile, Routine, RoutineStep
 from app.models.product import Product
 from app.services.agent_tools import create_agent_tools
@@ -101,15 +102,61 @@ You have 6 tools available:
 - If the user asks something outside your scope (medical diagnoses, drug advice, unrelated topics), politely explain you can only help with cosmetic safety and product management.
 - Never fabricate ingredient data. If you don't know, say so.
 - When the user asks to "create a routine", use generate_routine. When they ask to "swap" or "change" something, use modify_routine. When they ask what products to use, use recommend_products.
-- After generating a routine, offer to save it or make adjustments with modify_routine."""
+- After generating a routine, offer to save it or make adjustments with modify_routine.
+- When you call generate_routine: confirm the routine has been created and describe what it focuses on (the user's skin type, concerns, and goals from their profile). Tell the user they will be taken to the edit routine page to confirm or make changes. Do NOT print the routine steps, product assignments, or the AM/PM breakdown in your reply — the routine itself is shown on the edit routine page, not in the chat."""
 
 
 def _build_system_prompt(skin_profile_context: str) -> str:
     return SYSTEM_PROMPT.format(skin_profile_context=skin_profile_context)
 
 
-def create_chat_agent(db: Session, user_id: int):
+def summarize_conversation(existing_summary: str, overflow: str) -> str:
+    """Fold older chat messages into a compact conversation summary."""
+    if not OPENAI_API_KEY:
+        return existing_summary
+
+    base = f"Existing summary:\n{existing_summary}\n\n" if existing_summary else ""
+    system_prompt = (
+        "You are a chat history summarizer for a cosmetic safety assistant app. "
+        "Keep a concise running summary of the skincare conversation so far. "
+        "Retain: the user's skin type and concerns, their products, routines and "
+        "decisions, routine changes or preferences, and any explicit instructions. "
+        "Drop generic pleasantries and repetition. Limit to a few short paragraphs."
+    )
+
+    try:
+        client = openai.OpenAI(api_key=OPENAI_API_KEY, timeout=30)
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": (
+                        f"{base}New conversation messages to fold into the summary:\n"
+                        f"{overflow}"
+                    ),
+                },
+            ],
+            temperature=0,
+            max_tokens=500,
+        )
+        content = response.choices[0].message.content.strip()
+        if content:
+            return content
+        return existing_summary
+    except Exception as e:
+        logger.error("summarize_conversation failed: %s", e)
+        return existing_summary
+
+
+def create_chat_agent(db: Session, user_id: int, conversation_summary: str = ""):
     skin_profile_context = _build_skin_profile_context(db, user_id)
+    if conversation_summary:
+        skin_profile_context += (
+            "\n\n## Conversation Summary\n"
+            f"Earlier in this conversation: {conversation_summary}"
+        )
     system_prompt = _build_system_prompt(skin_profile_context)
 
     llm = ChatOpenAI(

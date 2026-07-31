@@ -42,5 +42,8 @@ OPENAI_API_KEY: str = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL: str = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 AGENT_MODEL: str = os.environ.get("AGENT_MODEL", "gpt-4o-mini")
 
+CHAT_HISTORY_WINDOW: int = int(os.environ.get("CHAT_HISTORY_WINDOW", "20"))
+CHAT_SUMMARY_INTERVAL: int = int(os.environ.get("CHAT_SUMMARY_INTERVAL", "5"))
+
 CHROMADB_PATH: str = str(BACKEND_DIR / "data" / "chromadb")
 EMBEDDING_MODEL: str = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
