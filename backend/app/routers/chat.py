@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import re
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
@@ -18,8 +17,6 @@ from app.services.agent import create_chat_agent, summarize_conversation
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-ROUTINE_CONTENT_PATTERN = re.compile(r"\b(AM \||PM \|)|Raw data:")
 
 
 def _routine_confirmation(db: Session, user_id: int) -> str:
@@ -222,8 +219,7 @@ async def send_message(
     if routine_generated:
         for msg in reversed(saved):
             if msg.role == "assistant" and msg.content:
-                if ROUTINE_CONTENT_PATTERN.search(msg.content):
-                    msg.content = _routine_confirmation(db, current_user.id)
+                msg.content = _routine_confirmation(db, current_user.id)
                 break
 
     if windowed:

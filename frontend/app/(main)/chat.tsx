@@ -173,7 +173,11 @@ export default function ChatScreen() {
       );
       if (routineGenerated) {
         newMessages = newMessages.filter(
-          (m) => !m.content || !/\b(AM \||PM \|)/.test(m.content),
+          (m) =>
+            !m.content ||
+            !/(###?\s*AM Routine)|(###?\s*PM Routine)|(AM \||PM \||Raw data:)/.test(
+              m.content,
+            ),
         );
         if (newMessages.length === 0) {
           const fallback: ChatMessageOut = {
