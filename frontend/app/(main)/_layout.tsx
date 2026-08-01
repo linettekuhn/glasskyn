@@ -4,7 +4,16 @@ import { Tabs } from "expo-router";
 import { Text, StyleSheet, View, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const TabIcon = (props: any) => {
+type TabBarIconProps = { focused: boolean; color: string };
+
+type TabIconProps = TabBarIconProps & {
+  IconComponent: React.ComponentType<{ name: string; size: number; color: string }>;
+  outlineName: string;
+  fillName: string;
+  size: number;
+};
+
+const TabIcon = (props: TabIconProps) => {
   const IconComponent = props.IconComponent;
   const outlineName = props.outlineName;
   const fillName = props.fillName;
@@ -53,7 +62,7 @@ export default function MainLayout() {
           name="index"
           options={{
             title: "Home",
-            tabBarIcon: ({ focused, color }) => (
+            tabBarIcon: ({ focused, color }: TabBarIconProps) => (
               <TabIcon
                 IconComponent={MaterialCommunityIcons}
                 outlineName="home-variant-outline"
@@ -66,10 +75,26 @@ export default function MainLayout() {
           }}
         />
         <Tabs.Screen
+          name="routine"
+          options={{
+            title: "Routines",
+            tabBarIcon: ({ focused, color }: TabBarIconProps) => (
+              <TabIcon
+                IconComponent={MaterialCommunityIcons}
+                outlineName="clipboard-list-outline"
+                fillName="clipboard-list"
+                size={28}
+                color={color}
+                focused={focused}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="scanner"
           options={{
             title: "Scanner",
-            tabBarIcon: ({ focused, color }) => (
+            tabBarIcon: ({ focused, color }: TabBarIconProps) => (
               <TabIcon
                 IconComponent={MaterialCommunityIcons}
                 outlineName="qrcode-scan"
@@ -82,10 +107,26 @@ export default function MainLayout() {
           }}
         />
         <Tabs.Screen
+          name="chat"
+          options={{
+            title: "Chat",
+            tabBarIcon: ({ focused, color }: TabBarIconProps) => (
+              <TabIcon
+                IconComponent={MaterialCommunityIcons}
+                outlineName="chat-outline"
+                fillName="chat"
+                size={28}
+                color={color}
+                focused={focused}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="products"
           options={{
             title: "My Shelf",
-            tabBarIcon: ({ focused, color }) => (
+            tabBarIcon: ({ focused, color }: TabBarIconProps) => (
               <TabIcon
                 IconComponent={MaterialCommunityIcons}
                 outlineName="archive-outline"
@@ -101,7 +142,7 @@ export default function MainLayout() {
           name="profile"
           options={{
             title: "Profile",
-            tabBarIcon: ({ focused, color }) => (
+            tabBarIcon: ({ focused, color }: TabBarIconProps) => (
               <TabIcon
                 IconComponent={MaterialCommunityIcons}
                 outlineName="face-man-shimmer-outline"

@@ -1,47 +1,77 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableOpacity,
   useColorScheme,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
-import { createProduct, updateScanResult } from "../../api/products";
-import type { ProductCategory, NameBrandMethod } from "../../types";
+import { createProduct, updateScanResult, analyzeIngredients } from "../../api/products";
+import type { ProductCategory, ProductType, NameBrandMethod } from "../../types";
 import { useScanContext } from "../../contexts/ScanContext";
 import ProductForm, { ProductFormData } from "../ui/product-form";
 import { DEFAULT_ICON } from "../ui/icon-selector";
 import { ThemedText } from "../ui/themed-text";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "../ui/themed-button";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-export default function StepConfirm() {
-  const { scanResult, paoMonths, setPaoMonths, frontFileKey, reset } =
-    useScanContext();
+interface StepConfirmProps {
+  returnTo?: string;
+  returnParams?: { templateId: string; stepId: string; stepType: string };
+}
+
+export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps) {
+  const {
+    scanResult,
+    paoMonths,
+    setPaoMonths,
+    frontFileKey,
+    ingredientAnalysis,
+    analyzingIngredients,
+    setIngredientAnalysis,
+    setAnalyzingIngredients,
+    reset,
+  } = useScanContext();
   const initialName = scanResult?.product_name || "";
   const initialBrand = scanResult?.brand || "";
   const initialCategory = (scanResult?.category as ProductCategory) || "";
+  const initialProductType = (scanResult?.product_type as ProductType) || null;
   const initialMethod = scanResult?.name_brand_method as NameBrandMethod | null;
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: initialName,
     brand: initialBrand,
     category: initialCategory,
+    productType: initialProductType,
     paoMonths: paoMonths !== null ? `${paoMonths}` : "",
     icon: DEFAULT_ICON,
   });
   const [saving, setSaving] = useState(false);
+  const [showFlags, setShowFlags] = useState(false);
+  const hasTriggeredAnalysis = useRef(false);
 
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const bgColor = colors.background;
+
+  useEffect(() => {
+    if (hasTriggeredAnalysis.current) return;
+    if (!scanResult?.raw_ocr_text) return;
+    if (ingredientAnalysis || analyzingIngredients) return;
+
+    hasTriggeredAnalysis.current = true;
+    setAnalyzingIngredients(true);
+    analyzeIngredients(scanResult.raw_ocr_text)
+      .then((result) => setIngredientAnalysis(result))
+      .catch(() => {})
+      .finally(() => setAnalyzingIngredients(false));
+  }, [scanResult?.raw_ocr_text]);
 
   const normalizePao = (input: string): number | null => {
     const trimmed = input.trim();
@@ -97,6 +127,7 @@ export default function StepConfirm() {
         name: formData.name.trim(),
         brand: formData.brand.trim() || undefined,
         category: formData.category || undefined,
+        product_type: formData.productType || undefined,
         icon: formData.icon || undefined,
         pao_months: paoValue ?? undefined,
         image_s3_key: frontFileKey || undefined,
@@ -110,7 +141,12 @@ export default function StepConfirm() {
         text2: `${formData.name.trim()} saved to your shelf`,
         position: "top",
       });
-      router.replace("/(main)/products");
+      if (returnTo && returnParams) {
+        router.dismissAll();
+        router.push({ pathname: returnTo, params: returnParams });
+      } else {
+        router.replace("/(main)/products");
+      }
     } catch {
       // interceptor shows toast
     } finally {
@@ -125,11 +161,11 @@ export default function StepConfirm() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: bgColor }]}
+      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
       edges={["top", "bottom"]}
     >
       <KeyboardAvoidingView
-        style={styles.inner}
+        style={[styles.container, { backgroundColor: bgColor }]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
@@ -145,6 +181,75 @@ export default function StepConfirm() {
               Double-check and add product to your shelf!
             </ThemedText>
           </View>
+
+          {analyzingIngredients && scanResult?.raw_ocr_text && (
+            <View style={[styles.flagBadge, { borderColor: colors.neutral[400] }]}>
+              <ThemedText
+                type="captionLarge"
+                style={{ color: colors.neutral[600] }}
+              >
+                Analyzing ingredients...
+              </ThemedText>
+            </View>
+          )}
+
+          {!analyzingIngredients && ingredientAnalysis && ingredientAnalysis.flags.length > 0 && (
+            <View>
+              <TouchableOpacity
+                style={[styles.flagBadge, { borderColor: colors.secondary[500] }]}
+                onPress={() => setShowFlags((prev) => !prev)}
+                activeOpacity={0.7}
+              >
+                <ThemedText
+                  type="captionLarge"
+                  weight="medium"
+                  style={{ color: colors.secondary[600] }}
+                >
+                  {ingredientAnalysis.flags.length} flagged ingredient{ingredientAnalysis.flags.length !== 1 ? "s" : ""}
+                </ThemedText>
+                <MaterialCommunityIcons
+                  name={showFlags ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={colors.secondary[600]}
+                />
+              </TouchableOpacity>
+              {showFlags && (
+                <View style={styles.flagList}>
+                  {ingredientAnalysis.flags.map((flag, i) => (
+                    <View key={i} style={styles.flagRow}>
+                      <MaterialCommunityIcons
+                        name="alert-circle-outline"
+                        size={14}
+                        color={colors.secondary[600]}
+                      />
+                      <ThemedText
+                        type="caption"
+                        style={{ color: colors.neutral[700], flex: 1 }}
+                      >
+                        {flag}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
+          {!analyzingIngredients && ingredientAnalysis && ingredientAnalysis.flags.length === 0 && scanResult?.raw_ocr_text && (
+            <View style={[styles.flagBadge, { borderColor: colors.primary[400] }]}>
+              <MaterialCommunityIcons
+                name="check-circle-outline"
+                size={16}
+                color={colors.primary[600]}
+              />
+              <ThemedText
+                type="captionLarge"
+                style={{ color: colors.primary[600] }}
+              >
+                No flagged ingredients
+              </ThemedText>
+            </View>
+          )}
 
           <ProductForm
             value={formData}
@@ -189,6 +294,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  inner: { flex: 1 },
   scrollContent: { padding: 24, paddingTop: 16 },
+  flagBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignSelf: "center",
+  },
+  flagList: {
+    marginTop: 8,
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  flagRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
 });

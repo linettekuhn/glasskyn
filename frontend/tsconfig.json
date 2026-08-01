@@ -3,7 +3,8 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "expo-router/src/*": ["./node_modules/expo-router/build/*"]
     }
   }
 }

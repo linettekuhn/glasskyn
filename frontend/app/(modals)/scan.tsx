@@ -1,6 +1,5 @@
 import { View, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useScanContext } from "../../src/contexts/ScanContext";
 import StepFront from "../../src/components/scan/step-front";
 import StepBack from "../../src/components/scan/step-back";
@@ -9,6 +8,12 @@ import StepConfirm from "../../src/components/scan/step-confirm";
 
 export default function ScanScreen() {
   const { step, reset } = useScanContext();
+  const { returnTo, templateId, stepId, stepType } = useLocalSearchParams<{
+    returnTo?: string;
+    templateId?: string;
+    stepId?: string;
+    stepType?: string;
+  }>();
   const isCameraStep = step === "front" || step === "back" || step === "pao";
 
   const handleClose = () => {
@@ -28,7 +33,16 @@ export default function ScanScreen() {
 
   return (
     <View style={styles.nonCameraContainer}>
-      {step === "confirm" && <StepConfirm />}
+      {step === "confirm" && (
+        <StepConfirm
+          returnTo={returnTo}
+          returnParams={
+            templateId && stepId && stepType
+              ? { templateId, stepId, stepType }
+              : undefined
+          }
+        />
+      )}
     </View>
   );
 }

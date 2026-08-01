@@ -81,6 +81,23 @@ export default function ProductCard({
     });
   };
 
+  const handleSeeMore = () => {
+    router.push({
+      pathname: "/(modals)/product-detail",
+      params: {
+        productId: String(product.id),
+        name: product.name,
+        brand: product.brand || "",
+        category: product.category || "",
+        productType: product.product_type || "",
+        icon: product.icon || "",
+        paoMonths: product.pao_months ? String(product.pao_months) : "",
+        imageUrl: product.image_url || "",
+        createdAt: product.created_at,
+      },
+    });
+  };
+
   const handleDelete = () => {
     Alert.alert("Delete", `Delete "${product.name}"?`, [
       { text: "Cancel", style: "cancel" },
@@ -140,6 +157,26 @@ export default function ProductCard({
           >
             Expires {expiryLabel}
           </ThemedText>
+        )}
+        {!isPreview && (
+          <TouchableOpacity
+            onPress={handleSeeMore}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            style={styles.seeMoreRow}
+          >
+            <ThemedText
+              type="captionSmall"
+              weight="medium"
+              style={{ color: colors.primary[600] }}
+            >
+              See more
+            </ThemedText>
+            <MaterialCommunityIcons
+              name="chevron-right"
+              size={14}
+              color={colors.primary[600]}
+            />
+          </TouchableOpacity>
         )}
       </View>
       {!isPreview && (
@@ -210,5 +247,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  seeMoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    marginTop: 2,
   },
 });

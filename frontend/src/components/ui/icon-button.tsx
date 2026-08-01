@@ -17,7 +17,7 @@ export default function IconButton({
   onPress,
   IconComponent,
   iconName,
-  iconSize = 18,
+  iconSize = 24,
   iconColor,
   active = false,
   activeColor = "rgba(255,200,0,0.6)",
@@ -46,10 +46,10 @@ export default function IconButton({
 
 const styles = StyleSheet.create({
   button: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    padding: 6,
+    borderRadius: "50%",
     justifyContent: "center",
     alignItems: "center",
+    alignSelf: "center",
   },
 });

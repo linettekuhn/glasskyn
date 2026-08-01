@@ -13,6 +13,7 @@ class ProductCreate(BaseModel):
     image_s3_key: Optional[str] = None
     icon: Optional[str] = None
     pao_months: Optional[int] = Field(default=None, ge=1, le=120)
+    product_type: Optional[str] = None
     scan_id: Optional[int] = None
 
     @field_validator("category", mode="before")
@@ -47,6 +48,7 @@ class ProductUpdate(BaseModel):
     image_s3_key: Optional[str] = None
     icon: Optional[str] = None
     pao_months: Optional[int] = Field(default=None, ge=1, le=120)
+    product_type: Optional[str] = None
 
     @field_validator("category", mode="before")
     @classmethod
@@ -70,6 +72,7 @@ class ProductOut(BaseModel):
     image_url: Optional[str] = None
     icon: Optional[str] = None
     pao_months: Optional[int] = None
+    product_type: Optional[str] = None
     created_at: datetime
     user_id: int
 

@@ -1,11 +1,7 @@
 import { useState } from "react";
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   useColorScheme,
@@ -19,7 +15,7 @@ import Toast from "react-native-toast-message";
 import { ThemedText } from "@/components/ui/themed-text";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedTextInput from "@/components/ui/themed-text-input";
-import { Octicons } from "@expo/vector-icons";
+import { MaterialIcons, Octicons } from "@expo/vector-icons";
 import ThemedButton from "@/components/ui/themed-button";
 
 export default function LoginScreen() {
@@ -44,7 +40,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email, password);
-      router.replace("/(main)");
+      router.replace("/");
     } catch {
       // toast already shown by axios interceptor
     } finally {
@@ -126,8 +122,8 @@ export default function LoginScreen() {
               onPress={handleLogin}
               disabled={loading}
               loading={loading}
-              RightIconComponent={Octicons}
-              rightIconName="arrow-right"
+              rightIconName="arrow-forward"
+              RightIconComponent={MaterialIcons}
             />
           </View>
           <View style={styles.divider}>

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import {
   View,
   FlatList,
@@ -7,11 +7,10 @@ import {
   RefreshControl,
   useColorScheme,
 } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
-import Toast from "react-native-toast-message";
+import { useRouter } from "expo-router";
 import LoadingSpinner from "../../src/components/ui/loading-spinner";
-import { getProducts } from "../../src/api/products";
-import { Product, ProductCategory } from "../../src/types";
+import { useProducts } from "../../src/hooks/use-products";
+import { ProductCategory } from "../../src/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
@@ -26,8 +25,7 @@ const categoryLabels: { key: "all" | ProductCategory; label: string }[] = [
 ];
 
 export default function MyShelfScreen() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { products, loading, refetch } = useProducts();
   const [selectedCategories, setSelectedCategories] = useState<
     ProductCategory[]
   >([]);
@@ -41,28 +39,6 @@ export default function MyShelfScreen() {
       : products.filter(
           (p) => p.category && selectedCategories.includes(p.category),
         );
-
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getProducts();
-      setProducts(data);
-    } catch {
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Failed to load products",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchProducts();
-    }, [fetchProducts]),
-  );
 
   if (loading) {
     return <LoadingSpinner />;
@@ -139,11 +115,11 @@ export default function MyShelfScreen() {
           data={filteredProducts}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <ProductCard product={item} onDelete={fetchProducts} />
+            <ProductCard product={item} onDelete={refetch} />
           )}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={fetchProducts} />
+            <RefreshControl refreshing={loading} onRefresh={refetch} />
           }
         />
       )}
@@ -161,7 +137,6 @@ export default function MyShelfScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 32,
     paddingHorizontal: 20,
   },
   chipRow: {

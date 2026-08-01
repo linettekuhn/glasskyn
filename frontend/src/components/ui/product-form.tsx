@@ -1,14 +1,12 @@
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  useColorScheme,
-} from "react-native";
-import type { ProductCategory, NameBrandMethod } from "../../types";
+import { View, StyleSheet, useColorScheme } from "react-native";
+import type {
+  ProductCategory,
+  ProductType,
+  NameBrandMethod,
+} from "../../types";
 import { ThemedText } from "./themed-text";
 import ThemedTextInput from "./themed-text-input";
+import ThemedDropdown from "./themed-dropdown";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "./themed-button";
 import IconSelector from "./icon-selector";
@@ -18,6 +16,7 @@ export interface ProductFormData {
   name: string;
   brand: string;
   category: ProductCategory | null;
+  productType: ProductType | null;
   paoMonths: string;
   icon: string;
 }
@@ -27,17 +26,32 @@ interface ProductFormProps {
   onChange: (data: ProductFormData) => void;
   disabled?: boolean;
   showPaoInput?: boolean;
+  showProductType?: boolean;
   paoHint?: string;
   sourceMethod?: NameBrandMethod | null;
 }
 
 const CATEGORIES: ProductCategory[] = ["skincare", "makeup", "haircare"];
 
+const PRODUCT_TYPES: { key: ProductType; label: string }[] = [
+  { key: "cleanser", label: "Cleanser" },
+  { key: "toner", label: "Toner" },
+  { key: "serum", label: "Serum" },
+  { key: "moisturizer", label: "Moisturizer" },
+  { key: "exfoliant", label: "Exfoliant" },
+  { key: "mask", label: "Mask" },
+  { key: "spot_treatment", label: "Spot Treatment" },
+  { key: "spf", label: "SPF" },
+  { key: "oil", label: "Oil" },
+  { key: "other", label: "Other" },
+];
+
 export default function ProductForm({
   value,
   onChange,
   disabled,
   showPaoInput,
+  showProductType = true,
   paoHint,
   sourceMethod,
 }: ProductFormProps) {
@@ -45,32 +59,6 @@ export default function ProductForm({
   const colors = Colors[getTheme(colorScheme)];
   return (
     <View style={styles.form}>
-      <View style={styles.inputWrapper}>
-        <ThemedText
-          type="caption"
-          weight="bold"
-          style={{ color: colors.primary[700] }}
-        >
-          PREVIEW
-        </ThemedText>
-        <ProductCard
-          product={{
-            id: -1,
-            name: value.name,
-            brand: value.brand,
-            category: value.category,
-            icon: value.icon,
-            image_s3_key: null,
-            image_url: null,
-            created_at: "",
-            user_id: -1,
-            pao_months: value.paoMonths ? parseInt(value.paoMonths, 10) : null,
-          }}
-          onDelete={() => {}}
-          isPreview
-        />
-      </View>
-
       <View style={styles.inputWrapper}>
         <ThemedText
           type="caption"
@@ -148,6 +136,29 @@ export default function ProductForm({
           editable={!disabled}
         />
       </View>
+      {showProductType && value.category === "skincare" && (
+        <View style={styles.inputWrapper}>
+          <ThemedText
+            type="caption"
+            weight="bold"
+            style={{ color: colors.primary[700] }}
+          >
+            PRODUCT TYPE
+          </ThemedText>
+          <ThemedDropdown
+            options={PRODUCT_TYPES.map((pt) => ({
+              label: pt.label,
+              value: pt.key,
+            }))}
+            value={value.productType}
+            onChange={(v) =>
+              onChange({ ...value, productType: v as ProductType })
+            }
+            placeholder="Select product type"
+            disabled={disabled}
+          />
+        </View>
+      )}
       {sourceMethod === "barcode_lookup" && (
         <ThemedText type="caption">
           Name & brand extracted from barcode data

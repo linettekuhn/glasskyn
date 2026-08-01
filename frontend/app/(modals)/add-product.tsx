@@ -1,10 +1,7 @@
 import { useState } from "react";
 import {
   View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 import { createProduct, updateProduct } from "../../src/api/products";
-import type { ProductCategory } from "../../src/types";
+import type { ProductCategory, ProductType } from "../../src/types";
 import ProductForm, {
   ProductFormData,
 } from "../../src/components/ui/product-form";
@@ -29,6 +26,7 @@ export default function AddProductScreen() {
     name?: string;
     brand?: string;
     category?: string;
+    product_type?: string;
     icon?: string;
     pao_months?: string;
     imageS3Key?: string;
@@ -40,6 +38,7 @@ export default function AddProductScreen() {
     name: params.name ?? "",
     brand: params.brand ?? "",
     category: (params.category as ProductCategory) || "",
+    productType: (params.product_type as ProductType) || null,
     paoMonths: params.pao_months ?? "",
     icon: params.icon || DEFAULT_ICON,
   });
@@ -55,6 +54,7 @@ export default function AddProductScreen() {
       name: "",
       brand: "",
       category: null,
+      productType: null,
       paoMonths: "",
       icon: DEFAULT_ICON,
     });
@@ -81,6 +81,7 @@ export default function AddProductScreen() {
         name: formData.name.trim(),
         brand: formData.brand.trim() || undefined,
         category: formData.category || undefined,
+        product_type: formData.productType || undefined,
         icon: formData.icon || undefined,
         pao_months: paoMonths,
         image_s3_key: params.imageS3Key || undefined,
@@ -121,11 +122,11 @@ export default function AddProductScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: bgColor }]}
+      style={{ flex: 1, backgroundColor: bgColor }}
       edges={["top", "bottom"]}
     >
       <KeyboardAvoidingView
-        style={styles.containerInner}
+        style={[styles.container, { backgroundColor: bgColor }]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
@@ -133,11 +134,11 @@ export default function AddProductScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <ThemedText type="h2">
+            <ThemedText type="h1">
               {isEditing ? "Edit Product Details" : "Add a New Product"}
             </ThemedText>
             <ThemedText
-              type="bodySmall"
+              type="bodyLarge"
               style={{ color: colors.secondary[600] }}
             >
               {isEditing
@@ -182,9 +183,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  containerInner: {
-    flex: 1,
-  },
   scrollContent: {
     padding: 24,
     paddingTop: 16,
@@ -196,35 +194,5 @@ const styles = StyleSheet.create({
   buttons: {
     alignItems: "center",
     gap: 8,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 8,
-  },
-  button: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-  },
-  clearButton: {
-    backgroundColor: "#f0f0f0",
-  },
-  clearButtonText: {
-    color: "#666",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  addButton: {
-    backgroundColor: "#6c63ff",
-  },
-  addButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  buttonDisabled: {
-    opacity: 0.7,
   },
 });

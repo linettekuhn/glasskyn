@@ -1,0 +1,342 @@
+[
+  {
+    "seed_version": 1,
+    "name": "Dry Skin Essentials",
+    "description": "A hydrating routine for dry skin, focused on moisture barrier repair and gentle care.",
+    "routine_type": "skincare",
+    "skin_type_tags": ["dry"],
+    "concern_tags": ["Dryness", "Dullness"],
+    "steps": [
+      {
+        "step_order": 1,
+        "step_type": "cleanse",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 2,
+        "step_type": "moisturize",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 3,
+        "step_type": "spf",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 4,
+        "step_type": "cleanse",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 5,
+        "step_type": "tone",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 6,
+        "step_type": "treat",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 7,
+        "step_type": "moisturize",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      }
+    ]
+  },
+  {
+    "seed_version": 1,
+    "name": "Oily Skin Control",
+    "description": "A lightweight routine for oily skin, focused on controlling shine and keeping pores clear.",
+    "routine_type": "skincare",
+    "skin_type_tags": ["oily"],
+    "concern_tags": ["Oiliness", "Enlarged Pores"],
+    "steps": [
+      {
+        "step_order": 1,
+        "step_type": "cleanse",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 2,
+        "step_type": "moisturize",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 3,
+        "step_type": "spf",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 4,
+        "step_type": "cleanse",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 5,
+        "step_type": "tone",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 6,
+        "step_type": "treat",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 7,
+        "step_type": "moisturize",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      }
+    ]
+  },
+  {
+    "seed_version": 1,
+    "name": "Combination Balance",
+    "description": "A well-rounded routine for combination skin, balancing oily and dry areas morning and night.",
+    "routine_type": "skincare",
+    "skin_type_tags": ["combination"],
+    "concern_tags": ["Dullness", "Even Tone"],
+    "steps": [
+      {
+        "step_order": 1,
+        "step_type": "cleanse",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 2,
+        "step_type": "tone",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 3,
+        "step_type": "moisturize",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 4,
+        "step_type": "spf",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 5,
+        "step_type": "cleanse",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 6,
+        "step_type": "treat",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 7,
+        "step_type": "moisturize",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      }
+    ]
+  },
+  {
+    "seed_version": 1,
+    "name": "Normal Skin Maintenance",
+    "description": "A simple upkeep routine for normal skin, keeping things healthy without overcomplicating.",
+    "routine_type": "skincare",
+    "skin_type_tags": ["normal"],
+    "concern_tags": [],
+    "steps": [
+      {
+        "step_order": 1,
+        "step_type": "cleanse",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 2,
+        "step_type": "moisturize",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 3,
+        "step_type": "spf",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 4,
+        "step_type": "cleanse",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 5,
+        "step_type": "moisturize",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      }
+    ]
+  },
+  {
+    "seed_version": 1,
+    "name": "Acne-Focused Routine",
+    "description": "A targeted routine for breakout-prone skin, focused on deep cleansing and treating active acne.",
+    "routine_type": "skincare",
+    "skin_type_tags": ["oily", "combination"],
+    "concern_tags": ["Acne"],
+    "steps": [
+      {
+        "step_order": 1,
+        "step_type": "cleanse",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 2,
+        "step_type": "moisturize",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 3,
+        "step_type": "spf",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 4,
+        "step_type": "cleanse",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 5,
+        "step_type": "tone",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 6,
+        "step_type": "treat",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 7,
+        "step_type": "moisturize",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      }
+    ]
+  },
+  {
+    "seed_version": 1,
+    "name": "Anti-Aging Routine",
+    "description": "A targeted routine for aging concerns, incorporating treatment steps to support firmness and brightness.",
+    "routine_type": "skincare",
+    "skin_type_tags": ["dry", "combination", "normal"],
+    "concern_tags": ["Aging", "Dark Spots", "Dullness"],
+    "steps": [
+      {
+        "step_order": 1,
+        "step_type": "cleanse",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 2,
+        "step_type": "tone",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 3,
+        "step_type": "moisturize",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 4,
+        "step_type": "spf",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 5,
+        "step_type": "cleanse",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 6,
+        "step_type": "treat",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 7,
+        "step_type": "moisturize",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      }
+    ]
+  },
+  {
+    "seed_version": 1,
+    "name": "Simple Start",
+    "description": "A minimal three-step routine perfect for beginners or anyone wanting a low-maintenance regimen.",
+    "routine_type": "skincare",
+    "skin_type_tags": ["dry", "oily", "combination", "normal"],
+    "concern_tags": [],
+    "steps": [
+      {
+        "step_order": 1,
+        "step_type": "cleanse",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 2,
+        "step_type": "moisturize",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 3,
+        "step_type": "spf",
+        "time_of_day": "AM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 4,
+        "step_type": "cleanse",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      },
+      {
+        "step_order": 5,
+        "step_type": "moisturize",
+        "time_of_day": "PM",
+        "frequency": "daily"
+      }
+    ]
+  }
+]

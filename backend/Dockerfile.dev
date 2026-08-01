@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 8000
 
 # dev server with reload and migrations
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["bash", "/app/entrypoint.sh"]

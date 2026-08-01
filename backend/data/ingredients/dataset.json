@@ -1,0 +1,1102 @@
+[
+  {
+    "id": "water",
+    "ingredient_name": "Water",
+    "aliases": ["Aqua", "Eau", "Purified Water", "Deionized Water"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Solvent", "Vehicle for other ingredients"],
+    "functions": ["solvent"],
+    "skin_type_considerations": {
+      "sensitive": "Safe, no irritation expected",
+      "dry": "Safe, but water alone does not hydrate skin",
+      "oily": "Safe",
+      "combination": "Safe"
+    },
+    "regulatory_status": "Universal, no restrictions",
+    "sources": ["EWG Skin Deep", "INCIDecoder"]
+  },
+  {
+    "id": "glycerin",
+    "ingredient_name": "Glycerin",
+    "aliases": ["Glycerol", "Vegetable Glycerin"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["High concentrations may draw moisture from deeper skin layers in very dry environments"],
+    "benefits": ["Humectant", "Skin barrier support", "Moisturizer", "Wound healing"],
+    "functions": ["humectant", "skin conditioning", "solvent", "viscosity controlling"],
+    "skin_type_considerations": {
+      "sensitive": "Well tolerated, anti-irritant properties",
+      "dry": "Effective at 3-20%, highly beneficial",
+      "oily": "Non-comedogenic, lightweight hydration",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed, FDA GRAS, CIR safe as used",
+    "sources": ["EWG Skin Deep", "INCIDecoder", "CIR"]
+  },
+  {
+    "id": "butylene_glycol",
+    "ingredient_name": "Butylene Glycol",
+    "aliases": ["1,3-Butanediol", "BG"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Humectant", "Solvent", "Texture enhancer", "Penetration enhancer"],
+    "functions": ["humectant", "solvent", "viscosity controlling"],
+    "skin_type_considerations": {
+      "sensitive": "Very low irritation potential",
+      "dry": "Lightweight hydration",
+      "oily": "Non-comedogenic",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed, CIR safe as used",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "propanediol",
+    "ingredient_name": "Propanediol",
+    "aliases": ["1,3-Propanediol", "Zemea", "Corn-derived propanediol"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Humectant", "Solvent", "Skin conditioning", "Enhances ingredient absorption"],
+    "functions": ["humectant", "solvent", "skin conditioning"],
+    "skin_type_considerations": {
+      "sensitive": "Very well tolerated, corn-derived alternative to propylene glycol",
+      "dry": "Good humectant properties",
+      "oily": "Non-comedogenic",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["INCIDecoder", "CIR"]
+  },
+  {
+    "id": "propylene_glycol",
+    "ingredient_name": "Propylene Glycol",
+    "aliases": ["PG", "1,2-Propanediol"],
+    "safety_score": 3,
+    "data_availability": "robust",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["May cause contact dermatitis in sensitive individuals", "Can enhance penetration of other ingredients"],
+    "benefits": ["Humectant", "Solvent", "Preservative booster", "Texture enhancer"],
+    "functions": ["humectant", "solvent", "viscosity controlling"],
+    "skin_type_considerations": {
+      "sensitive": "May irritate; patch test recommended",
+      "dry": "Generally fine, but avoid if reactive",
+      "oily": "Non-comedogenic, safe for most",
+      "combination": "Usually well tolerated"
+    },
+    "regulatory_status": "EU allowed (limited use in some products), CIR safe as used",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "sorbitol",
+    "ingredient_name": "Sorbitol",
+    "aliases": ["D-Glucitol", "Sorbitol Solution"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Humectant", "Skin conditioning", "Flavoring agent"],
+    "functions": ["humectant", "skin conditioning", "flavoring agent"],
+    "skin_type_considerations": {
+      "sensitive": "Very well tolerated",
+      "dry": "Mild humectant, non-drying",
+      "oily": "Non-comedogenic",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed, FDA GRAS",
+    "sources": ["EWG Skin Deep"]
+  },
+  {
+    "id": "sodium_hyaluronate",
+    "ingredient_name": "Sodium Hyaluronate",
+    "aliases": ["Hyaluronic Acid Sodium Salt", "HA"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["High molecular weight HA may form a film that feels sticky"],
+    "benefits": ["Humectant", "Anti-aging", "Wound healing", "Skin plumping"],
+    "functions": ["humectant", "skin conditioning"],
+    "skin_type_considerations": {
+      "sensitive": "Very well tolerated, biocompatible",
+      "dry": "Excellent, holds up to 1000x its weight in water",
+      "oily": "Non-comedogenic, lightweight",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["INCIDecoder", "CIR"]
+  },
+  {
+    "id": "panthenol",
+    "ingredient_name": "Panthenol",
+    "aliases": ["D-Panthenol", "Pro-Vitamin B5", "Dexpanthenol", "Pantothenol"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Humectant", "Anti-inflammatory", "Wound healing", "Hair conditioning", "Skin barrier repair"],
+    "functions": ["humectant", "skin conditioning", "hair conditioning"],
+    "skin_type_considerations": {
+      "sensitive": "Anti-irritant, excellent for reactive skin",
+      "dry": "Strengthens skin barrier",
+      "oily": "Non-comedogenic, soothing",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed, FDA approved OTC skin protectant",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "sodium_laureth_sulfate",
+    "ingredient_name": "Sodium Laureth Sulfate",
+    "aliases": ["SLES", "Sodium Lauryl Ether Sulfate", "PEG-2 Sodium Sulfate"],
+    "safety_score": 3,
+    "data_availability": "robust",
+    "irritancy": 2,
+    "comedogenicity": 0,
+    "known_risks": ["May be contaminated with 1,4-dioxane (a potential carcinogen)", "Can strip skin and hair of natural oils", "Contact irritant at high concentrations"],
+    "benefits": ["Surfactant", "Foaming agent", "Cleansing"],
+    "functions": ["surfactant", "cleansing agent", "emulsifying"],
+    "skin_type_considerations": {
+      "sensitive": "Avoid on face, may cause irritation and dryness",
+      "dry": "Can be overly stripping, use with caution",
+      "oily": "Effective cleanser but may cause rebound oiliness",
+      "combination": "Use only on body, avoid on dry areas"
+    },
+    "regulatory_status": "EU allowed (with 1,4-dioxane limits), CIR safe as used in rinse-off",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "sodium_lauryl_sulfate",
+    "ingredient_name": "Sodium Lauryl Sulfate",
+    "aliases": ["SLS", "Sodium Dodecyl Sulfate", "SDS"],
+    "safety_score": 4,
+    "data_availability": "robust",
+    "irritancy": 3,
+    "comedogenicity": 0,
+    "known_risks": ["Significant skin irritation at concentrations above 1%", "Strips skin barrier", "Eye irritant", "Can cause contact dermatitis"],
+    "benefits": ["Surfactant", "Foaming agent", "Cleansing agent"],
+    "functions": ["surfactant", "cleansing agent", "emulsifying"],
+    "skin_type_considerations": {
+      "sensitive": "Avoid, high irritation potential",
+      "dry": "Avoid, causes barrier damage and dryness",
+      "oily": "May use in wash-off products only",
+      "combination": "Avoid on face, only suitable in rinse-off body products"
+    },
+    "regulatory_status": "EU restricted in leave-on products, CIR safe at low concentrations",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "cocamidopropyl_betaine",
+    "ingredient_name": "Cocamidopropyl Betaine",
+    "aliases": ["CAPB", "Ampholyt"],
+    "safety_score": 2,
+    "data_availability": "good",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["Rare cases of allergic contact dermatitis", "May contain impurity 3-dimethylaminopropylamine (DDMOP)"],
+    "benefits": ["Mild surfactant", "Foam booster", "Conditioning agent"],
+    "functions": ["surfactant", "foaming agent", "antistatic"],
+    "skin_type_considerations": {
+      "sensitive": "Generally well tolerated, much milder than SLS",
+      "dry": "Gentle enough for frequent use",
+      "oily": "Good for oily skin cleansers",
+      "combination": "Safe for most products"
+    },
+    "regulatory_status": "EU allowed, CIR safe as used",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "decyl_glucoside",
+    "ingredient_name": "Decyl Glucoside",
+    "aliases": ["D-Glucoside", "Lauryl Glucoside"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Very mild surfactant", "Biodegradable", "Plant-derived", "Good foam"],
+    "functions": ["surfactant", "cleansing agent", "emulsifying"],
+    "skin_type_considerations": {
+      "sensitive": "Excellent, one of the mildest surfactants available",
+      "dry": "Non-stripping, suitable for dry skin cleansers",
+      "oily": "Effective gentle cleanser",
+      "combination": "Safe for all skin types"
+    },
+    "regulatory_status": "EU allowed, COSMOS/Ecocert approved",
+    "sources": ["INCIDecoder", "CIR"]
+  },
+  {
+    "id": "sodium_cocoyl_glutamate",
+    "ingredient_name": "Sodium Cocoyl Glutamate",
+    "aliases": ["SCG", "Amisoft CS-11"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Very mild amino acid-based surfactant", "Skin-identical pH", "Gentle cleansing"],
+    "functions": ["surfactant", "cleansing agent"],
+    "skin_type_considerations": {
+      "sensitive": "Excellent choice, minimal irritation risk",
+      "dry": "Non-stripping, preserves moisture",
+      "oily": "Effective gentle cleanser",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed, COSMOS approved",
+    "sources": ["INCIDecoder"]
+  },
+  {
+    "id": "dimethicone",
+    "ingredient_name": "Dimethicone",
+    "aliases": ["Polydimethylsiloxane", "PDMS", "Dimethicone Fluid"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 1,
+    "known_risks": ["May trap debris in pores at high concentrations for acne-prone skin", "Can feel occlusive"],
+    "benefits": ["Emollient", "Skin protectant", "Silky texture", "Reduces appearance of fine lines"],
+    "functions": ["emollient", "skin protecting", "antifoaming", "hair conditioning"],
+    "skin_type_considerations": {
+      "sensitive": "Well tolerated, non-irritating barrier",
+      "dry": "Good occlusive to lock in moisture",
+      "oily": "May feel heavy; use low concentrations or avoid",
+      "combination": "Use on dry areas, avoid oily zones if concerned"
+    },
+    "regulatory_status": "EU allowed, CIR safe as used",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "cyclopentasiloxane",
+    "ingredient_name": "Cyclopentasiloxane",
+    "aliases": ["D5", "DC 245"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["Environmental persistence concerns", "Evaporates quickly which can dry out skin in arid climates"],
+    "benefits": ["Lightweight emollient", "Spreadability enhancer", "Non-greasy feel", "Volatility helps product absorb"],
+    "functions": ["emollient", "solvent", "skin conditioning"],
+    "skin_type_considerations": {
+      "sensitive": "Non-irritating, evaporates without residue",
+      "dry": "May not provide enough moisture on its own",
+      "oily": "Excellent, lightweight and non-comedogenic",
+      "combination": "Good for oily zones"
+    },
+    "regulatory_status": "EU restricted (environmental assessment ongoing), CIR safe",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "caprylic_capric_triglyceride",
+    "ingredient_name": "Caprylic/Capric Triglyceride",
+    "aliases": ["MCT Oil", "Fractionated Coconut Oil", "Myritol 312"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 1,
+    "known_risks": [],
+    "benefits": ["Lightweight emollient", "Solvent for actives", "Non-greasy", "Stabilizes formulations"],
+    "functions": ["emollient", "solvent", "skin conditioning"],
+    "skin_type_considerations": {
+      "sensitive": "Very well tolerated, non-irritating",
+      "dry": "Good emollient for lightweight moisture",
+      "oily": "Non-comedogenic, excellent for oily skin",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed, COSMOS approved",
+    "sources": ["INCIDecoder"]
+  },
+  {
+    "id": "cetearyl_alcohol",
+    "ingredient_name": "Cetearyl Alcohol",
+    "aliases": ["Cetyl Stearyl Alcohol", "Cetostearyl Alcohol"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 2,
+    "known_risks": ["Fatty alcohols can be comedogenic in very high concentrations for acne-prone skin"],
+    "benefits": ["Emollient", "Emulsifier", "Thickener", "Texture enhancer"],
+    "functions": ["emollient", "emulsifying", "foam boosting", "viscosity controlling"],
+    "skin_type_considerations": {
+      "sensitive": "Well tolerated, non-irritating",
+      "dry": "Good emollient for dry skin formulations",
+      "oily": "May feel heavy; check concentration in leave-on products",
+      "combination": "Usually fine, monitor if acne-prone"
+    },
+    "regulatory_status": "EU allowed, CIR safe as used",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "cetyl_alcohol",
+    "ingredient_name": "Cetyl Alcohol",
+    "aliases": ["1-Hexadecanol", "Palmityl Alcohol"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 2,
+    "known_risks": ["Fatty alcohol, may be comedogenic at high concentrations"],
+    "benefits": ["Emollient", "Thickener", "Emulsion stabilizer", "Texture enhancer"],
+    "functions": ["emollient", "emulsifying", "viscosity controlling", "opacifying"],
+    "skin_type_considerations": {
+      "sensitive": "Non-irritating",
+      "dry": "Good emollient",
+      "oily": "May feel heavy in leave-on products",
+      "combination": "Usually fine"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "glyceryl_stearate",
+    "ingredient_name": "Glyceryl Stearate",
+    "aliases": ["Monostearin", "Glyceryl Monostearate"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 2,
+    "known_risks": ["Fatty acid ester, mild comedogenicity potential at high concentrations"],
+    "benefits": ["Emulsifier", "Emollient", "Stabilizer"],
+    "functions": ["emulsifying", "emollient", "surfactant"],
+    "skin_type_considerations": {
+      "sensitive": "Well tolerated",
+      "dry": "Good emollient properties",
+      "oily": "Generally fine at typical concentrations",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["INCIDecoder", "CIR"]
+  },
+  {
+    "id": "squalane",
+    "ingredient_name": "Squalane",
+    "aliases": ["Hydrogenated Squalene", "Olive-derived Squalane"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Emollient", "Antioxidant", "Non-comedogenic moisturizer", "Skin barrier support"],
+    "functions": ["emollient", "skin conditioning", "emulsifying"],
+    "skin_type_considerations": {
+      "sensitive": "Excellent, skin-identical lipid",
+      "dry": "Deeply moisturizing without heaviness",
+      "oily": "Non-comedogenic, balances oil production",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed, COSMOS approved",
+    "sources": ["INCIDecoder"]
+  },
+  {
+    "id": "simmondsia_chinensis_seed_oil",
+    "ingredient_name": "Jojoba Oil",
+    "aliases": ["Simmondsia Chinensis Seed Oil", "Jojoba Seed Oil"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 2,
+    "known_risks": ["Rare allergic reactions possible", "Heavier formulations may feel greasy"],
+    "benefits": ["Emollient", "Anti-inflammatory", "Sebum-regulating", "Antioxidant"],
+    "functions": ["emollient", "skin conditioning", "hair conditioning"],
+    "skin_type_considerations": {
+      "sensitive": "Well tolerated, anti-inflammatory",
+      "dry": "Rich moisturizer, good for very dry skin",
+      "oily": "May help regulate sebum production; start with small amounts",
+      "combination": "Can use on dry areas, patch test on oily zones"
+    },
+    "regulatory_status": "EU allowed, COSMOS approved",
+    "sources": ["EWG Skin Deep", "INCIDecoder"]
+  },
+  {
+    "id": "phenoxyethanol",
+    "ingredient_name": "Phenoxyethanol",
+    "aliases": ["2-Phenoxyethanol", "Phenoxetol"],
+    "safety_score": 4,
+    "data_availability": "robust",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["May cause irritation at high concentrations (>1%)", "Avoid near eyes", "Some concerns about neurotoxicity at very high doses in animal studies"],
+    "benefits": ["Preservative", "Effective against gram-negative bacteria", "Stable across pH range"],
+    "functions": ["preservative", "fragrance", "solvent"],
+    "skin_type_considerations": {
+      "sensitive": "Usually well tolerated at standard concentrations (<1%)",
+      "dry": "Safe",
+      "oily": "Safe",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed (max 1%), CIR safe at 1% or less",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "methylparaben",
+    "ingredient_name": "Methylparaben",
+    "aliases": ["Methyl 4-hydroxybenzoate", "Methylparaben Sodium"],
+    "safety_score": 4,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["Endocrine disruption concerns (weak estrogenic activity in vitro)", "Allergic contact dermatitis (rare)", "Some consumers avoid due to paraben-free trends"],
+    "benefits": ["Effective preservative", "Broad-spectrum antimicrobial", "Low cost"],
+    "functions": ["preservative", "antifungal"],
+    "skin_type_considerations": {
+      "sensitive": "Rare allergic reactions possible; most tolerate well",
+      "dry": "Safe",
+      "oily": "Safe",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed (max 0.4%), CIR safe at current use levels, FDA permitted",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "propylparaben",
+    "ingredient_name": "Propylparaben",
+    "aliases": ["Propyl 4-hydroxybenzoate"],
+    "safety_score": 5,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["Stronger endocrine disruption concerns than methylparaben", "EU restricts total paraben concentration to 0.4%", "Banned in some product categories in EU"],
+    "benefits": ["Preservative", "Antifungal"],
+    "functions": ["preservative", "antifungal"],
+    "skin_type_considerations": {
+      "sensitive": "Most tolerate, but paraben-sensitive individuals should avoid",
+      "dry": "Safe",
+      "oily": "Safe",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed (max 0.4% combined with other parabens), CIR safe at 0.4% total",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "sodium_benzoate",
+    "ingredient_name": "Sodium Benzoate",
+    "aliases": ["Benzoate of Soda"],
+    "safety_score": 3,
+    "data_availability": "good",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["May cause irritation in sensitive individuals at high concentrations", "Can form benzene (carcinogen) when combined with vitamin C in certain conditions"],
+    "benefits": ["Preservative", "Effective at low pH"],
+    "functions": ["preservative", "antimicrobial"],
+    "skin_type_considerations": {
+      "sensitive": "Usually fine at standard concentrations",
+      "dry": "Safe",
+      "oily": "Safe",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed, CIR safe, FDA GRAS",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "niacinamide",
+    "ingredient_name": "Niacinamide",
+    "aliases": ["Vitamin B3", "Nicotinamide", "Nicotinic Acid Amide"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["Very high concentrations (>10%) may cause flushing in sensitive individuals", "Temporary redness if skin barrier is compromised"],
+    "benefits": ["Reduces pores", "Controls oil", "Brightens skin", "Strengthens skin barrier", "Anti-inflammatory", "Reduces hyperpigmentation"],
+    "functions": ["skin conditioning", "anti-acne", "brightening"],
+    "skin_type_considerations": {
+      "sensitive": "Well tolerated at 2-5%, start low",
+      "dry": "Strengthens barrier, reduces transepidermal water loss",
+      "oily": "Excellent for oil control and pore minimization",
+      "combination": "Ideal, addresses both oily and dry concerns"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["EWG Skin Deep", "INCIDecoder", "CIR"]
+  },
+  {
+    "id": "salicylic_acid",
+    "ingredient_name": "Salicylic Acid",
+    "aliases": ["BHA", "2-Hydroxybenzoic Acid", "Beta Hydroxy Acid"],
+    "safety_score": 4,
+    "data_availability": "robust",
+    "irritancy": 2,
+    "comedogenicity": 0,
+    "known_risks": ["Photosensitivity", "Skin peeling and dryness", "Avoid during pregnancy (systemic absorption)", "Aspirin allergy may cross-react"],
+    "benefits": ["Exfoliant", "Acne treatment", "Anti-inflammatory", "Unclogs pores", "Reduces blackheads"],
+    "functions": ["exfoliant", "anti-acne", "keratolytic", "anti-inflammatory"],
+    "skin_type_considerations": {
+      "sensitive": "Use with caution, start at 0.5%, may cause irritation",
+      "dry": "Can be drying, follow with moisturizer",
+      "oily": "Excellent for acne-prone, oily skin",
+      "combination": "Use on oily/acne-prone areas only"
+    },
+    "regulatory_status": "EU restricted (max 2% leave-on, 3% rinse-off), FDA OTC acne treatment",
+    "sources": ["EWG Skin Deep", "INCIDecoder", "CIR"]
+  },
+  {
+    "id": "glycolic_acid",
+    "ingredient_name": "Glycolic Acid",
+    "aliases": ["AHA", "Hydroxyacetic Acid", "Alpha Hydroxy Acid"],
+    "safety_score": 4,
+    "data_availability": "robust",
+    "irritancy": 2,
+    "comedogenicity": 0,
+    "known_risks": ["Photosensitivity (must use SPF)", "Skin irritation and peeling", "Avoid on broken skin", "Avoid during pregnancy"],
+    "benefits": ["Exfoliant", "Anti-aging", "Brightens skin", "Improves texture", "Stimulates collagen"],
+    "functions": ["exfoliant", "skin conditioning", "pH adjuster"],
+    "skin_type_considerations": {
+      "sensitive": "Avoid or use very low concentrations (<4%)",
+      "dry": "Can be drying, use sparingly and follow with moisturizer",
+      "oily": "Good for texture and acne",
+      "combination": "Target oily areas, avoid sensitive zones"
+    },
+    "regulatory_status": "EU restricted (max 6% AHA total, pH >=3.5), CIR safe at 10% or less, pH 3.5+",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "retinol",
+    "ingredient_name": "Retinol",
+    "aliases": ["Vitamin A", "Retinyl Alcohol", "Pure Retinol"],
+    "safety_score": 5,
+    "data_availability": "robust",
+    "irritancy": 3,
+    "comedogenicity": 0,
+    "known_risks": ["Photosensitivity (must use SPF)", "Peeling and dryness during retinization period", "Teratogenic — strictly avoid during pregnancy", "May worsen rosacea"],
+    "benefits": ["Anti-aging", "Acne treatment", "Cell turnover", "Collagen stimulation", "Reduces hyperpigmentation"],
+    "functions": ["anti-aging", "anti-acne", "skin conditioning"],
+    "skin_type_considerations": {
+      "sensitive": "Start very low (0.025%) and slow (2x/week), buffer with moisturizer",
+      "dry": "Can be very drying; use with rich moisturizer",
+      "oily": "Well-tolerated, excellent for acne and texture",
+      "combination": "Start on less sensitive areas"
+    },
+    "regulatory_status": "EU restricted, CIR safe at 0.3-1%, prescription-only in some formulations",
+    "sources": ["EWG Skin Deep", "INCIDecoder", "CIR"]
+  },
+  {
+    "id": "ascorbic_acid",
+    "ingredient_name": "Vitamin C",
+    "aliases": ["L-Ascorbic Acid", "Ascorbic Acid", "AA"],
+    "safety_score": 2,
+    "data_availability": "robust",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["Oxidizes easily (turns orange/brown, loses efficacy)", "Stinging and irritation at high concentrations (>20%)", "Unstable in light and heat"],
+    "benefits": ["Antioxidant", "Brightening", "Collagen synthesis", "UV damage repair", "Anti-pigmentation"],
+    "functions": ["antioxidant", "skin conditioning", "brightening"],
+    "skin_type_considerations": {
+      "sensitive": "Use low concentration (10%) or derivatives (SAP, MAP)",
+      "dry": "Benefits all skin types, pair with moisturizer",
+      "oily": "Excellent for oily, acne-prone skin",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["EWG Skin Deep", "INCIDecoder", "CIR"]
+  },
+  {
+    "id": "hyaluronic_acid",
+    "ingredient_name": "Hyaluronic Acid",
+    "aliases": ["HA", "Hyaluronan", "Sodium Hyaluronate"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["Low molecular weight HA may cause inflammation in some studies", "Can feel sticky at high concentrations"],
+    "benefits": ["Humectant", "Anti-aging", "Wound healing", "Skin plumping", "Reduces fine lines"],
+    "functions": ["humectant", "skin conditioning"],
+    "skin_type_considerations": {
+      "sensitive": "Very well tolerated",
+      "dry": "Excellent, holds 1000x its weight in water",
+      "oily": "Non-comedogenic, lightweight hydration",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["INCIDecoder", "CIR"]
+  },
+  {
+    "id": "benzoyl_peroxide",
+    "ingredient_name": "Benzoyl Peroxide",
+    "aliases": ["BPO", "Benzoylperoxide"],
+    "safety_score": 6,
+    "data_availability": "robust",
+    "irritancy": 3,
+    "comedogenicity": 0,
+    "known_risks": ["Significant skin dryness and peeling", "Bleaches fabrics and hair", "Contact dermatitis common", "May cause sun sensitivity"],
+    "benefits": ["Acne treatment", "Kills P. acnes bacteria", "Unclogs pores", "Anti-inflammatory"],
+    "functions": ["anti-acne", "antimicrobial", "oxidizing agent"],
+    "skin_type_considerations": {
+      "sensitive": "Generally avoid or use very low concentrations (2.5%)",
+      "dry": "Very drying; use with heavy moisturizer",
+      "oily": "Excellent for inflammatory acne",
+      "combination": "Use only on acne-affected areas"
+    },
+    "regulatory_status": "EU restricted, FDA OTC acne treatment (max 10%)",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "azelaic_acid",
+    "ingredient_name": "Azelaic Acid",
+    "aliases": ["Azelainic Acid", "Nonanedioic Acid"],
+    "safety_score": 2,
+    "data_availability": "good",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["Mild tingling and redness initially", "May bleach dark skin temporarily"],
+    "benefits": ["Anti-acne", "Brightening", "Anti-inflammatory", "Reduces hyperpigmentation", "Safe during pregnancy"],
+    "functions": ["anti-acne", "skin conditioning", "brightening"],
+    "skin_type_considerations": {
+      "sensitive": "Well tolerated compared to other actives, but start slow",
+      "dry": "Can be drying at 15-20%, use moisturizer",
+      "oily": "Excellent for acne and rosacea",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed (15-20% prescription, 10% OTC in some countries), CIR safe",
+    "sources": ["EWG Skin Deep", "INCIDecoder"]
+  },
+  {
+    "id": "adenosine",
+    "ingredient_name": "Adenosine",
+    "aliases": ["Adenosin"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Anti-wrinkle", "Skin soothing", "Promotes collagen production", "Anti-inflammatory"],
+    "functions": ["skin conditioning", "anti-wrinkle"],
+    "skin_type_considerations": {
+      "sensitive": "Very well tolerated",
+      "dry": "Beneficial, promotes skin repair",
+      "oily": "Safe",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed, required for anti-wrinkle claims in Korea",
+    "sources": ["INCIDecoder"]
+  },
+  {
+    "id": "centella_asiatica_extract",
+    "ingredient_name": "Centella Asiatica Extract",
+    "aliases": ["Cica", "Gotu Kola", "Madecassoside", "Asiaticoside", "Asiatic Acid", "Madecassic Acid"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Wound healing", "Anti-inflammatory", "Collagen synthesis", "Soothes irritation", "Barrier repair"],
+    "functions": ["skin conditioning", "wound healing agent", "anti-inflammatory"],
+    "skin_type_considerations": {
+      "sensitive": "Excellent, one of the best ingredients for sensitive skin",
+      "dry": "Supports barrier repair and hydration",
+      "oily": "Non-comedogenic, helps with acne scarring",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed, COSMOS approved",
+    "sources": ["INCIDecoder", "EWG Skin Deep"]
+  },
+  {
+    "id": "fragrance",
+    "ingredient_name": "Fragrance",
+    "aliases": ["Parfum", "Fragrance", "Aroma", "Perfume"],
+    "safety_score": 6,
+    "data_availability": "limited",
+    "irritancy": 2,
+    "comedogenicity": 0,
+    "known_risks": ["Leading cause of cosmetic contact dermatitis", "Allergen: 26 EU-listed fragrance allergens must be declared", "Can cause sensitization", "Endocrine disruption concerns for some fragrance compounds", "Lack of transparency (proprietary blends)"],
+    "benefits": ["Cosmetic appeal", "Masking unpleasant odors"],
+    "functions": ["fragrance", "masking"],
+    "skin_type_considerations": {
+      "sensitive": "Strongly advise avoiding; most common irritant",
+      "dry": "Can exacerbate dryness and irritation",
+      "oily": "May irritate acne-prone skin",
+      "combination": "Avoid if any sensitivity concerns"
+    },
+    "regulatory_status": "EU allowed (26 allergens must be listed above 0.001% in leave-on, 0.01% in rinse-off)",
+    "sources": ["EWG Skin Deep", "INCIDecoder"]
+  },
+  {
+    "id": "tocopherol",
+    "ingredient_name": "Tocopherol",
+    "aliases": ["Vitamin E", "d-alpha-Tocopherol", "dl-alpha-Tocopherol", "Tocopheryl Acetate"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 2,
+    "known_risks": ["Rare allergic contact dermatitis", "May be comedogenic at very high concentrations"],
+    "benefits": ["Antioxidant", "Moisturizer", "Anti-inflammatory", "Photoprotection", "Preserves product stability"],
+    "functions": ["antioxidant", "skin conditioning", "emollient"],
+    "skin_type_considerations": {
+      "sensitive": "Well tolerated, anti-inflammatory",
+      "dry": "Good emollient and moisturizer",
+      "oily": "May be slightly comedogenic; use at lower concentrations",
+      "combination": "Generally safe"
+    },
+    "regulatory_status": "EU allowed, CIR safe, FDA GRAS",
+    "sources": ["EWG Skin Deep", "INCIDecoder", "CIR"]
+  },
+  {
+    "id": "allantoin",
+    "ingredient_name": "Allantoin",
+    "aliases": ["5-Ureidohydantoin", "Glyoxyldiureide"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Soothing", "Skin protectant", "Promotes cell regeneration", "Moisturizing", "Anti-irritant"],
+    "functions": ["skin conditioning", "skin protectant"],
+    "skin_type_considerations": {
+      "sensitive": "Excellent, anti-irritant properties",
+      "dry": "Soothing and moisturizing",
+      "oily": "Non-comedogenic, safe",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed, CIR safe, FDA approved OTC skin protectant",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "aloe_barbadensis_leaf_extract",
+    "ingredient_name": "Aloe Barbadensis Leaf Extract",
+    "aliases": ["Aloe Vera", "Aloe Vera Extract", "Aloe Barbadensis"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["Raw aloe latex contains aloin (laxative, potential irritant)", "Highly processed extracts lose some bioactivity"],
+    "benefits": ["Soothing", "Moisturizing", "Anti-inflammatory", "Wound healing", "Cooling"],
+    "functions": ["skin conditioning", "humectant"],
+    "skin_type_considerations": {
+      "sensitive": "Excellent, soothing and calming",
+      "dry": "Mild humectant, helps soothe dry skin",
+      "oily": "Lightweight, non-greasy hydration",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["EWG Skin Deep", "INCIDecoder"]
+  },
+  {
+    "id": "citric_acid",
+    "ingredient_name": "Citric Acid",
+    "aliases": ["2-Hydroxypropane-1,2,3-Tricarboxylic Acid"],
+    "safety_score": 2,
+    "data_availability": "robust",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["Irritating at low pH", "Stinging on broken or sensitized skin", "Can cause chemical burns at high concentrations"],
+    "benefits": ["pH adjuster", "Exfoliant (as AHA)", "Antioxidant", "Chelating agent"],
+    "functions": ["pH adjuster", "exfoliant", "chelating"],
+    "skin_type_considerations": {
+      "sensitive": "Avoid as active; use only as pH adjuster at low concentrations",
+      "dry": "Mild AHA at <10%, can be beneficial",
+      "oily": "Good for texture improvement",
+      "combination": "Use as directed, avoid sensitive areas at high concentrations"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "zinc_oxide",
+    "ingredient_name": "Zinc Oxide",
+    "aliases": ["ZnO", "CI 77947"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["Can leave white cast on darker skin tones", "Nano-particle concerns (inhalation, not skin application)"],
+    "benefits": ["UV filter (broad spectrum UVA/UVB)", "Anti-inflammatory", "Skin protectant", "Non-comedogenic"],
+    "functions": ["sunscreen agent", "skin protecting", "bulking agent"],
+    "skin_type_considerations": {
+      "sensitive": "Excellent, anti-irritant and safest sunscreen filter",
+      "dry": "Protective and soothing",
+      "oily": "Non-comedogenic, but may feel thick",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed (max 25% as UV filter), FDA OTC sunscreen monograph",
+    "sources": ["EWG Skin Deep", "INCIDecoder"]
+  },
+  {
+    "id": "titanium_dioxide",
+    "ingredient_name": "Titanium Dioxide",
+    "aliases": ["TiO2", "CI 77891"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["White cast on darker skin", "Nano-particle inhalation concerns (not topical)"],
+    "benefits": ["UV filter (UVB, some UVA-II)", "Physical/mineral sunscreen", "Opacifier and pigment"],
+    "functions": ["sunscreen agent", "colorant", "bulking agent"],
+    "skin_type_considerations": {
+      "sensitive": "Very safe, minimal irritation",
+      "dry": "Protective",
+      "oily": "Non-comedogenic, can be matte-finish in formulations",
+      "combination": "Safe for all areas"
+    },
+    "regulatory_status": "EU allowed (max 25% as UV filter), FDA OTC sunscreen monograph, nano restricted in EU",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "octinoxate",
+    "ingredient_name": "Octinoxate",
+    "aliases": ["Octyl Methoxycinnamate", "OMC", "Ethylhexyl Methoxycinnamate"],
+    "safety_score": 5,
+    "data_availability": "robust",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["Endocrine disruption concerns (weak estrogenic activity)", "Allergic contact dermatitis", "Harms coral reefs (banned in Hawaii/Palau)", "Penetration enhancer"],
+    "benefits": ["UVB filter", "Effective sun protection", "Lightweight texture"],
+    "functions": ["sunscreen agent"],
+    "skin_type_considerations": {
+      "sensitive": "Usually well tolerated, but some experience stinging",
+      "dry": "Safe",
+      "oily": "Lightweight, good for oily skin sunscreens",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed (max 10%), FDA OTC sunscreen, banned in Hawaii/Palau (coral)",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "avobenzone",
+    "ingredient_name": "Avobenzone",
+    "aliases": ["Butyl Methoxydibenzoylmethane", "Parsol 1789", "BMBM"],
+    "safety_score": 4,
+    "data_availability": "robust",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["Photounstable (degrades without stabilizers)", "Allergic contact dermatitis (rare)", "Endocrine disruption concerns (weak)", "Releases free radicals when degrading"],
+    "benefits": ["Broad UVA protection", "Only widely used organic UVA filter"],
+    "functions": ["sunscreen agent"],
+    "skin_type_considerations": {
+      "sensitive": "Usually well tolerated, but can sting on sensitized skin",
+      "dry": "Safe",
+      "oily": "Safe",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed (max 5%), FDA OTC sunscreen",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "xanthan_gum",
+    "ingredient_name": "Xanthan Gum",
+    "aliases": ["Xanthan", "E150"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Thickener", "Stabilizer", "Emulsion stabilizer", "Texture enhancer"],
+    "functions": ["viscosity controlling", "emulsion stabilizing", "gel forming"],
+    "skin_type_considerations": {
+      "sensitive": "Very well tolerated",
+      "dry": "Safe",
+      "oily": "Safe",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed, FDA GRAS, COSMOS approved",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "carbomer",
+    "ingredient_name": "Carbomer",
+    "aliases": ["Carbopol", "Polyacrylic Acid", "Carbomer 940", "Carbomer 980"],
+    "safety_score": 1,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["Dust inhalation during manufacturing (not consumer concern)"],
+    "benefits": ["Thickener", "Gel former", "Stabilizer", "Creates clear gel textures"],
+    "functions": ["viscosity controlling", "gel forming", "emulsion stabilizing"],
+    "skin_type_considerations": {
+      "sensitive": "Very well tolerated, often used in sensitive skin products",
+      "dry": "Safe",
+      "oily": "Safe, creates lightweight gel textures",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "silica",
+    "ingredient_name": "Silica",
+    "aliases": ["Silicon Dioxide", "Hydrated Silica", "CI 77811"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["Nano-silica: inhalation concerns during manufacturing (not relevant to consumer use)"],
+    "benefits": ["Mattifying agent", "Oil absorber", "Texture enhancer", "Bulking agent"],
+    "functions": ["absorbent", "anticaking agent", "bulking agent", "viscosity controlling"],
+    "skin_type_considerations": {
+      "sensitive": "Very well tolerated",
+      "dry": "Can be drying, use in mattifying products only if oily",
+      "oily": "Excellent, absorbs excess oil",
+      "combination": "Good for T-zone mattifying"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["EWG Skin Deep"]
+  },
+  {
+    "id": "tapioca_starch",
+    "ingredient_name": "Tapioca Starch",
+    "aliases": ["Manihot Esculenta Root Starch", "Cassava Starch"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Oil absorber", "Mattifying", "Natural texture enhancer", "Silky feel"],
+    "functions": ["absorbent", "bulking agent", "viscosity controlling"],
+    "skin_type_considerations": {
+      "sensitive": "Very well tolerated, natural origin",
+      "dry": "Can feel drying in high amounts",
+      "oily": "Good oil absorber, mattifying",
+      "combination": "Good for mattifying formulations"
+    },
+    "regulatory_status": "EU allowed, COSMOS approved",
+    "sources": ["INCIDecoder"]
+  },
+  {
+    "id": "peg_100_stearate",
+    "ingredient_name": "PEG-100 Stearate",
+    "aliases": ["Polyethylene Glycol-100 Stearate"],
+    "safety_score": 3,
+    "data_availability": "good",
+    "irritancy": 1,
+    "comedogenicity": 1,
+    "known_risks": ["May contain 1,4-dioxane contamination (manufacturing byproduct)", "Can enhance penetration of other ingredients"],
+    "benefits": ["Emulsifier", "Emollient", "Texture enhancer"],
+    "functions": ["emulsifying", "surfactant"],
+    "skin_type_considerations": {
+      "sensitive": "Usually well tolerated, but sensitive skin should patch test",
+      "dry": "Safe",
+      "oily": "Safe",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed, CIR safe when free of 1,4-dioxane",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "acrylates_c10_30_alkyl_acrylate_crosspolymer",
+    "ingredient_name": "Acrylates/C10-30 Alkyl Acrylate Crosspolymer",
+    "aliases": ["Carbomer-like polymer", "Synthetic polymer"],
+    "safety_score": 1,
+    "data_availability": "good",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": [],
+    "benefits": ["Thickener", "Stabilizer", "Emulsion stabilizer", "Creates smooth textures"],
+    "functions": ["viscosity controlling", "emulsion stabilizing", "stabilizer"],
+    "skin_type_considerations": {
+      "sensitive": "Very well tolerated, inert polymer",
+      "dry": "Safe",
+      "oily": "Safe",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed, CIR safe",
+    "sources": ["EWG Skin Deep"]
+  },
+  {
+    "id": "homosalate",
+    "ingredient_name": "Homosalate",
+    "aliases": ["Homomenthyl Salicylate", "3,3,5-Trimethylcyclohexyl Salicylate"],
+    "safety_score": 4,
+    "data_availability": "robust",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["Endocrine disruption concerns (weak estrogenic activity)", "Enhances penetration of other chemicals", "Breaks down in sunlight", "Absorbed through skin in significant amounts"],
+    "benefits": ["UVB filter", "Stabilizes other sunscreen agents", "Lightweight texture"],
+    "functions": ["sunscreen agent"],
+    "skin_type_considerations": {
+      "sensitive": "May cause irritation in sensitive individuals",
+      "dry": "Safe",
+      "oily": "Lightweight, suitable for oily skin",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed (max 15%), FDA OTC sunscreen",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "octisalate",
+    "ingredient_name": "Octisalate",
+    "aliases": ["Ethylhexyl Salicylate", "Octyl Salicylate", "2-Ethylhexyl Salicylate"],
+    "safety_score": 3,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 0,
+    "known_risks": ["Low-level endocrine activity (less concerning than other chemical filters)", "Can enhance absorption of other ingredients"],
+    "benefits": ["UVB filter", "Stabilizes Avobenzone", "Lightweight emollient", "Helps water-resistant formulations"],
+    "functions": ["sunscreen agent", "emollient"],
+    "skin_type_considerations": {
+      "sensitive": "Generally well tolerated, low irritation potential",
+      "dry": "Provides mild moisturizing benefits",
+      "oily": "Lightweight, suitable for oily skin",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed (max 5%), FDA OTC sunscreen",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "octocrylene",
+    "ingredient_name": "Octocrylene",
+    "aliases": ["Ethylhexyl Cyanoacrylate", "Octocrilene", "Uvinul N 539"],
+    "safety_score": 3,
+    "data_availability": "robust",
+    "irritancy": 0,
+    "comedogenicity": 1,
+    "known_risks": ["Degrades into benzophenone over time (potential endocrine disruptor)", "UVB filter", "Environmental concerns (coral reef impact under study)", "May accumulate in ocean environments"],
+    "benefits": ["UVB filter", "Photostabilizer for Avobenzone", "Enhances water resistance", "Lightweight texture"],
+    "functions": ["sunscreen agent", "stabilizer"],
+    "skin_type_considerations": {
+      "sensitive": "Generally well tolerated, low irritation potential",
+      "dry": "Safe, mild emollient properties",
+      "oily": "Lightweight, suitable for oily skin",
+      "combination": "Safe"
+    },
+    "regulatory_status": "EU allowed (max 10%), FDA OTC sunscreen",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "oxybenzone",
+    "ingredient_name": "Oxybenzone",
+    "aliases": ["Benzophenone-3", "Octyldimethyl PABA", "Uvinul M40"],
+    "safety_score": 6,
+    "data_availability": "robust",
+    "irritancy": 2,
+    "comedogenicity": 0,
+    "known_risks": ["Significant endocrine disruption concerns (estrogenic, anti-androgenic)", "Allergic contact dermatitis", "Harms coral reefs (banned in Hawaii/Palau/Virgin Islands)", "High skin absorption rates", "Detectable in blood after topical application"],
+    "benefits": ["Broad spectrum UVA/UVB protection", "Absorbs UV light effectively", "Helps protect product from UV degradation"],
+    "functions": ["sunscreen agent"],
+    "skin_type_considerations": {
+      "sensitive": "Higher irritation risk, avoid if reactive",
+      "dry": "Safe but may be drying",
+      "oily": "Safe",
+      "combination": "Patch test recommended for sensitive areas"
+    },
+    "regulatory_status": "EU allowed (max 6%), FDA OTC sunscreen, banned in Hawaii/Palau/Virgin Islands (coral)",
+    "sources": ["EWG Skin Deep", "CIR"]
+  },
+  {
+    "id": "ensulizole",
+    "ingredient_name": "Ensulizole",
+    "aliases": ["Phenylbenzimidazole Sulfonic Acid", "PBSA"],
+    "safety_score": 3,
+    "data_availability": "good",
+    "irritancy": 1,
+    "comedogenicity": 0,
+    "known_risks": ["Low-level endocrine activity (minimal concern)", "Water-soluble so provides less water resistance"],
+    "benefits": ["UVB filter", "Water-soluble (lightweight feel)", "Does not leave white cast", "Good for daily wear under makeup"],
+    "functions": ["sunscreen agent"],
+    "skin_type_considerations": {
+      "sensitive": "Low irritation potential, water-soluble formula is gentle",
+      "dry": "Non-drying, lightweight",
+      "oily": "Excellent choice, non-greasy water-soluble formula",
+      "combination": "Safe, lightweight feel"
+    },
+    "regulatory_status": "EU allowed (max 5%), FDA OTC sunscreen",
+    "sources": ["EWG Skin Deep", "CIR"]
+  }
+]
