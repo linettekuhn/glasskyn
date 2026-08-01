@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { View, StyleSheet, useColorScheme } from "react-native";
+import { View, StyleSheet, useColorScheme, Alert } from "react-native";
 import { Octicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 
@@ -36,8 +36,10 @@ interface RoutineFormProps {
   productPickerReturnTo: string;
   productPickerExtraParam?: { key: string; value: string };
   onSubmit: (payload: RoutineFormSubmit) => void | Promise<void>;
+  onSaved?: () => void;
   submitLabel: string;
   bottomBarExtra?: React.ReactNode;
+  saveOnBack?: boolean;
   onGoBack?: () => void;
   rightIconName?: React.ComponentProps<typeof Octicons>["name"];
   RightIconComponent?: typeof Octicons;
@@ -54,8 +56,10 @@ export default function RoutineForm({
   productPickerReturnTo,
   productPickerExtraParam,
   onSubmit,
+  onSaved,
   submitLabel,
   bottomBarExtra,
+  saveOnBack = false,
   onGoBack,
   rightIconName,
   RightIconComponent,
@@ -192,7 +196,7 @@ export default function RoutineForm({
     setLocalStepOrder(null);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (notify = true) => {
     if (!routineName.trim() || enrichedSteps.length === 0) return;
     setSaving(true);
     try {
@@ -204,9 +208,34 @@ export default function RoutineForm({
         frequency: s.frequency ?? "daily",
       }));
       await onSubmit({ name: routineName.trim(), steps });
+      if (notify) onSaved?.();
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleGoBack = async () => {
+    const leave = () => (onGoBack ? onGoBack() : router.back());
+
+    if (saveOnBack) {
+      await handleSubmit(false);
+      leave();
+      return;
+    }
+
+    if (routineName.trim() || localSteps.length > 0) {
+      Alert.alert(
+        "Discard Routine",
+        "Discard this routine draft? Your changes won't be saved.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Discard", style: "destructive", onPress: leave },
+        ],
+      );
+      return;
+    }
+
+    leave();
   };
 
   const headerContent = (
@@ -259,7 +288,7 @@ export default function RoutineForm({
       onDeleteStep={handleDeleteStep}
       onAddStep={handleOpenAddStep}
       headerContent={headerContent}
-      onGoBack={onGoBack}
+      onGoBack={handleGoBack}
       bottomBar={bottomBarExtra ? <View style={styles.bottomBar}>{bottomBar}</View> : bottomBar}
     />
   );

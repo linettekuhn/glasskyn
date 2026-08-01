@@ -25,12 +25,18 @@ import {
 import { useChatSession } from "@/contexts/ChatSessionContext";
 
 const QUICK_ACTIONS = [
-  { label: "Generate Routine", message: "Generate a skincare routine for me" },
   {
-    label: "Swap moisturizer",
-    message: "Swap my moisturizer for something lighter for my skin type",
+    label: "Generate a Skincare Routine",
+    message: "Generate a skincare routine for me",
   },
-  { label: "My products", message: "What products do I have for my routine?" },
+  {
+    label: "Audit My Shelf",
+    message: "Check my saved products for any risky or concerning ingredients",
+  },
+  {
+    label: "Find Routine Gaps",
+    message: "What am I missing from my current routine?",
+  },
 ];
 
 export default function ChatScreen() {
@@ -38,6 +44,10 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessageOut[]>([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editableRoutine, setEditableRoutine] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const routineSavedRef = useRef(false);
   const sendingRef = useRef(false);
@@ -45,14 +55,12 @@ export default function ChatScreen() {
   const skipHydrationRef = useRef(false);
   const prevParamsRef = useRef<{
     generate?: string;
-    routineSaved?: string;
     routineDiscarded?: string;
   }>({});
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const { generate, routineSaved, routineDiscarded } = useLocalSearchParams<{
+  const { generate, routineDiscarded } = useLocalSearchParams<{
     generate?: string;
-    routineSaved?: string;
     routineDiscarded?: string;
   }>();
 
@@ -73,27 +81,11 @@ export default function ChatScreen() {
         prev.generate = undefined;
       }
 
-      if (routineSaved === "1" && prev.routineSaved !== "1") {
-        prev.routineSaved = "1";
-        router.setParams({ routineSaved: undefined } as any);
-        const msg: ChatMessageOut = {
-          id: -Date.now(),
-          session_id: sessionId,
-          role: "assistant",
-          content: "✅ Routine saved!",
-          tool_calls: null,
-          tool_call_id: null,
-          created_at: new Date().toISOString(),
-        };
-        setMessages((prevMsgs) => [...prevMsgs, msg]);
-      } else if (!routineSaved) {
-        prev.routineSaved = undefined;
-      }
-
       if (routineDiscarded === "1" && prev.routineDiscarded !== "1") {
         prev.routineDiscarded = "1";
         router.setParams({ routineDiscarded: undefined } as any);
         routineSavedRef.current = false;
+        setEditableRoutine(null);
         const msg: ChatMessageOut = {
           id: -Date.now(),
           session_id: sessionId,
@@ -107,7 +99,7 @@ export default function ChatScreen() {
       } else if (!routineDiscarded) {
         prev.routineDiscarded = undefined;
       }
-    }, [sessionId, generate, routineSaved, routineDiscarded]),
+    }, [sessionId, generate, routineDiscarded]),
   );
 
   useFocusEffect(
@@ -199,6 +191,7 @@ export default function ChatScreen() {
         routineSavedRef.current = true;
         try {
           const routine = await generateRoutine();
+          setEditableRoutine({ id: routine.id, name: routine.name });
           setTimeout(() => {
             router.push(
               `/(modals)/edit-routine?routineId=${routine.id}&returnTo=/(main)/chat`,
@@ -237,28 +230,25 @@ export default function ChatScreen() {
 
   const handleNewChat = () => {
     if (loading) return;
-    Alert.alert(
-      "Start a new chat?",
-      "This clears the current conversation.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "New Chat",
-          style: "destructive",
-          onPress: () => {
-            const oldSessionId = sessionId;
-            setMessages([]);
-            setInputText("");
-            routineSavedRef.current = false;
-            skipHydrationRef.current = true;
-            if (oldSessionId) {
-              deleteSession(oldSessionId).catch(() => {});
-            }
-            resetSession();
-          },
+    Alert.alert("Start a new chat?", "This clears the current conversation.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "New Chat",
+        style: "destructive",
+        onPress: () => {
+          const oldSessionId = sessionId;
+          setMessages([]);
+          setInputText("");
+          routineSavedRef.current = false;
+          setEditableRoutine(null);
+          skipHydrationRef.current = true;
+          if (oldSessionId) {
+            deleteSession(oldSessionId).catch(() => {});
+          }
+          resetSession();
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const renderMessage = ({ item }: { item: ChatMessageOut }) => {
@@ -344,17 +334,17 @@ export default function ChatScreen() {
         <View style={styles.headerRow}>
           <View style={styles.headerText}>
             <ThemedText type="h1">Chat</ThemedText>
-            <ThemedText type="bodySmall" style={{ color: colors.secondary[600] }}>
+            <ThemedText
+              type="bodySmall"
+              style={{ color: colors.secondary[600] }}
+            >
               Ask about products, ingredients, or your routine
             </ThemedText>
           </View>
           <TouchableOpacity
             onPress={handleNewChat}
             disabled={loading}
-            style={[
-              styles.newChatButton,
-              loading && { opacity: 0.4 },
-            ]}
+            style={[styles.newChatButton, loading && { opacity: 0.4 }]}
             accessibilityLabel="Start a new chat"
           >
             <MaterialCommunityIcons
@@ -396,6 +386,49 @@ export default function ChatScreen() {
       />
 
       {renderQuickActions()}
+
+      {editableRoutine && (
+        <TouchableOpacity
+          style={[
+            styles.continueBanner,
+            {
+              backgroundColor: colors.primary[100],
+              borderColor: colors.primary[300],
+            },
+          ]}
+          onPress={() =>
+            router.push(
+              `/(modals)/edit-routine?routineId=${editableRoutine.id}&returnTo=/(main)/chat`,
+            )
+          }
+          accessibilityLabel="Continue editing routine"
+        >
+          <MaterialCommunityIcons
+            name="pencil-outline"
+            size={18}
+            color={colors.primary[700]}
+          />
+          <ThemedText
+            type="caption"
+            weight="bold"
+            numberOfLines={1}
+            style={{ color: colors.primary[800], flex: 1 }}
+          >
+            {editableRoutine.name}
+          </ThemedText>
+          <ThemedText
+            type="captionSmall"
+            style={{ color: colors.primary[700] }}
+          >
+            Continue editing
+          </ThemedText>
+          <MaterialCommunityIcons
+            name="chevron-right"
+            size={18}
+            color={colors.primary[700]}
+          />
+        </TouchableOpacity>
+      )}
 
       <View
         style={[
@@ -506,6 +539,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 6,
+  },
+  continueBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   inputBar: {
     flexDirection: "row",

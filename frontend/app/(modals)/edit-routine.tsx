@@ -56,36 +56,10 @@ export default function EditRoutineScreen() {
       name: payload.name,
       steps: payload.steps,
     });
-    router.dismissAll();
-    if (returnTo) {
-      router.replace(`${returnTo}?routineSaved=1`);
-    } else {
-      router.replace("/(main)/routine");
-    }
   };
 
-  const handleBackToChat = () => {
-    Alert.alert(
-      "Discard Routine",
-      "Discard this routine? This will delete the generated routine.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Discard",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteRoutine(Number(routineId));
-            } catch {
-              // toast shown by interceptor
-            }
-            router.dismissAll();
-            if (returnTo) router.replace(`${returnTo}?routineDiscarded=1`);
-            else router.back();
-          },
-        },
-      ],
-    );
+  const handleClose = () => {
+    router.dismissAll();
   };
 
   const handleDelete = () => {
@@ -101,6 +75,7 @@ export default function EditRoutineScreen() {
             try {
               await deleteRoutine(Number(routineId));
               router.dismissAll();
+              if (returnTo) router.replace(`${returnTo}?routineDiscarded=1`);
             } catch {
               // toast shown by interceptor
             }
@@ -124,7 +99,9 @@ export default function EditRoutineScreen() {
       productPickerExtraParam={{ key: "routineId", value: routineId ?? "" }}
       submitLabel="Done"
       onSubmit={handleSubmit}
-      onGoBack={returnTo ? handleBackToChat : undefined}
+      onSaved={handleClose}
+      saveOnBack
+      onGoBack={handleClose}
       bottomBarExtra={
         <ThemedButton
           link
