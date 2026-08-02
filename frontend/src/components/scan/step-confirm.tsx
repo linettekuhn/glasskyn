@@ -52,6 +52,9 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
     paoMonths: paoMonths !== null ? `${paoMonths}` : "",
     icon: DEFAULT_ICON,
     openedDate: null,
+    expiryDate: scanResult?.expiry_date
+      ? scanResult.expiry_date.slice(0, 7)
+      : null,
   });
   const [saving, setSaving] = useState(false);
   const [showFlags, setShowFlags] = useState(false);
@@ -124,13 +127,19 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
         setPaoMonths(paoValue);
       }
 
+      const expiryComplete =
+        !!formData.expiryDate && /^\d{4}-\d{2}$/.test(formData.expiryDate);
+
       await createProduct({
         name: formData.name.trim(),
         brand: formData.brand.trim() || undefined,
         category: formData.category || undefined,
         product_type: formData.productType || undefined,
         icon: formData.icon || undefined,
-        pao_months: paoValue ?? undefined,
+        pao_months: expiryComplete ? null : (paoValue ?? undefined),
+        expiry_date: expiryComplete
+          ? `${formData.expiryDate}-01`
+          : undefined,
         opened_date: formData.openedDate || undefined,
         image_s3_key: frontFileKey || undefined,
         scan_id: scanId || null,

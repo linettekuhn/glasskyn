@@ -24,6 +24,7 @@ export interface ProductFormData {
   paoMonths: string;
   icon: string;
   openedDate: string | null;
+  expiryDate: string | null;
 }
 
 interface ProductFormProps {
@@ -67,6 +68,39 @@ function formatOpenedDate(iso: string | null): string {
   return `${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
+const MONTH_OPTIONS = MONTHS.map((label, i) => ({
+  label,
+  value: String(i + 1).padStart(2, "0"),
+}));
+
+function buildYearOptions(): { label: string; value: string }[] {
+  const current = new Date().getFullYear();
+  const options: { label: string; value: string }[] = [];
+  for (let y = current; y <= current + 20; y++) {
+    options.push({ label: String(y), value: String(y) });
+  }
+  return options;
+}
+
+const YEAR_OPTIONS = buildYearOptions();
+
+function splitExpiryDate(iso: string | null): {
+  month: string | null;
+  year: string | null;
+} {
+  if (!iso) return { month: null, year: null };
+  const parts = iso.split("-");
+  if (parts.length === 2) {
+    return { month: parts[1] ?? null, year: parts[0] ?? null };
+  }
+  if (parts.length === 1) {
+    const value = parts[0];
+    if (/^\d{4}$/.test(value)) return { month: null, year: value };
+    if (/^\d{2}$/.test(value)) return { month: value, year: null };
+  }
+  return { month: null, year: null };
+}
+
 const PRODUCT_TYPES: { key: ProductType; label: string }[] = [
   { key: "cleanser", label: "Cleanser" },
   { key: "toner", label: "Toner" },
@@ -93,9 +127,38 @@ export default function ProductForm({
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [expiryMode, setExpiryMode] = useState(!!value.expiryDate);
+
+  const handleSwitchToExpiry = () => {
+    setExpiryMode(true);
+    onChange({ ...value, paoMonths: "" });
+  };
+
+  const handleSwitchToPao = () => {
+    setExpiryMode(false);
+    onChange({ ...value, expiryDate: null });
+  };
+
+  const handleExpiryPartChange = (
+    part: "month" | "year",
+    partValue: string,
+  ) => {
+    const { month, year } = splitExpiryDate(value.expiryDate);
+    const nextMonth = part === "month" ? partValue : month;
+    const nextYear = part === "year" ? partValue : year;
+    if (nextMonth && nextYear) {
+      onChange({ ...value, expiryDate: `${nextYear}-${nextMonth}` });
+    } else if (nextMonth) {
+      onChange({ ...value, expiryDate: nextMonth });
+    } else if (nextYear) {
+      onChange({ ...value, expiryDate: nextYear });
+    }
+  };
 
   const pickerValue = (() => {
-    const parsed = value.openedDate ? new Date(`${value.openedDate}T00:00:00`) : new Date();
+    const parsed = value.openedDate
+      ? new Date(`${value.openedDate}T00:00:00`)
+      : new Date();
     return parsed;
   })();
 
@@ -222,22 +285,62 @@ export default function ProductForm({
 
       {showPaoInput && (
         <>
-          <View style={styles.inputWrapper}>
-            <ThemedText
-              type="caption"
-              weight="bold"
-              style={{ color: colors.primary[700] }}
-            >
-              PAO (PERIOD AFTER OPENING)
-            </ThemedText>
-            <ThemedTextInput
-              value={value.paoMonths}
-              onChangeText={(text) => onChange({ ...value, paoMonths: text })}
-              placeholder="Enter PAO in months here"
-              autoCapitalize="none"
-              editable={!disabled}
-            />
-          </View>
+          {!expiryMode ? (
+            <View style={styles.inputWrapper}>
+              <ThemedText
+                type="caption"
+                weight="bold"
+                style={{ color: colors.primary[700] }}
+              >
+                PAO (PERIOD AFTER OPENING)
+              </ThemedText>
+              <ThemedTextInput
+                value={value.paoMonths}
+                onChangeText={(text) => onChange({ ...value, paoMonths: text })}
+                placeholder="Enter PAO in months here"
+                autoCapitalize="none"
+                editable={!disabled}
+              />
+            </View>
+          ) : (
+            <View style={styles.inputWrapper}>
+              <ThemedText
+                type="caption"
+                weight="bold"
+                style={{ color: colors.primary[700] }}
+              >
+                EXPIRATION DATE
+              </ThemedText>
+              <View style={styles.expiryRow}>
+                <ThemedDropdown
+                  options={MONTH_OPTIONS}
+                  value={splitExpiryDate(value.expiryDate).month}
+                  onChange={(v) => handleExpiryPartChange("month", v)}
+                  placeholder="Month"
+                  disabled={disabled}
+                  style={styles.expiryMonth}
+                />
+                <ThemedDropdown
+                  options={YEAR_OPTIONS}
+                  value={splitExpiryDate(value.expiryDate).year}
+                  onChange={(v) => handleExpiryPartChange("year", v)}
+                  placeholder="Year"
+                  disabled={disabled}
+                  style={styles.expiryYear}
+                />
+              </View>
+            </View>
+          )}
+          <ThemedButton
+            link
+            textType="caption"
+            onPress={expiryMode ? handleSwitchToPao : handleSwitchToExpiry}
+            disabled={disabled}
+            color={colors.secondary[700]}
+            text={
+              expiryMode ? "Use PAO instead" : "No PAO? Enter expiration date"
+            }
+          />
         </>
       )}
 
@@ -271,7 +374,9 @@ export default function ProductForm({
           <ThemedButton
             link
             textType="caption"
-            onPress={() => onChange({ ...value, openedDate: toISODate(new Date()) })}
+            onPress={() =>
+              onChange({ ...value, openedDate: toISODate(new Date()) })
+            }
             disabled={disabled}
             color={colors.primary[600]}
             text="Mark as opened today"
@@ -300,6 +405,16 @@ const styles = StyleSheet.create({
     gap: 8,
     marginLeft: "auto",
     marginRight: "auto",
+  },
+  expiryRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  expiryMonth: {
+    flex: 1.2,
+  },
+  expiryYear: {
+    flex: 1,
   },
   form: {
     marginTop: 12,

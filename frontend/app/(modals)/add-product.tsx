@@ -30,6 +30,7 @@ export default function AddProductScreen() {
     icon?: string;
     pao_months?: string;
     opened_date?: string;
+    expiry_date?: string;
     imageS3Key?: string;
     scanId?: string;
   }>();
@@ -43,6 +44,7 @@ export default function AddProductScreen() {
     paoMonths: params.pao_months ?? "",
     icon: params.icon || DEFAULT_ICON,
     openedDate: params.opened_date ?? null,
+    expiryDate: params.expiry_date ? params.expiry_date.slice(0, 7) : null,
   });
   const [submitLoading, setSubmitLoading] = useState(false);
   const colorScheme = useColorScheme();
@@ -60,6 +62,7 @@ export default function AddProductScreen() {
       paoMonths: "",
       icon: DEFAULT_ICON,
       openedDate: null,
+      expiryDate: null,
     });
   };
 
@@ -79,6 +82,11 @@ export default function AddProductScreen() {
       const paoMonths = formData.paoMonths
         ? parseInt(formData.paoMonths, 10) || undefined
         : undefined;
+      const expiryComplete =
+        !!formData.expiryDate && /^\d{4}-\d{2}$/.test(formData.expiryDate);
+      const expiryDate = expiryComplete
+        ? `${formData.expiryDate}-01`
+        : undefined;
 
       const data: Parameters<typeof createProduct>[0] = {
         name: formData.name.trim(),
@@ -86,7 +94,8 @@ export default function AddProductScreen() {
         category: formData.category || undefined,
         product_type: formData.productType || undefined,
         icon: formData.icon || undefined,
-        pao_months: paoMonths,
+        pao_months: expiryComplete ? null : paoMonths,
+        expiry_date: expiryDate,
         opened_date: formData.openedDate || undefined,
         image_s3_key: params.imageS3Key || undefined,
       };

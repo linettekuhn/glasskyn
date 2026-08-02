@@ -8,7 +8,11 @@ import TopBar from "@/components/top-bar";
 type TabBarIconProps = { focused: boolean; color: string };
 
 type TabIconProps = TabBarIconProps & {
-  IconComponent: React.ComponentType<{ name: string; size: number; color: string }>;
+  IconComponent: React.ComponentType<{
+    name: string;
+    size: number;
+    color: string;
+  }>;
   outlineName: string;
   fillName: string;
   size: number;
@@ -77,14 +81,14 @@ export default function MainLayout() {
           }}
         />
         <Tabs.Screen
-          name="routine"
+          name="chat"
           options={{
-            title: "Routines",
+            title: "Chat",
             tabBarIcon: ({ focused, color }: TabBarIconProps) => (
               <TabIcon
                 IconComponent={MaterialCommunityIcons}
-                outlineName="clipboard-list-outline"
-                fillName="clipboard-list"
+                outlineName="chat-outline"
+                fillName="chat"
                 size={28}
                 color={color}
                 focused={focused}
@@ -109,22 +113,6 @@ export default function MainLayout() {
           }}
         />
         <Tabs.Screen
-          name="chat"
-          options={{
-            title: "Chat",
-            tabBarIcon: ({ focused, color }: TabBarIconProps) => (
-              <TabIcon
-                IconComponent={MaterialCommunityIcons}
-                outlineName="chat-outline"
-                fillName="chat"
-                size={28}
-                color={color}
-                focused={focused}
-              />
-            ),
-          }}
-        />
-        <Tabs.Screen
           name="products"
           options={{
             title: "My Shelf",
@@ -133,6 +121,22 @@ export default function MainLayout() {
                 IconComponent={MaterialCommunityIcons}
                 outlineName="archive-outline"
                 fillName="archive"
+                size={28}
+                color={color}
+                focused={focused}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="routine"
+          options={{
+            title: "Routines",
+            tabBarIcon: ({ focused, color }: TabBarIconProps) => (
+              <TabIcon
+                IconComponent={MaterialCommunityIcons}
+                outlineName="clipboard-list-outline"
+                fillName="clipboard-list"
                 size={28}
                 color={color}
                 focused={focused}

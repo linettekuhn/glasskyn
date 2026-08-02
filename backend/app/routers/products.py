@@ -29,7 +29,8 @@ def create_product(
         pao_months=body.pao_months,
         product_type=body.product_type,
         opened_date=body.opened_date,
-        expiry_date=compute_expiry_date(body.opened_date, body.pao_months),
+        expiry_date=body.expiry_date
+        or compute_expiry_date(body.opened_date, body.pao_months),
         user_id=current_user.id,
     )
 
@@ -79,13 +80,21 @@ def update_product(
 
     # returns fields client actually sent
     updates = body.model_dump(exclude_unset=True)
+    explicit_expiry = "expiry_date" in updates
 
     # dynamically set each updated attribute
     for field, value in updates.items():
         setattr(product, field, value)
 
-    # recompute expiry whenever opened date or PAO changes
-    product.expiry_date = compute_expiry_date(product.opened_date, product.pao_months)
+    # Expiry precedence:
+    # - explicit non-null expiry_date wins (literal mode) — never recompute
+    # - otherwise recompute from PAO/opened only when those changed, so a
+    #   brand-only edit doesn't clobber a literal expiry
+    if not (explicit_expiry and updates["expiry_date"] is not None):
+        if "opened_date" in updates or "pao_months" in updates:
+            product.expiry_date = compute_expiry_date(
+                product.opened_date, product.pao_months
+            )
 
     db.commit()
     db.refresh(product)

@@ -25,8 +25,9 @@ export async function createProduct(data: {
   product_type?: string;
   image_s3_key?: string;
   icon?: string;
-  pao_months?: number;
+  pao_months?: number | null;
   opened_date?: string;
+  expiry_date?: string;
   scan_id?: number | null;
 }) {
   const response = await apiClient.post('/products', data);
@@ -45,8 +46,9 @@ export async function updateProduct(id: number, data: {
   product_type?: string;
   image_s3_key?: string;
   icon?: string;
-  pao_months?: number;
+  pao_months?: number | null;
   opened_date?: string;
+  expiry_date?: string;
 }) {
   const response = await apiClient.patch(`/products/${id}`, data);
   return response.data;

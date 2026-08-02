@@ -110,6 +110,7 @@ export default function ProductCard({
         name: product.name,
         brand: product.brand || "",
         category: product.category || "",
+        product_type: product.product_type || "",
         icon: product.icon || "",
         pao_months: product.pao_months ? String(product.pao_months) : "",
         opened_date: product.opened_date || "",

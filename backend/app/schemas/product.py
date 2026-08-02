@@ -15,6 +15,7 @@ class ProductCreate(BaseModel):
     pao_months: Optional[int] = Field(default=None, ge=1, le=120)
     product_type: Optional[str] = None
     opened_date: Optional[date] = None
+    expiry_date: Optional[date] = None
     scan_id: Optional[int] = None
 
     @field_validator("category", mode="before")
@@ -51,6 +52,7 @@ class ProductUpdate(BaseModel):
     pao_months: Optional[int] = Field(default=None, ge=1, le=120)
     product_type: Optional[str] = None
     opened_date: Optional[date] = None
+    expiry_date: Optional[date] = None
 
     @field_validator("category", mode="before")
     @classmethod

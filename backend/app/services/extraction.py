@@ -1,10 +1,31 @@
 import re
+from datetime import date as date_cls, timedelta
 
 PAO_PATTERNS = [
     (r"(\d+)\s*months\b", "en"),
     (r"(\d+)\s*mois\b", "fr"),
     (r"(\d+)\s*meses\b", "es"),
     (r"(\d+)\s*M\b", "short"),
+]
+
+# Expiry-date patterns. Keyword is optional so a bare "05/2027" on a label
+# still matches, but keywords add confidence. "my" = month/year group order,
+# "ym" = year/month group order. Keyword patterns run before bare ones.
+EXPIRE_PATTERNS = [
+    (
+        r"(?:exp(?:iry|iration)?|expires|use by|use-by|best before|best-by|"
+        r"b\.b|good until|valid until)\b[^0-9]{0,10}(\d{1,2})[/.\-](\d{2,4})",
+        "keyword_mmyyyy",
+        "my",
+    ),
+    (
+        r"(?:exp(?:iry|iration)?|expires|use by|use-by|best before|best-by)\b"
+        r"[^0-9]{0,10}(\d{4})[/.\-](\d{1,2})",
+        "keyword_yyyymm",
+        "ym",
+    ),
+    (r"\b(\d{1,2})[/.\-](\d{4})\b", "bare_mmyyyy", "my"),
+    (r"\b(\d{4})[/.\-](\d{1,2})\b", "bare_yyyymm", "ym"),
 ]
 
 CATEGORY_KEYWORDS = {
@@ -105,6 +126,48 @@ def extract_pao(raw_text: str | None) -> dict:
     return {"pao_months": None, "extraction_method": "not_found"}
 
 
+def _last_day_of_month(year: int, month: int) -> date_cls:
+    if month == 12:
+        return date_cls(year, 12, 31)
+    return date_cls(year, month + 1, 1) - timedelta(days=1)
+
+
+def _normalize_expiry(year_raw: str, month_raw: str) -> date_cls | None:
+    try:
+        month = int(month_raw)
+        year = int(year_raw)
+    except (ValueError, TypeError):
+        return None
+    if month < 1 or month > 12:
+        return None
+    if year < 100:
+        year += 2000
+    if year < 2020 or year > 2100:
+        return None
+    try:
+        return _last_day_of_month(year, month)
+    except ValueError:
+        return None
+
+
+def extract_expiry_date(raw_text: str | None) -> tuple[date_cls | None, str]:
+    if not raw_text:
+        return None, "not_found"
+
+    for pattern, method, order in EXPIRE_PATTERNS:
+        match = re.search(pattern, raw_text, re.IGNORECASE)
+        if not match:
+            continue
+        if order == "my":
+            parsed = _normalize_expiry(match.group(2), match.group(1))
+        else:
+            parsed = _normalize_expiry(match.group(1), match.group(2))
+        if parsed is not None:
+            return parsed, method
+
+    return None, "not_found"
+
+
 def classify_category(raw_text: str | None) -> tuple[str | None, str | None]:
     if not raw_text:
         return None, None
@@ -120,11 +183,13 @@ def classify_category(raw_text: str | None) -> tuple[str | None, str | None]:
 def extract_all(raw_text: str | None) -> dict:
     pao = extract_pao(raw_text)
     category, category_method = classify_category(raw_text)
+    expiry_date, expiry_method = extract_expiry_date(raw_text)
 
     return {
         "pao_months": pao["pao_months"],
-        "expiry_date": None,
+        "expiry_date": expiry_date,
         "category": category,
         "category_method": category_method,
         "extraction_method": pao["extraction_method"],
+        "expiry_extraction_method": expiry_method,
     }
