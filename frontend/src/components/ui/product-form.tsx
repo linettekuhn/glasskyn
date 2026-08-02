@@ -1,4 +1,8 @@
-import { View, StyleSheet, useColorScheme } from "react-native";
+import { useState } from "react";
+import { View, StyleSheet, useColorScheme, Platform } from "react-native";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import type {
   ProductCategory,
   ProductType,
@@ -19,6 +23,7 @@ export interface ProductFormData {
   productType: ProductType | null;
   paoMonths: string;
   icon: string;
+  openedDate: string | null;
 }
 
 interface ProductFormProps {
@@ -26,12 +31,41 @@ interface ProductFormProps {
   onChange: (data: ProductFormData) => void;
   disabled?: boolean;
   showPaoInput?: boolean;
+  showOpenedDate?: boolean;
   showProductType?: boolean;
   paoHint?: string;
   sourceMethod?: NameBrandMethod | null;
 }
 
 const CATEGORIES: ProductCategory[] = ["skincare", "makeup", "haircare"];
+
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function toISODate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatOpenedDate(iso: string | null): string {
+  if (!iso) return "Not opened yet";
+  const date = new Date(`${iso}T00:00:00`);
+  return `${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
 
 const PRODUCT_TYPES: { key: ProductType; label: string }[] = [
   { key: "cleanser", label: "Cleanser" },
@@ -51,12 +85,28 @@ export default function ProductForm({
   onChange,
   disabled,
   showPaoInput,
+  showOpenedDate,
   showProductType = true,
   paoHint,
   sourceMethod,
 }: ProductFormProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const pickerValue = (() => {
+    const parsed = value.openedDate ? new Date(`${value.openedDate}T00:00:00`) : new Date();
+    return parsed;
+  })();
+
+  const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS !== "ios") {
+      setShowDatePicker(false);
+    }
+    if (event.type === "dismissed" || !date) return;
+    onChange({ ...value, openedDate: toISODate(date) });
+  };
+
   return (
     <View style={styles.form}>
       <View style={styles.inputWrapper}>
@@ -189,6 +239,53 @@ export default function ProductForm({
             />
           </View>
         </>
+      )}
+
+      {showOpenedDate && (
+        <View style={styles.inputWrapper}>
+          <ThemedText
+            type="caption"
+            weight="bold"
+            style={{ color: colors.primary[700] }}
+          >
+            OPENED DATE
+          </ThemedText>
+          <ThemedButton
+            outlined
+            alignment="center"
+            onPress={() => setShowDatePicker(true)}
+            disabled={disabled}
+            color={colors.secondary[700]}
+            text={formatOpenedDate(value.openedDate)}
+          />
+          {value.openedDate && (
+            <ThemedButton
+              link
+              textType="caption"
+              onPress={() => onChange({ ...value, openedDate: null })}
+              disabled={disabled}
+              color={colors.secondary[700]}
+              text="Clear opened date"
+            />
+          )}
+          <ThemedButton
+            link
+            textType="caption"
+            onPress={() => onChange({ ...value, openedDate: toISODate(new Date()) })}
+            disabled={disabled}
+            color={colors.primary[600]}
+            text="Mark as opened today"
+          />
+          {showDatePicker && (
+            <DateTimePicker
+              value={pickerValue}
+              mode="date"
+              display={Platform.OS === "ios" ? "inline" : "default"}
+              maximumDate={new Date()}
+              onChange={handleDateChange}
+            />
+          )}
+        </View>
       )}
     </View>
   );

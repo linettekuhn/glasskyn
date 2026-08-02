@@ -47,3 +47,10 @@ CHAT_SUMMARY_INTERVAL: int = int(os.environ.get("CHAT_SUMMARY_INTERVAL", "5"))
 
 CHROMADB_PATH: str = str(BACKEND_DIR / "data" / "chromadb")
 EMBEDDING_MODEL: str = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
+
+EXPIRY_ALERT_WINDOW_DAYS: int = int(os.environ.get("EXPIRY_ALERT_WINDOW_DAYS", "30"))
+EXPIRY_CHECK_HOUR: int = int(os.environ.get("EXPIRY_CHECK_HOUR", "9"))
+EXPIRY_CHECK_MINUTE: int = int(os.environ.get("EXPIRY_CHECK_MINUTE", "0"))
+REMINDER_AM_TIME: str = os.environ.get("REMINDER_AM_TIME", "08:00")
+REMINDER_PM_TIME: str = os.environ.get("REMINDER_PM_TIME", "20:00")
+WATER_REMINDER_TIME: str = os.environ.get("WATER_REMINDER_TIME", "12:00")

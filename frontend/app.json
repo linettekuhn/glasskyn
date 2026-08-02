@@ -8,7 +8,9 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "expo-notifications",
+      "@react-native-community/datetimepicker"
     ],
     "scheme": "cosmetic-expiry",
     "newArchEnabled": true,

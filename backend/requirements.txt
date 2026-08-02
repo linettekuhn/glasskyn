@@ -1,5 +1,6 @@
 fastapi
 httpx
+apscheduler
 uvicorn[standard]
 sqlalchemy
 alembic

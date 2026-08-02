@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -13,9 +14,21 @@ from app.routers import classify as classify_router
 from app.routers import routines as routines_router
 from app.routers import ingredients as ingredients_router
 from app.routers import chat as chat_router
+from app.routers import notifications as notifications_router
+from app.services.scheduler import scheduler
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler.start()
+    try:
+        yield
+    finally:
+        scheduler.shutdown(wait=False)
+
+
+app = FastAPI(lifespan=lifespan)
 
 # TODO: change cors rules in prod
 app.add_middleware(
@@ -33,6 +46,7 @@ app.include_router(classify_router.router)
 app.include_router(routines_router.router)
 app.include_router(ingredients_router.router)
 app.include_router(chat_router.router)
+app.include_router(notifications_router.router)
 
 
 @app.get("/items")

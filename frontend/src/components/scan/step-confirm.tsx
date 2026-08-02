@@ -51,6 +51,7 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
     productType: initialProductType,
     paoMonths: paoMonths !== null ? `${paoMonths}` : "",
     icon: DEFAULT_ICON,
+    openedDate: null,
   });
   const [saving, setSaving] = useState(false);
   const [showFlags, setShowFlags] = useState(false);
@@ -130,6 +131,7 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
         product_type: formData.productType || undefined,
         icon: formData.icon || undefined,
         pao_months: paoValue ?? undefined,
+        opened_date: formData.openedDate || undefined,
         image_s3_key: frontFileKey || undefined,
         scan_id: scanId || null,
       });
@@ -256,6 +258,7 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
             onChange={setFormData}
             disabled={saving}
             showPaoInput
+            showOpenedDate
             paoHint={paoHint}
             sourceMethod={initialMethod}
           />

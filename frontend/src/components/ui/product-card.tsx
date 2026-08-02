@@ -37,15 +37,36 @@ export default function ProductCard({
   const [expiryLabel, setExpiryLabel] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!product.pao_months) {
-      setExpiryLabel(null);
+    const expiry = product.expiry_date
+      ? new Date(`${product.expiry_date}T00:00:00`)
+      : null;
+    if (!expiry) {
+      if (product.pao_months && product.created_at) {
+        const created = new Date(product.created_at);
+        const fallback = new Date(created);
+        fallback.setMonth(fallback.getMonth() + product.pao_months);
+        const months = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        setExpiryLabel(
+          `${months[fallback.getMonth()]} ${fallback.getDate()} ${fallback.getFullYear()}`,
+        );
+      } else {
+        setExpiryLabel(null);
+      }
       return;
     }
-    const created = product.created_at
-      ? new Date(product.created_at)
-      : new Date();
-    const expiry = new Date(created);
-    expiry.setMonth(expiry.getMonth() + product.pao_months);
     const months = [
       "Jan",
       "Feb",
@@ -63,7 +84,23 @@ export default function ProductCard({
     setExpiryLabel(
       `${months[expiry.getMonth()]} ${expiry.getDate()} ${expiry.getFullYear()}`,
     );
-  }, [product.pao_months, product.created_at]);
+  }, [product.expiry_date, product.pao_months, product.created_at]);
+
+  const expiryStatus =
+    product.days_until_expiry === null ||
+    product.days_until_expiry === undefined
+      ? null
+      : product.days_until_expiry < 0
+        ? "expired"
+        : product.days_until_expiry <= 30
+          ? "expiring"
+          : "ok";
+
+  const expiryColor = (() => {
+    if (expiryStatus === "expired") return "#A10000";
+    if (expiryStatus === "expiring") return colors.secondary[500];
+    return colors.neutral[700];
+  })();
 
   const handleEdit = () => {
     router.push({
@@ -75,6 +112,8 @@ export default function ProductCard({
         category: product.category || "",
         icon: product.icon || "",
         pao_months: product.pao_months ? String(product.pao_months) : "",
+        opened_date: product.opened_date || "",
+        expiry_date: product.expiry_date || "",
         imageUrl: product.image_url || "",
         imageS3Key: product.image_s3_key || "",
       },
@@ -92,6 +131,11 @@ export default function ProductCard({
         productType: product.product_type || "",
         icon: product.icon || "",
         paoMonths: product.pao_months ? String(product.pao_months) : "",
+        openedDate: product.opened_date || "",
+        expiryDate: product.expiry_date || "",
+        daysUntilExpiry: product.days_until_expiry
+          ? String(product.days_until_expiry)
+          : "",
         imageUrl: product.image_url || "",
         createdAt: product.created_at,
       },
@@ -153,7 +197,7 @@ export default function ProductCard({
           <ThemedText
             type="captionSmall"
             weight="extraLight"
-            style={{ color: colors.neutral[700] }}
+            style={{ color: expiryColor }}
           >
             Expires {expiryLabel}
           </ThemedText>

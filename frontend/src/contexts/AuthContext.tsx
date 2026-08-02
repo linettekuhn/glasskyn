@@ -15,6 +15,10 @@ import {
   removeRefreshToken,
 } from "../storage/token";
 import * as auth from "../api/auth";
+import {
+  registerPushNotificationsWithBackend,
+  unregisterPushNotificationsFromBackend,
+} from "../services/notifications";
 
 interface AuthContextType {
   user: User | null;
@@ -53,6 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth();
   }, []);
+
+  useEffect(() => {
+    if (token) {
+      registerPushNotificationsWithBackend();
+    }
+  }, [token]);
 
   const performLogin = async (email: string, password: string) => {
     const data = await auth.login(email, password);
@@ -94,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // still clear local state even if server call fails
     }
+    await unregisterPushNotificationsFromBackend();
     await removeToken();
     await removeRefreshToken();
     setUser(null);

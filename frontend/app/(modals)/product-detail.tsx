@@ -26,6 +26,9 @@ export default function ProductDetailScreen() {
     productType: string;
     icon: string;
     paoMonths: string;
+    openedDate: string;
+    expiryDate: string;
+    daysUntilExpiry: string;
     imageUrl: string;
     createdAt: string;
   }>();
@@ -41,8 +44,29 @@ export default function ProductDetailScreen() {
   const [safetyScore, setSafetyScore] = useState<number | null>(null);
 
   const paoMonths = params.paoMonths ? parseInt(params.paoMonths, 10) : null;
+  const daysUntilExpiry = params.daysUntilExpiry
+    ? parseInt(params.daysUntilExpiry, 10)
+    : null;
 
   const expiryLabel = (() => {
+    if (params.expiryDate) {
+      const expiry = new Date(`${params.expiryDate}T00:00:00`);
+      const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      return `${months[expiry.getMonth()]} ${expiry.getDate()} ${expiry.getFullYear()}`;
+    }
     if (!paoMonths || !params.createdAt) return null;
     const created = new Date(params.createdAt);
     const expiry = new Date(created);
@@ -62,6 +86,21 @@ export default function ProductDetailScreen() {
       "Dec",
     ];
     return `${months[expiry.getMonth()]} ${expiry.getDate()} ${expiry.getFullYear()}`;
+  })();
+
+  const expiryStatus =
+    daysUntilExpiry === null
+      ? null
+      : daysUntilExpiry < 0
+        ? "expired"
+        : daysUntilExpiry <= 30
+          ? "expiring"
+          : "ok";
+
+  const expiryColor = (() => {
+    if (expiryStatus === "expired") return "#A10000";
+    if (expiryStatus === "expiring") return colors.secondary[500];
+    return colors.neutral[700];
   })();
 
   const fetchAndAnalyze = useCallback(async () => {
@@ -256,6 +295,22 @@ export default function ProductDetailScreen() {
             </View>
           )}
 
+          {params.openedDate && (
+            <View style={styles.detailRow}>
+              <MaterialCommunityIcons
+                name="package-variant-closed"
+                size={16}
+                color={colors.neutral[600]}
+              />
+              <ThemedText
+                type="bodySmall"
+                style={{ color: colors.neutral[700] }}
+              >
+                Opened: {params.openedDate}
+              </ThemedText>
+            </View>
+          )}
+
           {expiryLabel && (
             <View style={styles.detailRow}>
               <MaterialCommunityIcons
@@ -265,7 +320,7 @@ export default function ProductDetailScreen() {
               />
               <ThemedText
                 type="bodySmall"
-                style={{ color: colors.neutral[700] }}
+                style={{ color: expiryColor }}
               >
                 Expires: {expiryLabel}
               </ThemedText>

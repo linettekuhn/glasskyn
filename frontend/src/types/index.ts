@@ -15,6 +15,9 @@ export interface Product {
   image_url: string | null;
   icon: string | null;
   pao_months: number | null;
+  opened_date: string | null;
+  expiry_date: string | null;
+  days_until_expiry: number | null;
   product_type: ProductType | null;
   created_at: string;
   user_id: number;

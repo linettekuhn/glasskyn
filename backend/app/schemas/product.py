@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator, Field
 from typing import Optional, Literal
-from datetime import datetime
+from datetime import date, datetime
 
 ProductCategory = Literal["skincare", "makeup", "haircare"]
 
@@ -14,6 +14,7 @@ class ProductCreate(BaseModel):
     icon: Optional[str] = None
     pao_months: Optional[int] = Field(default=None, ge=1, le=120)
     product_type: Optional[str] = None
+    opened_date: Optional[date] = None
     scan_id: Optional[int] = None
 
     @field_validator("category", mode="before")
@@ -49,6 +50,7 @@ class ProductUpdate(BaseModel):
     icon: Optional[str] = None
     pao_months: Optional[int] = Field(default=None, ge=1, le=120)
     product_type: Optional[str] = None
+    opened_date: Optional[date] = None
 
     @field_validator("category", mode="before")
     @classmethod
@@ -73,6 +75,9 @@ class ProductOut(BaseModel):
     icon: Optional[str] = None
     pao_months: Optional[int] = None
     product_type: Optional[str] = None
+    opened_date: Optional[date] = None
+    expiry_date: Optional[date] = None
+    days_until_expiry: Optional[int] = None
     created_at: datetime
     user_id: int
 

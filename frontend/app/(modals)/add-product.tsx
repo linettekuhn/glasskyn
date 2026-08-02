@@ -29,6 +29,7 @@ export default function AddProductScreen() {
     product_type?: string;
     icon?: string;
     pao_months?: string;
+    opened_date?: string;
     imageS3Key?: string;
     scanId?: string;
   }>();
@@ -41,6 +42,7 @@ export default function AddProductScreen() {
     productType: (params.product_type as ProductType) || null,
     paoMonths: params.pao_months ?? "",
     icon: params.icon || DEFAULT_ICON,
+    openedDate: params.opened_date ?? null,
   });
   const [submitLoading, setSubmitLoading] = useState(false);
   const colorScheme = useColorScheme();
@@ -57,6 +59,7 @@ export default function AddProductScreen() {
       productType: null,
       paoMonths: "",
       icon: DEFAULT_ICON,
+      openedDate: null,
     });
   };
 
@@ -84,6 +87,7 @@ export default function AddProductScreen() {
         product_type: formData.productType || undefined,
         icon: formData.icon || undefined,
         pao_months: paoMonths,
+        opened_date: formData.openedDate || undefined,
         image_s3_key: params.imageS3Key || undefined,
       };
 
@@ -152,6 +156,7 @@ export default function AddProductScreen() {
             onChange={setFormData}
             disabled={submitLoading}
             showPaoInput
+            showOpenedDate
           />
 
           <View style={styles.buttons}>

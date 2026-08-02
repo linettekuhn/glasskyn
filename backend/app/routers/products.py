@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.product import Product
 from app.models.scan import ScanResult
 from app.services.openbeautyfacts import lookup_product, RateLimitError
+from app.services.expiry import compute_expiry_date
 from typing import List
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -27,6 +28,8 @@ def create_product(
         icon=body.icon,
         pao_months=body.pao_months,
         product_type=body.product_type,
+        opened_date=body.opened_date,
+        expiry_date=compute_expiry_date(body.opened_date, body.pao_months),
         user_id=current_user.id,
     )
 
@@ -74,12 +77,15 @@ def update_product(
             status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
         )
 
-    # returns fiels client actually sent
+    # returns fields client actually sent
     updates = body.model_dump(exclude_unset=True)
 
     # dynamically set each updated attribute
     for field, value in updates.items():
         setattr(product, field, value)
+
+    # recompute expiry whenever opened date or PAO changes
+    product.expiry_date = compute_expiry_date(product.opened_date, product.pao_months)
 
     db.commit()
     db.refresh(product)
