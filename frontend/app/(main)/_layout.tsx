@@ -3,6 +3,7 @@ import { MaterialCommunityIcons, Octicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { Text, StyleSheet, View, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import TopBar from "@/components/top-bar";
 
 type TabBarIconProps = { focused: boolean; color: string };
 
@@ -38,6 +39,7 @@ export default function MainLayout() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
+      <TopBar />
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -141,17 +143,7 @@ export default function MainLayout() {
         <Tabs.Screen
           name="profile"
           options={{
-            title: "Profile",
-            tabBarIcon: ({ focused, color }: TabBarIconProps) => (
-              <TabIcon
-                IconComponent={MaterialCommunityIcons}
-                outlineName="face-man-shimmer-outline"
-                fillName="face-man-shimmer"
-                size={28}
-                color={color}
-                focused={focused}
-              />
-            ),
+            href: null,
           }}
         />
       </Tabs>

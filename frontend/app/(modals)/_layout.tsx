@@ -39,6 +39,7 @@ export default function ModalLayout() {
           <Stack.Screen name="product-picker" />
           <Stack.Screen name="routine-manual" />
           <Stack.Screen name="add-step" />
+          <Stack.Screen name="notifications" />
           <Stack.Screen name="edit-routine" />
           <Stack.Screen
             name="product-detail"
