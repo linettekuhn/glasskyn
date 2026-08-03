@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "../../src/contexts/AuthContext";
+import NotificationSettings from "../../src/components/ui/notification-settings";
 
 export default function ProfileScreen() {
   const { logout } = useAuth();
@@ -29,6 +30,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.content}>
+        <NotificationSettings />
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>

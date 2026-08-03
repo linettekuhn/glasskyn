@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   View,
   FlatList,
@@ -10,6 +10,7 @@ import { router } from "expo-router";
 import type { Routine, Product } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { FREQUENCY_LABELS } from "@/constants/routine";
+import { markStepComplete } from "@/api/routines";
 import { ThemedText } from "./themed-text";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import DayNightToggle from "./day-night-toggle";
@@ -28,13 +29,24 @@ const STEP_TYPE_LABELS: Record<string, string> = {
 interface RoutineCardProps {
   routine: Routine;
   productMap: Map<number, Product>;
+  onCompletionChange?: () => void;
 }
 
-export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
+export default function RoutineCard({
+  routine,
+  productMap,
+  onCompletionChange,
+}: RoutineCardProps) {
   const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<"AM" | "PM">("AM");
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+
+  useEffect(() => {
+    setCompletedSteps(
+      new Set(routine.steps.filter((s) => s.completed_today).map((s) => s.id)),
+    );
+  }, [routine.steps]);
 
   const filteredSteps = useMemo(() => {
     return routine.steps
@@ -42,22 +54,54 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
       .sort((a, b) => a.step_order - b.step_order);
   }, [routine.steps, selectedTimeOfDay]);
 
-  const toggleStep = useCallback((id: number) => {
-    setCompletedSteps((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+  const toggleStep = useCallback(
+    (id: number) => {
+      const nowCompleted = !completedSteps.has(id);
+      setCompletedSteps((prev) => {
+        const next = new Set(prev);
+        if (nowCompleted) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+      markStepComplete(routine.id, id, nowCompleted)
+        .catch(() => {
+          setCompletedSteps((prev) => {
+            const next = new Set(prev);
+            if (nowCompleted) next.delete(id);
+            else next.add(id);
+            return next;
+          });
+        })
+        .finally(() => onCompletionChange?.());
+    },
+    [completedSteps, routine.id, onCompletionChange],
+  );
 
   const toggleAll = useCallback(() => {
+    const allChecked =
+      filteredSteps.length > 0 &&
+      filteredSteps.every((s) => completedSteps.has(s.id));
+    const desired = !allChecked;
     setCompletedSteps((prev) => {
-      const allChecked = filteredSteps.every((s) => prev.has(s.id));
-      if (allChecked) return new Set();
-      return new Set(filteredSteps.map((s) => s.id));
+      const next = new Set(prev);
+      for (const s of filteredSteps) {
+        if (desired) next.add(s.id);
+        else next.delete(s.id);
+      }
+      return next;
     });
-  }, [filteredSteps]);
+    const ops = filteredSteps.map((s) =>
+      markStepComplete(routine.id, s.id, desired).catch(() => {
+        setCompletedSteps((prev) => {
+          const next = new Set(prev);
+          if (desired) next.delete(s.id);
+          else next.add(s.id);
+          return next;
+        });
+      }),
+    );
+    Promise.allSettled(ops).finally(() => onCompletionChange?.());
+  }, [completedSteps, filteredSteps, routine.id, onCompletionChange]);
 
   const allChecked =
     filteredSteps.length > 0 &&
@@ -76,7 +120,7 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
   return (
     <View style={[styles.card, { backgroundColor: colors.neutral[200] }]}>
       <View style={styles.cardHeader}>
-        <ThemedText type="h2" italic>
+        <ThemedText type="h3" italic>
           {routine.name}
         </ThemedText>
         <View style={styles.cardHeaderControls}>
@@ -165,6 +209,7 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
 
 const styles = StyleSheet.create({
   card: {
+    flex: 1,
     padding: 12,
     borderRadius: 8,
     borderBottomRightRadius: 0,

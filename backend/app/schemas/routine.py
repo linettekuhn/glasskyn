@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+import datetime as _dt
 
 
 # --- Skin Profile ---
@@ -50,6 +51,7 @@ class RoutineStepOut(BaseModel):
     step_type: str
     time_of_day: str
     frequency: str
+    completed_today: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -61,6 +63,16 @@ class RoutineStepUpdate(BaseModel):
     step_type: Optional[str] = None
     time_of_day: Optional[str] = None
     frequency: Optional[str] = None
+
+
+class StepCompleteIn(BaseModel):
+    completed: bool
+    date: Optional[_dt.date] = None
+
+
+class CalendarDayOut(BaseModel):
+    date: _dt.date
+    completed: bool
 
 
 class RoutineCreate(BaseModel):

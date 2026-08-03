@@ -103,6 +103,7 @@ export interface RoutineStep {
   step_type: StepType;
   time_of_day: TimeOfDay;
   frequency: Frequency;
+  completed_today: boolean;
   created_at: string;
 }
 
@@ -127,6 +128,17 @@ export interface RoutineTemplateStep {
   frequency: Frequency;
   suggested_product_category: string | null;
   created_at: string;
+}
+
+export interface CalendarDay {
+  date: string;
+  completed: boolean;
+}
+
+export interface UserPreference {
+  water_reminder_enabled: boolean;
+  water_reminder_time: string;
+  routine_digest_enabled: boolean;
 }
 
 export interface RoutineTemplate {

@@ -8,7 +8,7 @@ class Alert(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
-    alert_type = Column(String, nullable=False)  # "expiry" | "routine_reminder" | "water"
+    alert_type = Column(String, nullable=False)  # "expiry" | "routine_reminder_am" | "routine_reminder_pm" | "water"
     title = Column(String, nullable=True)
     body = Column(String, nullable=True)
     scheduled_for = Column(DateTime, nullable=True)

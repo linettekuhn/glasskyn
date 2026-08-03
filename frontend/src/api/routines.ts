@@ -1,5 +1,17 @@
 import apiClient from "./client";
-import type { SkinProfile, Routine, RoutineTemplate } from "../types";
+import type {
+  SkinProfile,
+  Routine,
+  RoutineTemplate,
+  CalendarDay,
+} from "../types";
+
+export function localToday(): string {
+  const now = new Date();
+  const month = `${now.getMonth() + 1}`.padStart(2, "0");
+  const day = `${now.getDate()}`.padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
 
 export async function getSkinProfile(): Promise<SkinProfile> {
   const response = await apiClient.get("/routines/skin-profile");
@@ -34,24 +46,28 @@ export async function createRoutine(data: {
 
 export async function listRoutines(
   routineType = "skincare",
+  date?: string,
 ): Promise<Routine[]> {
-  const response = await apiClient.get("/routines", {
-    params: { routine_type: routineType },
-  });
+  const params: Record<string, string> = { routine_type: routineType };
+  if (date) params.date = date;
+  const response = await apiClient.get("/routines", { params });
   return response.data;
 }
 
 export async function getActiveRoutine(
   routineType = "skincare",
+  date?: string,
 ): Promise<Routine> {
-  const response = await apiClient.get("/routines/active", {
-    params: { routine_type: routineType },
-  });
+  const params: Record<string, string> = { routine_type: routineType };
+  if (date) params.date = date;
+  const response = await apiClient.get("/routines/active", { params });
   return response.data;
 }
 
-export async function getRoutine(id: number): Promise<Routine> {
-  const response = await apiClient.get(`/routines/${id}`);
+export async function getRoutine(id: number, date?: string): Promise<Routine> {
+  const params: Record<string, string> = {};
+  if (date) params.date = date;
+  const response = await apiClient.get(`/routines/${id}`, { params });
   return response.data;
 }
 
@@ -94,8 +110,24 @@ export async function updateRoutineStep(
 export async function markStepComplete(
   routineId: number,
   stepId: number,
+  completed: boolean,
+  date?: string,
 ): Promise<void> {
-  await apiClient.patch(`/routines/${routineId}/steps/${stepId}/complete`);
+  await apiClient.patch(`/routines/${routineId}/steps/${stepId}/complete`, {
+    completed,
+    date: date ?? localToday(),
+  });
+}
+
+export async function getRoutineCalendar(
+  routineId: number,
+  month: number,
+  year: number,
+): Promise<CalendarDay[]> {
+  const response = await apiClient.get("/routines/calendar", {
+    params: { routine_id: routineId, month, year },
+  });
+  return response.data;
 }
 
 export async function listTemplates(
