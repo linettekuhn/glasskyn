@@ -61,13 +61,10 @@ export default function NotificationSettings() {
   }
 
   return (
-    <View
-      style={[styles.card, { backgroundColor: colors.neutral[200] }]}
-    >
-      <ThemedText type="h2" italic>
-        Reminders
+    <View style={[styles.card, { backgroundColor: colors.neutral[200] }]}>
+      <ThemedText type="captionSmall" style={{ color: colors.neutral[500] }}>
+        {saving ? "Saving…" : "Reminders are delivered as push notifications."}
       </ThemedText>
-
       <View style={styles.row}>
         <ThemedText type="bodyLarge">Water reminder</ThemedText>
         <Switch
@@ -92,19 +89,13 @@ export default function NotificationSettings() {
       )}
 
       <View style={styles.row}>
-        <ThemedText type="bodyLarge">Routine digests</ThemedText>
+        <ThemedText type="bodyLarge">Routine reminders</ThemedText>
         <Switch
           value={prefs.routine_digest_enabled}
           onValueChange={(v: boolean) => update({ routine_digest_enabled: v })}
           trackColor={{ true: colors.secondary[500] }}
         />
       </View>
-
-      <ThemedText type="captionSmall" style={{ color: colors.neutral[500] }}>
-        {saving
-          ? "Saving…"
-          : "Reminders are delivered as push notifications."}
-      </ThemedText>
 
       {Platform.OS === "ios" && (
         <Modal
@@ -115,7 +106,10 @@ export default function NotificationSettings() {
         >
           <View style={styles.modalOverlay}>
             <View
-              style={[styles.modalContent, { backgroundColor: colors.background }]}
+              style={[
+                styles.modalContent,
+                { backgroundColor: colors.background },
+              ]}
             >
               <View style={styles.modalHeader}>
                 <ThemedText type="bodyLarge" weight="semiBold">

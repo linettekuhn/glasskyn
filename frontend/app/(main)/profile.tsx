@@ -1,10 +1,98 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { router } from "expo-router";
+import { useState, useCallback, ComponentProps } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  useColorScheme,
+} from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../src/contexts/AuthContext";
 import NotificationSettings from "../../src/components/ui/notification-settings";
+import { getSkinProfile } from "../../src/api/routines";
+import type { SkinProfile } from "../../src/types";
+import { Colors, getTheme } from "../../src/constants/theme";
+import { ThemedText } from "../../src/components/ui/themed-text";
+import UserAvatar from "../../src/components/ui/user-avatar";
+import ThemedButton from "@/components/ui/themed-button";
+
+const SKIN_TYPE_LABELS: Record<string, string> = {
+  dry: "Dry",
+  oily: "Oily",
+  combination: "Combination",
+  normal: "Normal",
+  sensitive: "Sensitive",
+};
+
+function skinTypeLabel(value: string | null | undefined): string {
+  if (!value) return "Not set";
+  return SKIN_TYPE_LABELS[value] ?? value;
+}
+
+type SettingsRowProps = {
+  label: string;
+  icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
+  destructive?: boolean;
+  last?: boolean;
+  onPress: () => void;
+};
+
+function SettingsRow({
+  label,
+  icon,
+  destructive,
+  last,
+  onPress,
+}: SettingsRowProps) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[getTheme(colorScheme)];
+  const tint = destructive ? colors.error : colors.primary[700];
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.settingsRow,
+        !last && { borderBottomColor: colors.neutral[200] },
+        last && { borderBottomColor: "transparent" },
+      ]}
+      onPress={onPress}
+    >
+      <MaterialCommunityIcons name={icon} size={22} color={tint} />
+      <ThemedText
+        type="body"
+        style={{ flex: 1, color: destructive ? colors.error : colors.text }}
+      >
+        {label}
+      </ThemedText>
+      <MaterialCommunityIcons
+        name="chevron-right"
+        size={22}
+        color={colors.neutral[400]}
+      />
+    </TouchableOpacity>
+  );
+}
 
 export default function ProfileScreen() {
-  const { logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
+  const colorScheme = useColorScheme();
+  const colors = Colors[getTheme(colorScheme)];
+  const [skinProfile, setSkinProfile] = useState<SkinProfile | null>(null);
+
+  const fetchSkinProfile = useCallback(() => {
+    getSkinProfile()
+      .then(setSkinProfile)
+      .catch(() => setSkinProfile(null));
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchSkinProfile();
+    }, [fetchSkinProfile]),
+  );
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -20,23 +108,132 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This permanently deletes your account and all of your data. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              router.replace("/(auth)/login");
+            } catch {
+              // interceptor shows toast
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const hasSkinProfile =
+    skinProfile !== null &&
+    (skinProfile.skin_type !== null || skinProfile.concerns.length > 0);
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>👤</Text>
+    <View style={[styles.container, { backgroundColor: colors.neutral[100] }]}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <UserAvatar seed={user?.name ?? "guest"} size={80} />
+          <ThemedText type="h2">{user?.name ?? "Profile"}</ThemedText>
+          <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
+            {user?.email}
+          </ThemedText>
         </View>
-        <Text style={styles.title}>Profile</Text>
-      </View>
 
-      <View style={styles.content}>
-        <NotificationSettings />
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.section}>
+          <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
+            Account
+          </ThemedText>
+          <View style={[styles.card, { backgroundColor: colors.background }]}>
+            <SettingsRow
+              label="Edit name & email"
+              icon="account-edit-outline"
+              onPress={() => router.push("/(modals)/edit-account")}
+            />
+            <SettingsRow
+              label="Change password"
+              icon="lock-outline"
+              onPress={() => router.push("/(modals)/change-password")}
+            />
+            <SettingsRow
+              label="Delete account"
+              icon="delete-outline"
+              destructive
+              last
+              onPress={handleDeleteAccount}
+            />
+          </View>
+        </View>
 
-      <Text style={styles.version}>Cosmetic Expiry Scanner v1.0</Text>
+        <View style={styles.section}>
+          <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
+            Skin Profile
+          </ThemedText>
+          <TouchableOpacity
+            style={[styles.card, { backgroundColor: colors.background }]}
+            onPress={() => router.push("/(modals)/edit-skin-profile")}
+          >
+            <View style={styles.skinRow}>
+              <View style={styles.skinInfo}>
+                {hasSkinProfile ? (
+                  <>
+                    <ThemedText type="bodyLarge" weight="semiBold">
+                      {skinTypeLabel(skinProfile?.skin_type)}
+                      {skinProfile?.is_sensitive != null
+                        ? ` · ${skinProfile.is_sensitive ? "Sensitive" : "Not sensitive"}`
+                        : ""}
+                    </ThemedText>
+                    <ThemedText
+                      type="caption"
+                      style={{ color: colors.neutral[600] }}
+                    >
+                      {`${skinProfile?.concerns?.length ?? 0} concern${(skinProfile?.concerns?.length ?? 0) === 1 ? "" : "s"} · ${skinProfile?.goals?.length ?? 0} goal${(skinProfile?.goals?.length ?? 0) === 1 ? "" : "s"}`}
+                    </ThemedText>
+                  </>
+                ) : (
+                  <>
+                    <ThemedText type="bodyLarge" weight="semiBold">
+                      Set up your skin profile
+                    </ThemedText>
+                    <ThemedText
+                      type="caption"
+                      style={{ color: colors.neutral[600] }}
+                    >
+                      Tailor routines and ingredient flags to your skin
+                    </ThemedText>
+                  </>
+                )}
+              </View>
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color={colors.neutral[400]}
+              />
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
+            Reminders
+          </ThemedText>
+          <NotificationSettings />
+        </View>
+
+        <ThemedButton
+          onPress={handleLogout}
+          link
+          text="Logout"
+          leftIconName="logout"
+          LeftIconComponent={MaterialCommunityIcons}
+          color={colors.error}
+        />
+      </ScrollView>
     </View>
   );
 }
@@ -44,48 +241,56 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+  },
+  content: {
+    padding: 24,
+    gap: 24,
   },
   header: {
     alignItems: "center",
-    paddingVertical: 40,
+    gap: 6,
+    paddingVertical: 8,
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#f0f0f0",
-    justifyContent: "center",
+  section: {
+    gap: 10,
+  },
+  card: {
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  settingsRow: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    gap: 12,
+    padding: 16,
+    borderBottomWidth: 1,
   },
-  avatarText: {
-    fontSize: 36,
+  skinRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    gap: 12,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1a1a1a",
-  },
-  content: {
+  skinInfo: {
     flex: 1,
-    padding: 24,
+    gap: 2,
   },
   logoutButton: {
-    backgroundColor: "#fef0f0",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     borderRadius: 12,
     padding: 16,
-    alignItems: "center",
   },
   logoutButtonText: {
-    color: "#e74c3c",
     fontSize: 16,
     fontWeight: "600",
   },
   version: {
     textAlign: "center",
-    color: "#999",
     fontSize: 13,
-    paddingBottom: 24,
+    paddingBottom: 8,
   },
 });

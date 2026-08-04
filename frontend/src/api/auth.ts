@@ -22,3 +22,22 @@ export async function logout(refresh_token: string) {
     headers: { 'x-refresh-token': refresh_token },
   });
 }
+
+export async function updateUser(data: { name?: string; email?: string }) {
+  const response = await apiClient.patch('/auth/me', data);
+  return response.data as { id: number; name: string; email: string };
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+) {
+  await apiClient.post('/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+}
+
+export async function deleteAccount() {
+  await apiClient.delete('/auth/me');
+}

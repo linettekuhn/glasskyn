@@ -1,4 +1,4 @@
-import { Colors, Fonts, getTheme } from "@/constants/theme";
+import { Colors, getTheme } from "@/constants/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
@@ -8,15 +8,13 @@ import {
   useColorScheme,
 } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
-import { ThemedText } from "@/components/ui/themed-text";
+import UserAvatar from "@/components/ui/user-avatar";
 import GlasskynLogo from "@/components/icons/glasskyn-logo";
 
 export default function TopBar() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const { user } = useAuth();
-
-  const initial = user?.name?.trim()?.[0]?.toUpperCase() ?? "?";
 
   return (
     <View
@@ -53,19 +51,10 @@ export default function TopBar() {
         <TouchableOpacity
           onPress={() => router.navigate("/(main)/profile")}
           accessibilityLabel="Profile"
-          style={[styles.avatar, { backgroundColor: colors.primary[600] }]}
+          style={styles.avatar}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <ThemedText
-            type="bodyLarge"
-            weight="semiBold"
-            style={{
-              color: colors.neutral[100],
-              fontFamily: Fonts.sansSemiBold,
-            }}
-          >
-            {initial}
-          </ThemedText>
+          <UserAvatar seed={user?.name ?? "guest"} size={36} />
         </TouchableOpacity>
       </View>
     </View>

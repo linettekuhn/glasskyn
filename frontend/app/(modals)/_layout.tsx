@@ -41,6 +41,9 @@ export default function ModalLayout() {
           <Stack.Screen name="add-step" />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="edit-routine" />
+          <Stack.Screen name="edit-account" />
+          <Stack.Screen name="change-password" />
+          <Stack.Screen name="edit-skin-profile" />
           <Stack.Screen
             name="product-detail"
             options={{

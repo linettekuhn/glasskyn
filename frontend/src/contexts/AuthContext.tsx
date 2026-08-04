@@ -28,6 +28,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (user: User) => void;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -111,6 +113,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
   };
 
+  const updateUser = (updated: User) => {
+    setUser(updated);
+  };
+
+  const deleteAccount = async () => {
+    await auth.deleteAccount();
+    await unregisterPushNotificationsFromBackend();
+    await removeToken();
+    await removeRefreshToken();
+    setUser(null);
+    setToken(null);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -121,6 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        updateUser,
+        deleteAccount,
       }}
     >
       {children}

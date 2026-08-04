@@ -8,10 +8,20 @@ from app.schemas.auth import (
     LoginRequest,
     UserOut,
     RefreshResponse,
+    UserUpdate,
+    ChangePasswordRequest,
 )
 from sqlalchemy.orm import Session
-from app.middleware.auth import get_db
+from app.middleware.auth import get_db, get_current_user
 from app.models.user import User
+from app.models.alert import Alert
+from app.models.chat import ChatMessage, ChatSession
+from app.models.device_token import DeviceToken
+from app.models.product import Product
+from app.models.routine import SkinProfile, Routine, RoutineStep
+from app.models.routine_step_completion import RoutineStepCompletion
+from app.models.scan import ScanResult
+from app.models.user_preference import UserPreference
 from app.core.security import (
     hash_password,
     verify_password,
@@ -198,4 +208,110 @@ async def logout(
 
     response.delete_cookie(key="refreshToken", httponly=True, samesite="strict")
 
+    return None
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_me(
+    body: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    updates = body.model_dump(exclude_unset=True)
+
+    new_email = updates.get("email")
+    if new_email and new_email != current_user.email:
+        existing = db.query(User).filter(User.email == new_email).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
+
+    for field, value in updates.items():
+        setattr(current_user, field, value)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/change-password", status_code=204)
+async def change_password(
+    body: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not verify_password(body.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    current_user.hashed_password = hash_password(body.new_password)
+    # revoke all refresh tokens so other sessions are signed out
+    db.query(RefreshToken).filter(
+        RefreshToken.user_id == current_user.id,
+        RefreshToken.is_revoked == False,
+    ).update({"is_revoked": True})
+    db.commit()
+    return None
+
+
+@router.delete("/me", status_code=204)
+async def delete_me(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    user_id = current_user.id
+
+    routine_ids = [
+        row[0]
+        for row in db.query(Routine.id).filter(Routine.user_id == user_id).all()
+    ]
+
+    if routine_ids:
+        db.query(RoutineStepCompletion).filter(
+            RoutineStepCompletion.routine_id.in_(routine_ids)
+        ).delete(synchronize_session=False)
+        db.query(RoutineStep).filter(
+            RoutineStep.routine_id.in_(routine_ids)
+        ).delete(synchronize_session=False)
+    db.query(RoutineStepCompletion).filter(
+        RoutineStepCompletion.user_id == user_id
+    ).delete(synchronize_session=False)
+    db.query(Routine).filter(Routine.user_id == user_id).delete(
+        synchronize_session=False
+    )
+
+    db.query(ScanResult).filter(ScanResult.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(Alert).filter(Alert.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(ChatMessage).filter(ChatMessage.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(ChatSession).filter(ChatSession.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(SkinProfile).filter(SkinProfile.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(UserPreference).filter(UserPreference.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(DeviceToken).filter(DeviceToken.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(Product).filter(Product.user_id == user_id).delete(
+        synchronize_session=False
+    )
+
+    db.delete(current_user)
+    db.commit()
     return None
