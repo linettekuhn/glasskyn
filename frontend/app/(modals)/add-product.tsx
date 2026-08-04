@@ -156,7 +156,7 @@ export default function AddProductScreen() {
             >
               {isEditing
                 ? "Tweak anything that needs a little fixing!"
-                : "What's the new addition to your shelf?"}
+                : "What's the new addition to your vanity?"}
             </ThemedText>
           </View>
 
@@ -175,7 +175,7 @@ export default function AddProductScreen() {
               disabled={submitLoading}
               loading={submitLoading}
               color={colors.primary[600]}
-              text={isEditing ? "Store In My Shelf" : "Store In My Shelf"}
+              text={isEditing ? "Save to Vanity" : "Add to Vanity"}
             />
             <ThemedButton
               link

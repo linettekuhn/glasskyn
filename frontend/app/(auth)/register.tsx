@@ -57,7 +57,7 @@ export default function RegisterScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.content}>
           <View style={styles.heading}>
-            <ThemedText type="h1">Create your shelf</ThemedText>
+            <ThemedText type="h1">Create your vanity</ThemedText>
             <ThemedText
               type="bodyLarge"
               style={{ color: colors.secondary[600] }}

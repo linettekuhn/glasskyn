@@ -61,7 +61,7 @@ export default function LoginScreen() {
               type="bodyLarge"
               style={{ color: colors.secondary[600] }}
             >
-              Sign in to your shelf
+              Sign in to your vanity
             </ThemedText>
           </View>
           <View style={styles.form}>

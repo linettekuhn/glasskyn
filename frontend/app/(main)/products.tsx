@@ -24,7 +24,7 @@ const categoryLabels: { key: "all" | ProductCategory; label: string }[] = [
   { key: "haircare", label: "Haircare" },
 ];
 
-export default function MyShelfScreen() {
+export default function VanityScreen() {
   const { products, loading, refetch } = useProducts();
   const [selectedCategories, setSelectedCategories] = useState<
     ProductCategory[]
@@ -48,7 +48,7 @@ export default function MyShelfScreen() {
     return (
       <View style={[styles.centerContainer, { backgroundColor: bgColor }]}>
         <View style={{ alignItems: "center" }}>
-          <ThemedText type="h1">Your shelf is empty</ThemedText>
+          <ThemedText type="h1">Your vanity is empty</ThemedText>
           <ThemedText type="bodyLarge">
             Scan your first product to start tracking
           </ThemedText>
@@ -67,7 +67,7 @@ export default function MyShelfScreen() {
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
       <View>
-        <ThemedText type="h1">My shelf</ThemedText>
+        <ThemedText type="h1">My vanity</ThemedText>
         <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
           Organize and monitor your cosmetics.
         </ThemedText>

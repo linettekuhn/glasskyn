@@ -74,7 +74,7 @@ export default function EditTemplateScreen() {
     <RoutineForm
       key={`template-${templateId}`}
       title="Edit Template"
-      subtitle="Fill up each step with a product from your shelf"
+      subtitle="Fill up each step with a product from your vanity"
       loading={loading || (template !== null && initialSteps === null)}
       notFound={!template && !loading}
       notFoundMessage="Template not found"

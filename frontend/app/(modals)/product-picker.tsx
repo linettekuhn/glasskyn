@@ -19,13 +19,14 @@ import LoadingSpinner from "@/components/ui/loading-spinner";
 import { MaterialIcons } from "@expo/vector-icons";
 
 export default function ProductPickerScreen() {
-  const { routineId, stepId, stepType, returnTo, templateId } = useLocalSearchParams<{
-    routineId: string;
-    stepId: string;
-    stepType: string;
-    returnTo: string;
-    templateId: string;
-  }>();
+  const { routineId, stepId, stepType, returnTo, templateId } =
+    useLocalSearchParams<{
+      routineId: string;
+      stepId: string;
+      stepType: string;
+      returnTo: string;
+      templateId: string;
+    }>();
   const { setPendingProduct } = useTemplateSelection();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -60,7 +61,7 @@ export default function ProductPickerScreen() {
       <View style={styles.header}>
         <ThemedText type="h2">Choose a Product</ThemedText>
         <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
-          Compatible products from your shelf
+          Compatible products from your vanity
         </ThemedText>
       </View>
 
@@ -71,7 +72,7 @@ export default function ProductPickerScreen() {
             No compatible products found
           </ThemedText>
           <ThemedText type="bodySmall" style={{ color: colors.neutral[500] }}>
-            Add a product to your shelf first
+            Add a product to your vanity first
           </ThemedText>
           <ThemedButton
             text="Scan a Product"
@@ -98,7 +99,10 @@ export default function ProductPickerScreen() {
             <TouchableOpacity
               style={[
                 styles.productRow,
-                { borderColor: colors.neutral[300], backgroundColor: colors.background },
+                {
+                  borderColor: colors.neutral[300],
+                  backgroundColor: colors.background,
+                },
               ]}
               onPress={() => handleSelect(item)}
               activeOpacity={0.7}
@@ -108,7 +112,10 @@ export default function ProductPickerScreen() {
                   {item.name}
                 </ThemedText>
                 {item.brand && (
-                  <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
+                  <ThemedText
+                    type="bodySmall"
+                    style={{ color: colors.neutral[600] }}
+                  >
                     {item.brand}
                   </ThemedText>
                 )}
@@ -124,12 +131,16 @@ export default function ProductPickerScreen() {
         />
       )}
 
-      <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.neutral[300] }]}>
-        <ThemedButton
-          text="Cancel"
-          outlined
-          onPress={() => router.back()}
-        />
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            backgroundColor: colors.background,
+            borderTopColor: colors.neutral[300],
+          },
+        ]}
+      >
+        <ThemedButton text="Cancel" outlined onPress={() => router.back()} />
       </View>
     </SafeAreaView>
   );

@@ -9,7 +9,10 @@ import RoutineForm from "@/components/ui/routine-form";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function EditRoutineScreen() {
-  const { routineId, returnTo } = useLocalSearchParams<{ routineId: string; returnTo?: string }>();
+  const { routineId, returnTo } = useLocalSearchParams<{
+    routineId: string;
+    returnTo?: string;
+  }>();
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [loading, setLoading] = useState(true);
   const colorScheme = useColorScheme();
@@ -89,7 +92,7 @@ export default function EditRoutineScreen() {
     <RoutineForm
       key={`routine-${routineId}`}
       title="Edit Routine"
-      subtitle="Reorder steps or swap products from your shelf"
+      subtitle="Reorder steps or swap products from your vanity"
       loading={loading || (routine !== null && initialSteps === null)}
       notFound={!routine && !loading}
       notFoundMessage="Routine not found"

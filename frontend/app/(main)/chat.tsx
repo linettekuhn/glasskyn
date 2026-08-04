@@ -30,7 +30,7 @@ const QUICK_ACTIONS = [
     message: "Generate a skincare routine for me",
   },
   {
-    label: "Audit My Shelf",
+    label: "Audit My Vanity",
     message: "Check my saved products for any risky or concerning ingredients",
   },
   {
@@ -333,12 +333,12 @@ export default function ChatScreen() {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <View style={styles.headerText}>
-            <ThemedText type="h1">Chat</ThemedText>
+            <ThemedText type="h1">Cur.io</ThemedText>
             <ThemedText
               type="bodySmall"
               style={{ color: colors.secondary[600] }}
             >
-              Ask about products, ingredients, or your routine
+              Personalized skincare guidance, powered by your vanity
             </ThemedText>
           </View>
           <TouchableOpacity

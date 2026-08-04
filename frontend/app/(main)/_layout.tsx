@@ -8,11 +8,7 @@ import TopBar from "@/components/top-bar";
 type TabBarIconProps = { focused: boolean; color: string };
 
 type TabIconProps = TabBarIconProps & {
-  IconComponent: React.ComponentType<{
-    name: string;
-    size: number;
-    color: string;
-  }>;
+  IconComponent: React.ComponentType<any>;
   outlineName: string;
   fillName: string;
   size: number;
@@ -53,7 +49,7 @@ export default function MainLayout() {
             backgroundColor: bgColor,
             borderTopWidth: 1,
             borderTopColor: strokeColor,
-            height: 60,
+            height: 65,
           },
           tabBarLabelStyle: {
             fontFamily: Fonts.sansMedium,
@@ -83,7 +79,7 @@ export default function MainLayout() {
         <Tabs.Screen
           name="chat"
           options={{
-            title: "Chat",
+            title: "Cur.io",
             tabBarIcon: ({ focused, color }: TabBarIconProps) => (
               <TabIcon
                 IconComponent={MaterialCommunityIcons}
@@ -115,7 +111,7 @@ export default function MainLayout() {
         <Tabs.Screen
           name="products"
           options={{
-            title: "My Shelf",
+            title: "Vanity",
             tabBarIcon: ({ focused, color }: TabBarIconProps) => (
               <TabIcon
                 IconComponent={MaterialCommunityIcons}
@@ -154,9 +150,3 @@ export default function MainLayout() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  icon: {
-    fontSize: 22,
-  },
-});

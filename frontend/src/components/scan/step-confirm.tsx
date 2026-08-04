@@ -10,8 +10,16 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
-import { createProduct, updateScanResult, analyzeIngredients } from "../../api/products";
-import type { ProductCategory, ProductType, NameBrandMethod } from "../../types";
+import {
+  createProduct,
+  updateScanResult,
+  analyzeIngredients,
+} from "../../api/products";
+import type {
+  ProductCategory,
+  ProductType,
+  NameBrandMethod,
+} from "../../types";
 import { useScanContext } from "../../contexts/ScanContext";
 import ProductForm, { ProductFormData } from "../ui/product-form";
 import { DEFAULT_ICON } from "../ui/icon-selector";
@@ -26,7 +34,10 @@ interface StepConfirmProps {
   returnParams?: { templateId: string; stepId: string; stepType: string };
 }
 
-export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps) {
+export default function StepConfirm({
+  returnTo,
+  returnParams,
+}: StepConfirmProps) {
   const {
     scanResult,
     paoMonths,
@@ -137,9 +148,7 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
         product_type: formData.productType || undefined,
         icon: formData.icon || undefined,
         pao_months: expiryComplete ? null : (paoValue ?? undefined),
-        expiry_date: expiryComplete
-          ? `${formData.expiryDate}-01`
-          : undefined,
+        expiry_date: expiryComplete ? `${formData.expiryDate}-01` : undefined,
         opened_date: formData.openedDate || undefined,
         image_s3_key: frontFileKey || undefined,
         scan_id: scanId || null,
@@ -149,7 +158,7 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
       Toast.show({
         type: "success",
         text1: "Added",
-        text2: `${formData.name.trim()} saved to your shelf`,
+        text2: `${formData.name.trim()} saved to your vanity`,
         position: "top",
       });
       if (returnTo && returnParams) {
@@ -189,12 +198,14 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
               type="bodySmall"
               style={{ color: colors.secondary[600] }}
             >
-              Double-check and add product to your shelf!
+              Double-check and add product to your vanity!
             </ThemedText>
           </View>
 
           {analyzingIngredients && scanResult?.raw_ocr_text && (
-            <View style={[styles.flagBadge, { borderColor: colors.neutral[400] }]}>
+            <View
+              style={[styles.flagBadge, { borderColor: colors.neutral[400] }]}
+            >
               <ThemedText
                 type="captionLarge"
                 style={{ color: colors.neutral[600] }}
@@ -204,63 +215,74 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
             </View>
           )}
 
-          {!analyzingIngredients && ingredientAnalysis && ingredientAnalysis.flags.length > 0 && (
-            <View>
-              <TouchableOpacity
-                style={[styles.flagBadge, { borderColor: colors.secondary[500] }]}
-                onPress={() => setShowFlags((prev) => !prev)}
-                activeOpacity={0.7}
+          {!analyzingIngredients &&
+            ingredientAnalysis &&
+            ingredientAnalysis.flags.length > 0 && (
+              <View>
+                <TouchableOpacity
+                  style={[
+                    styles.flagBadge,
+                    { borderColor: colors.secondary[500] },
+                  ]}
+                  onPress={() => setShowFlags((prev) => !prev)}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText
+                    type="captionLarge"
+                    weight="medium"
+                    style={{ color: colors.secondary[600] }}
+                  >
+                    {ingredientAnalysis.flags.length} flagged ingredient
+                    {ingredientAnalysis.flags.length !== 1 ? "s" : ""}
+                  </ThemedText>
+                  <MaterialCommunityIcons
+                    name={showFlags ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color={colors.secondary[600]}
+                  />
+                </TouchableOpacity>
+                {showFlags && (
+                  <View style={styles.flagList}>
+                    {ingredientAnalysis.flags.map((flag, i) => (
+                      <View key={i} style={styles.flagRow}>
+                        <MaterialCommunityIcons
+                          name="alert-circle-outline"
+                          size={14}
+                          color={colors.secondary[600]}
+                        />
+                        <ThemedText
+                          type="caption"
+                          style={{ color: colors.neutral[700], flex: 1 }}
+                        >
+                          {flag}
+                        </ThemedText>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+
+          {!analyzingIngredients &&
+            ingredientAnalysis &&
+            ingredientAnalysis.flags.length === 0 &&
+            scanResult?.raw_ocr_text && (
+              <View
+                style={[styles.flagBadge, { borderColor: colors.primary[400] }]}
               >
+                <MaterialCommunityIcons
+                  name="check-circle-outline"
+                  size={16}
+                  color={colors.primary[600]}
+                />
                 <ThemedText
                   type="captionLarge"
-                  weight="medium"
-                  style={{ color: colors.secondary[600] }}
+                  style={{ color: colors.primary[600] }}
                 >
-                  {ingredientAnalysis.flags.length} flagged ingredient{ingredientAnalysis.flags.length !== 1 ? "s" : ""}
+                  No flagged ingredients
                 </ThemedText>
-                <MaterialCommunityIcons
-                  name={showFlags ? "chevron-up" : "chevron-down"}
-                  size={16}
-                  color={colors.secondary[600]}
-                />
-              </TouchableOpacity>
-              {showFlags && (
-                <View style={styles.flagList}>
-                  {ingredientAnalysis.flags.map((flag, i) => (
-                    <View key={i} style={styles.flagRow}>
-                      <MaterialCommunityIcons
-                        name="alert-circle-outline"
-                        size={14}
-                        color={colors.secondary[600]}
-                      />
-                      <ThemedText
-                        type="caption"
-                        style={{ color: colors.neutral[700], flex: 1 }}
-                      >
-                        {flag}
-                      </ThemedText>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-
-          {!analyzingIngredients && ingredientAnalysis && ingredientAnalysis.flags.length === 0 && scanResult?.raw_ocr_text && (
-            <View style={[styles.flagBadge, { borderColor: colors.primary[400] }]}>
-              <MaterialCommunityIcons
-                name="check-circle-outline"
-                size={16}
-                color={colors.primary[600]}
-              />
-              <ThemedText
-                type="captionLarge"
-                style={{ color: colors.primary[600] }}
-              >
-                No flagged ingredients
-              </ThemedText>
-            </View>
-          )}
+              </View>
+            )}
 
           <ProductForm
             value={formData}
@@ -279,7 +301,7 @@ export default function StepConfirm({ returnTo, returnParams }: StepConfirmProps
               disabled={saving}
               loading={saving}
               color={colors.primary[600]}
-              text="Store In My Shelf"
+              text="Add to Vanity"
             />
             <ThemedButton
               link

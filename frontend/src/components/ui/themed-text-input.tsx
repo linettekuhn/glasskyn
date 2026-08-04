@@ -1,5 +1,12 @@
 import { Colors, Fonts, getTheme } from "@/constants/theme";
-import { ComponentType, ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  ComponentType,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Pressable,
   StyleProp,
@@ -32,7 +39,7 @@ export default function ThemedTextInput({
   iconName,
   children,
   style,
-  autoCapitalize = "sentences",
+  autoCapitalize = "none",
   ...rest
 }: Props) {
   const colorScheme = useColorScheme();
