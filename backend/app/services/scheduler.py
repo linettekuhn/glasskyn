@@ -9,8 +9,6 @@ from app.core.config import (
     EXPIRY_ALERT_WINDOW_DAYS,
     EXPIRY_CHECK_HOUR,
     EXPIRY_CHECK_MINUTE,
-    REMINDER_AM_TIME,
-    REMINDER_PM_TIME,
 )
 from app.db.session import SessionLocal
 from app.models.alert import Alert
@@ -111,8 +109,11 @@ def check_expiring_products() -> None:
         db.close()
 
 
-def send_routine_digests(time_of_day: str) -> None:
-    """AM/PM job: remind users to complete their daily skincare steps."""
+def send_routine_digests() -> None:
+    """Interval job: fire AM/PM routine reminders at each user's chosen time."""
+    now = datetime.now()
+    current_time = now.strftime("%H:%M")
+    time_of_day = "AM" if now.hour < 12 else "PM"
     alert_type = f"routine_reminder_{time_of_day.lower()}"
     db = SessionLocal()
     try:
@@ -124,7 +125,14 @@ def send_routine_digests(time_of_day: str) -> None:
                 .filter(UserPreference.user_id == user.id)
                 .first()
             )
-            if prefs is not None and not prefs.routine_digest_enabled:
+            if prefs is None:
+                continue
+            prefs_time = (
+                prefs.routine_digest_am_time
+                if time_of_day == "AM"
+                else prefs.routine_digest_pm_time
+            )
+            if not prefs_time or prefs_time != current_time:
                 continue
             if _alert_exists(db, user.id, alert_type, today):
                 continue
@@ -234,14 +242,6 @@ def send_water_reminders() -> None:
         db.close()
 
 
-def _parse_time(value: str) -> tuple:
-    try:
-        hour, minute = map(int, value.split(":"))
-        return hour, minute
-    except (ValueError, AttributeError):
-        return 8, 0
-
-
 def build_scheduler() -> BackgroundScheduler:
     scheduler = BackgroundScheduler()
     scheduler.add_job(
@@ -250,18 +250,10 @@ def build_scheduler() -> BackgroundScheduler:
         id="expiry_check",
         replace_existing=True,
     )
-    am_hour, am_minute = _parse_time(REMINDER_AM_TIME)
     scheduler.add_job(
-        lambda: send_routine_digests("AM"),
-        CronTrigger(hour=am_hour, minute=am_minute),
-        id="am_digest",
-        replace_existing=True,
-    )
-    pm_hour, pm_minute = _parse_time(REMINDER_PM_TIME)
-    scheduler.add_job(
-        lambda: send_routine_digests("PM"),
-        CronTrigger(hour=pm_hour, minute=pm_minute),
-        id="pm_digest",
+        send_routine_digests,
+        IntervalTrigger(minutes=5),
+        id="routine_digests",
         replace_existing=True,
     )
     scheduler.add_job(
