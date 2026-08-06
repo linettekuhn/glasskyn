@@ -6,6 +6,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { ThemedText } from "@/components/ui/themed-text";
+import Divider from "@/components/ui/divider";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { RoutineTemplate } from "@/types";
 
@@ -91,9 +92,7 @@ export default function TemplateCard({
         </View>
         {((template.concern_tags && template.concern_tags.length > 0) ||
           (template.skin_type_tags && template.skin_type_tags.length > 0)) && (
-          <View
-            style={[styles.divider, { backgroundColor: colors.neutral[300] }]}
-          />
+          <Divider style={{ marginVertical: 4 }} />
         )}
         {template.concern_tags && template.concern_tags.length > 0 && (
           <View style={{ width: "100%" }}>
@@ -187,11 +186,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-  },
-  divider: {
-    width: "100%",
-    height: 1,
-    marginVertical: 4,
   },
   chevron: {
     position: "absolute",

@@ -44,6 +44,18 @@ export const Colors = {
       900: "#333232",
     },
 
+    success: {
+      100: "#EAF3EC",
+      200: "#CBE3D0",
+      300: "#A6CDAF",
+      400: "#7FB68C",
+      500: "#5E9E6E",
+      600: "#4A7E57",
+      700: "#385E42",
+      800: "#263F2D",
+      900: "#131F17",
+    },
+
     background: "#FCFBFB",
     text: "#151C1A",
     tabBackground: "#271B17",
@@ -85,6 +97,18 @@ export const Colors = {
       700: "#F3EFEE",
       800: "#FAF7F7",
       900: "#FCFBFB",
+    },
+
+    success: {
+      100: "#131F17",
+      200: "#263F2D",
+      300: "#385E42",
+      400: "#4A7E57",
+      500: "#5E9E6E",
+      600: "#7FB68C",
+      700: "#A6CDAF",
+      800: "#CBE3D0",
+      900: "#EAF3EC",
     },
 
     background: "#333232",

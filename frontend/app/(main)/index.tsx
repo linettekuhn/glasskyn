@@ -5,9 +5,11 @@ import { affirmations } from "@/constants/affirmations";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHomeRoutine } from "@/hooks/use-home-routine";
 import RoutineStatusCard from "@/components/routine/routine-status-card";
+import WaterIntakeCard from "@/components/water-intake-card";
 import { router } from "expo-router";
 import {
   View,
+  ScrollView,
   StyleSheet,
   ActivityIndicator,
   useColorScheme,
@@ -49,7 +51,7 @@ export default function HomeScreen() {
         </ThemedText>
       </View>
 
-      <View style={styles.body}>
+      <ScrollView contentContainerStyle={styles.body}>
         {loading ? (
           <View style={styles.loadingRow}>
             <ActivityIndicator color={colors.primary[600]} />
@@ -83,7 +85,9 @@ export default function HomeScreen() {
             onPressCta={openRoutine}
           />
         ) : null}
-      </View>
+
+        <WaterIntakeCard />
+      </ScrollView>
     </View>
   );
 }

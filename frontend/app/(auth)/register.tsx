@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import Toast from "react-native-toast-message";
 import { ThemedText } from "@/components/ui/themed-text";
+import Divider from "@/components/ui/divider";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedTextInput from "@/components/ui/themed-text-input";
 import { MaterialIcons, Octicons } from "@expo/vector-icons";
@@ -131,20 +132,14 @@ export default function RegisterScreen() {
               RightIconComponent={MaterialIcons}
             />
           </View>
-          <View style={styles.divider}>
-            <View
-              style={[styles.line, { backgroundColor: colors.secondary[500] }]}
-            />
+          <Divider color={colors.secondary[500]}>
             <ThemedText
               type="overline"
               style={{ paddingHorizontal: 16, color: colors.secondary[600] }}
             >
               or
             </ThemedText>
-            <View
-              style={[styles.line, { backgroundColor: colors.secondary[500] }]}
-            />
-          </View>
+          </Divider>
           <View style={styles.link}>
             <ThemedText>Already have an account?</ThemedText>
             <ThemedButton
@@ -177,15 +172,6 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 24,
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-  },
-  line: {
-    flex: 1,
-    height: 1,
   },
   link: {
     flexDirection: "row",

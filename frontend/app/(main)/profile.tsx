@@ -13,6 +13,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../src/contexts/AuthContext";
 import NotificationSettings from "../../src/components/ui/notification-settings";
 import HomeRoutineSetting from "../../src/components/ui/home-routine-setting";
+import UnitsSetting from "../../src/components/ui/units-setting";
 import { getSkinProfile } from "../../src/api/routines";
 import type { SkinProfile } from "../../src/types";
 import { Colors, getTheme } from "../../src/constants/theme";
@@ -224,6 +225,13 @@ export default function ProfileScreen() {
             Home Screen
           </ThemedText>
           <HomeRoutineSetting />
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
+            Units
+          </ThemedText>
+          <UnitsSetting />
         </View>
 
         <View style={styles.section}>

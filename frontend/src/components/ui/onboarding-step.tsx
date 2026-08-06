@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { View, ScrollView, StyleSheet, useColorScheme } from "react-native";
 import { useRouter } from "expo-router";
 import { ThemedText } from "./themed-text";
+import Divider from "./divider";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "./themed-button";
 import { useOnboarding } from "@/contexts/OnboardingContext";
@@ -53,20 +54,14 @@ export default function OnboardingStep({
       </View>
 
       {showStepIndicator && currentStep && (
-        <View style={styles.divider}>
-          <View
-            style={[styles.line, { backgroundColor: colors.neutral[300] }]}
-          />
+        <Divider>
           <ThemedText
             type="overline"
             style={{ paddingHorizontal: 16, color: colors.neutral[600] }}
           >
             step {currentStep} of 3
           </ThemedText>
-          <View
-            style={[styles.line, { backgroundColor: colors.neutral[300] }]}
-          />
-        </View>
+        </Divider>
       )}
 
       {children}
@@ -85,14 +80,5 @@ const styles = StyleSheet.create({
   controls: {
     flexDirection: "row",
     justifyContent: "space-between",
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-  },
-  line: {
-    flex: 1,
-    height: 1,
   },
 });

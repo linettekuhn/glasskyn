@@ -12,6 +12,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, getTheme } from "../../src/constants/theme";
 import { ThemedText } from "../../src/components/ui/themed-text";
 import ThemedButton from "../../src/components/ui/themed-button";
+import Divider from "../../src/components/ui/divider";
 import IngredientAnalysisSection from "../../src/components/product/ingredient-analysis-section";
 import { analyzeIngredients, getProductScanText } from "../../src/api/products";
 import { fromValue } from "../../src/components/ui/icon-selector";
@@ -328,9 +329,7 @@ export default function ProductDetailScreen() {
           )}
         </View>
 
-        <View
-          style={[styles.divider, { backgroundColor: colors.neutral[300] }]}
-        />
+        <Divider style={{ marginBottom: 24 }} />
 
         <View style={styles.section}>
           <ThemedText type="h3" weight="semiBold">
@@ -391,10 +390,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  divider: {
-    height: 1,
-    marginBottom: 24,
   },
   section: {
     gap: 16,

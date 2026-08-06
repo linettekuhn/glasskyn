@@ -54,12 +54,10 @@ export default function RoutineStatusCard({
     <View
       style={[
         styles.card,
-        isFullDay
-          ? undefined
-          : {
-              backgroundColor: colors.background,
-              borderColor: colors.neutral[200],
-            },
+        {
+          backgroundColor: isFullDay ? undefined : colors.background,
+          borderColor: colors.neutral[200],
+        },
       ]}
     >
       {isFullDay && (
