@@ -58,6 +58,17 @@ export async function deleteProduct(id: number) {
   await apiClient.delete(`/products/${id}`);
 }
 
+export async function markProductReplaced(id: number, expiryDate?: string) {
+  const now = new Date();
+  const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return updateProduct(
+    id,
+    expiryDate
+      ? { opened_date: iso, expiry_date: expiryDate }
+      : { opened_date: iso },
+  );
+}
+
 export async function processImage(fileKey: string, barcode?: string | null): Promise<ProcessImageResult> {
   console.log("[API] processImage called, fileKey:", fileKey, "barcode:", barcode);
   const response = await apiClient.post('/uploads/process', {

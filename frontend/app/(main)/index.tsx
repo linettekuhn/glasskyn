@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useHomeRoutine } from "@/hooks/use-home-routine";
 import RoutineStatusCard from "@/components/routine/routine-status-card";
 import WaterIntakeCard from "@/components/water-intake-card";
+import ExpiringSoonCard from "@/components/expiring/expiring-soon-card";
 import { router } from "expo-router";
 import {
   View,
@@ -51,6 +52,8 @@ export default function HomeScreen() {
         </ThemedText>
       </View>
 
+      <ExpiringSoonCard />
+
       <ScrollView contentContainerStyle={styles.body}>
         {loading ? (
           <View style={styles.loadingRow}>
@@ -85,7 +88,6 @@ export default function HomeScreen() {
             onPressCta={openRoutine}
           />
         ) : null}
-
         <WaterIntakeCard />
       </ScrollView>
     </View>

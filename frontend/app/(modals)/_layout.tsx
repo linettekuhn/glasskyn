@@ -50,6 +50,12 @@ export default function ModalLayout() {
               contentStyle: { backgroundColor: "#fff" },
             }}
           />
+          <Stack.Screen
+            name="expiring-products"
+            options={{
+              contentStyle: { backgroundColor: "#fff" },
+            }}
+          />
         </Stack>
       </TemplateProvider>
     </ScanProvider>

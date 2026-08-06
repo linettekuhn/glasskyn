@@ -60,6 +60,7 @@ export const Colors = {
     text: "#151C1A",
     tabBackground: "#271B17",
     error: "#A10000",
+    warning: "#B45309",
   },
 
   dark: {
@@ -115,6 +116,7 @@ export const Colors = {
     text: "#F5ECEA",
     tabBackground: "#F5ECEA",
     error: "#FF5C5C",
+    warning: "#FBBF24",
   },
 };
 
