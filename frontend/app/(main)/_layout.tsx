@@ -79,7 +79,7 @@ export default function MainLayout() {
         <Tabs.Screen
           name="chat"
           options={{
-            title: "Cur.io",
+            title: "Cur.ai",
             tabBarIcon: ({ focused, color }: TabBarIconProps) => (
               <TabIcon
                 IconComponent={MaterialCommunityIcons}

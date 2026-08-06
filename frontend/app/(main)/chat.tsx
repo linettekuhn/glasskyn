@@ -333,7 +333,7 @@ export default function ChatScreen() {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <View style={styles.headerText}>
-            <ThemedText type="h1">Cur.io</ThemedText>
+            <ThemedText type="h1">Cur.ai</ThemedText>
             <ThemedText
               type="bodySmall"
               style={{ color: colors.secondary[600] }}

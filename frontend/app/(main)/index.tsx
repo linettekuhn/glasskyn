@@ -6,12 +6,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useHomeRoutine } from "@/hooks/use-home-routine";
 import RoutineStatusCard from "@/components/routine/routine-status-card";
 import { router } from "expo-router";
-import { View, StyleSheet, ActivityIndicator, useColorScheme } from "react-native";
+import {
+  View,
+  StyleSheet,
+  ActivityIndicator,
+  useColorScheme,
+} from "react-native";
 
 function getGreeting(hour: number, firstName: string): string {
-  if (hour >= 5 && hour < 12) return `Morning, ${firstName} ☀️`;
+  if (hour >= 5 && hour < 12) return `Morning, ${firstName}`;
   if (hour >= 12 && hour < 17) return `Hey, ${firstName}`;
-  if (hour >= 17 && hour < 22) return `Evening, ${firstName} 🌙`;
+  if (hour >= 17 && hour < 22) return `Evening, ${firstName}`;
   return `Up late, ${firstName}?`;
 }
 
@@ -40,7 +45,7 @@ export default function HomeScreen() {
           italic
           style={{ color: colors.neutral[600] }}
         >
-          {affirmation}
+          "{affirmation}"
         </ThemedText>
       </View>
 
@@ -53,7 +58,10 @@ export default function HomeScreen() {
           <View
             style={[
               styles.emptyCard,
-              { backgroundColor: colors.background, borderColor: colors.neutral[200] },
+              {
+                backgroundColor: colors.background,
+                borderColor: colors.neutral[200],
+              },
             ]}
           >
             <ThemedText type="bodyLarge" weight="semiBold">

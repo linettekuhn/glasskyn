@@ -6,6 +6,8 @@ export type RoutineStatusKey =
   | "amPrompt"
   | "amContinue"
   | "amDone"
+  | "amCatchupPartial"
+  | "nightDoneAmOpen"
   | "missedAmCatchup"
   | "pmPrompt"
   | "pmContinue"
@@ -18,6 +20,7 @@ export type CtaVariant = "primary" | "outlined" | "link";
 export interface RoutineStatus {
   key: RoutineStatusKey;
   message: string;
+  caption?: string;
   ctaLabel: string | null;
   ctaVariant: CtaVariant;
   progress: number;
@@ -57,8 +60,9 @@ export function resolveRoutineStatus(
   if (amTotal + pmTotal === 0) {
     return {
       key: "empty",
-      message: "No steps in this routine yet",
-      ctaLabel: "View Routine",
+      message: "No steps yet",
+      caption: "Let's build your routine",
+      ctaLabel: "Build Routine",
       ctaVariant: "link",
       progress: 0,
       done: 0,
@@ -75,14 +79,15 @@ export function resolveRoutineStatus(
   const pmEff = pmStatus === "none" ? "done" : pmStatus;
 
   if (amEff === "done" && pmEff === "done") {
-    const message =
+    const caption =
       streakDays != null && streakDays > 0
-        ? `Full day, streak's alive 🔥 ${streakDays} day${streakDays === 1 ? "" : "s"}`
-        : "Full day, streak's alive 🔥";
+        ? `${streakDays} day${streakDays === 1 ? "" : "s"} and counting`
+        : "First day of many";
     return {
       key: "fullDayComplete",
-      message,
-      ctaLabel: "View Routine",
+      message: "Glow secured for today",
+      caption,
+      ctaLabel: "See Today's Progress",
       ctaVariant: "link",
       progress: 1,
       done: amTotal + pmTotal,
@@ -97,6 +102,7 @@ export function resolveRoutineStatus(
       return {
         key: "amContinue",
         message: `${amDoneCount} of ${amTotal} steps down`,
+        caption: "Keep the streak going",
         ctaLabel: "Keep Going",
         ctaVariant: "primary",
         progress: fraction(amDoneCount, amTotal),
@@ -107,7 +113,8 @@ export function resolveRoutineStatus(
     if (amStatus === "done") {
       return {
         key: "amDone",
-        message: "AM done. Nice.",
+        message: "Morning routine done!",
+        caption: "See you tonight",
         ctaLabel: "View Routine",
         ctaVariant: "link",
         progress: 1,
@@ -117,7 +124,8 @@ export function resolveRoutineStatus(
     }
     return {
       key: "amPrompt",
-      message: "Your AM routine's waiting",
+      message: "Good morning",
+      caption: "Your routine's waiting",
       ctaLabel: "Start Routine",
       ctaVariant: "primary",
       progress: 0,
@@ -131,7 +139,8 @@ export function resolveRoutineStatus(
       const remaining = pmTotal - pmDoneCount;
       return {
         key: "pmContinue",
-        message: `Almost there, ${remaining} step${remaining === 1 ? "" : "s"} left`,
+        message: "Almost there",
+        caption: `${remaining} step${remaining === 1 ? "" : "s"} left`,
         ctaLabel: "Finish Up",
         ctaVariant: "primary",
         progress: fraction(pmDoneCount, pmTotal),
@@ -141,8 +150,9 @@ export function resolveRoutineStatus(
     }
     return {
       key: "pmPrompt",
-      message: "Time to wind down",
-      ctaLabel: "Start PM Routine",
+      message: "Ready to wind down?",
+      caption: "Start your night routine",
+      ctaLabel: "Start Night Routine",
       ctaVariant: "primary",
       progress: 0,
       done: 0,
@@ -154,7 +164,8 @@ export function resolveRoutineStatus(
     const remaining = pmTotal - pmDoneCount;
     return {
       key: "pmContinue",
-      message: `Almost there, ${remaining} step${remaining === 1 ? "" : "s"} left`,
+      message: "Almost there",
+      caption: `${remaining} step${remaining === 1 ? "" : "s"} left`,
       ctaLabel: "Finish Up",
       ctaVariant: "primary",
       progress: fraction(pmDoneCount, pmTotal),
@@ -163,11 +174,14 @@ export function resolveRoutineStatus(
     };
   }
 
+  // PM finished but AM was skipped earlier today. Distinct from the
+  // "still working through AM" case below, so it gets its own copy.
   if (pmStatus === "done") {
     return {
-      key: "amContinue",
-      message: `${amDoneCount} of ${amTotal} steps down`,
-      ctaLabel: "Keep Going",
+      key: "nightDoneAmOpen",
+      message: "Night done, morning's still open",
+      caption: "Catch up before tomorrow",
+      ctaLabel: "Catch Up on Morning",
       ctaVariant: "primary",
       progress: fraction(amDoneCount, amTotal),
       done: amDoneCount,
@@ -175,11 +189,13 @@ export function resolveRoutineStatus(
     };
   }
 
+  // Midday/night, AM partially done, PM not started/none.
   if (amStatus === "partial") {
     return {
-      key: "amContinue",
-      message: `${amDoneCount} of ${amTotal} steps down`,
-      ctaLabel: "Keep Going",
+      key: "amCatchupPartial",
+      message: `${amDoneCount} of ${amTotal} morning steps done`,
+      caption: "Finish before you forget",
+      ctaLabel: "Finish Morning",
       ctaVariant: "primary",
       progress: fraction(amDoneCount, amTotal),
       done: amDoneCount,
@@ -190,7 +206,8 @@ export function resolveRoutineStatus(
   if (window === "night") {
     return {
       key: "missedBoth",
-      message: "Tomorrow's a fresh one",
+      message: "Fresh start tomorrow",
+      caption: "Rest up, see you in the morning",
       ctaLabel: "Peek at Routine",
       ctaVariant: "outlined",
       progress: 0,
@@ -201,8 +218,9 @@ export function resolveRoutineStatus(
 
   return {
     key: "missedAmCatchup",
-    message: "Didn't get to AM? No stress, hop in whenever",
-    ctaLabel: "Do AM Routine",
+    message: "Skipped your morning?",
+    caption: "No stress, jump in anytime",
+    ctaLabel: "Do Morning Routine",
     ctaVariant: "primary",
     progress: 0,
     done: 0,

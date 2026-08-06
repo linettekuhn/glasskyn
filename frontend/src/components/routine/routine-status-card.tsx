@@ -34,7 +34,10 @@ export default function RoutineStatusCard({
   const isFullDay = status.key === "fullDayComplete";
 
   useEffect(() => {
-    if (status.key !== "fullDayComplete") return;
+    if (status.key !== "fullDayComplete") {
+      celebratedRef.current = null;
+      return;
+    }
     const key = todayKey();
     if (celebratedRef.current === key) return;
     celebratedRef.current = key;
@@ -44,9 +47,9 @@ export default function RoutineStatusCard({
   }, [status.key]);
 
   const ringColor = isFullDay ? colors.secondary[600] : colors.primary[600];
-  const captionColor = isFullDay ? colors.primary[800] : colors.neutral[600];
+  const captionColor = isFullDay ? colors.neutral[800] : colors.neutral[600];
   const titleColor = isFullDay ? colors.text : colors.text;
-
+  const btnColor = colors.primary[600];
   return (
     <View
       style={[
@@ -61,7 +64,7 @@ export default function RoutineStatusCard({
     >
       {isFullDay && (
         <LinearGradient
-          colors={[colors.secondary[100], colors.secondary[300]]}
+          colors={[colors.neutral[100], colors.neutral[200]]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
@@ -70,19 +73,27 @@ export default function RoutineStatusCard({
 
       <View style={styles.content}>
         <View style={styles.textColumn}>
-          <ThemedText
-            type={isFullDay ? "h3" : "bodyLarge"}
-            weight={isFullDay ? "semiBold" : "semiBold"}
-            style={{ color: titleColor }}
-          >
-            {status.message}
-          </ThemedText>
-          <ThemedText
-            type="caption"
-            style={{ color: captionColor, textTransform: "capitalize" }}
-          >
+          <ThemedText type="overline" style={{ color: captionColor }}>
             {routineName}
           </ThemedText>
+          <View>
+            <ThemedText
+              type={isFullDay ? "h5" : "bodyLarge"}
+              weight={isFullDay ? "semiBold" : "semiBold"}
+              style={{ color: titleColor }}
+            >
+              {status.message}
+            </ThemedText>
+            {status.caption && (
+              <ThemedText
+                type="captionLarge"
+                weight="medium"
+                style={{ color: captionColor }}
+              >
+                {status.caption}
+              </ThemedText>
+            )}
+          </View>
         </View>
         <ProgressRing size={68} progress={status.progress} color={ringColor} />
       </View>
@@ -94,6 +105,7 @@ export default function RoutineStatusCard({
           outlined={status.ctaVariant === "outlined"}
           link={status.ctaVariant === "link"}
           alignment="flex-start"
+          color={btnColor}
         />
       )}
 

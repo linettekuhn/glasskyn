@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -56,10 +57,12 @@ function Particle({ spec, color }: { spec: ParticleSpec; color: string }) {
       spec.delay,
       withTiming("180deg", { duration: 600 }),
     );
-    opacity.value = withDelay(spec.delay, withTiming(1, { duration: 60 }));
     opacity.value = withDelay(
-      spec.delay + 420,
-      withTiming(0, { duration: 400 }),
+      spec.delay,
+      withSequence(
+        withTiming(1, { duration: 60 }),
+        withDelay(360, withTiming(0, { duration: 400 })),
+      ),
     );
   }, [spec, tx, ty, opacity, scale, rotate]);
 

@@ -12,6 +12,7 @@ import { router, useFocusEffect } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../src/contexts/AuthContext";
 import NotificationSettings from "../../src/components/ui/notification-settings";
+import HomeRoutineSetting from "../../src/components/ui/home-routine-setting";
 import { getSkinProfile } from "../../src/api/routines";
 import type { SkinProfile } from "../../src/types";
 import { Colors, getTheme } from "../../src/constants/theme";
@@ -216,6 +217,13 @@ export default function ProfileScreen() {
               />
             </View>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
+            Home Screen
+          </ThemedText>
+          <HomeRoutineSetting />
         </View>
 
         <View style={styles.section}>

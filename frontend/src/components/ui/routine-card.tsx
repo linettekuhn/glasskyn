@@ -194,9 +194,7 @@ export default function RoutineCard({
                     ? ` ${FREQUENCY_LABELS[item.frequency] ?? item.frequency}`
                     : ""}
                 </ThemedText>
-                <ThemedText>
-                  {productName ? `with ${productName}` : ""}
-                </ThemedText>
+                {productName && <ThemedText>with {productName}</ThemedText>}
               </View>
             </TouchableOpacity>
           );

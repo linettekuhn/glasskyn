@@ -5,6 +5,7 @@ import {
   listRoutines,
   localToday,
 } from "@/api/routines";
+import { getPreferences } from "@/api/preferences";
 import type { Routine } from "@/types";
 import {
   resolveRoutineStatus,
@@ -26,7 +27,13 @@ export function useHomeRoutine() {
     setLoading(true);
     try {
       const data = await listRoutines("skincare", localToday());
-      setRoutine(data.find((r) => r.is_active) ?? data[0] ?? null);
+      const prefs = await getPreferences().catch(() => null);
+      const fallback = data.find((r) => r.is_active) ?? data[0] ?? null;
+      const chosen =
+        prefs?.home_routine_id != null
+          ? (data.find((r) => r.id === prefs.home_routine_id) ?? fallback)
+          : fallback;
+      setRoutine(chosen);
     } catch {
       setRoutine(null);
     } finally {

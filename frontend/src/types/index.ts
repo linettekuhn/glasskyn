@@ -140,6 +140,7 @@ export interface UserPreference {
   water_reminder_time: string;
   routine_digest_am_time: string | null;
   routine_digest_pm_time: string | null;
+  home_routine_id: number | null;
 }
 
 export interface RoutineTemplate {
