@@ -9,8 +9,7 @@ export function localDate(): string {
 }
 
 export async function getWaterIntake(date?: string): Promise<WaterIntake> {
-  const params: Record<string, string> = {};
-  if (date) params.date = date;
+  const params: Record<string, string> = { on_date: date ?? localDate() };
   const response = await apiClient.get("/water/intake", { params });
   return response.data;
 }
