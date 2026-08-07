@@ -2,7 +2,7 @@ import apiClient from "./client";
 
 export interface Alert {
   id: number;
-  alert_type: "expiry" | "routine_reminder" | "water";
+  alert_type: "expiry" | "routine_reminder_am" | "routine_reminder_pm" | "water";
   title: string | null;
   body: string | null;
   product_id: number | null;
@@ -33,5 +33,12 @@ export async function getAlerts(unreadOnly = false): Promise<Alert[]> {
 
 export async function markAlertRead(alertId: number): Promise<Alert> {
   const response = await apiClient.patch(`/alerts/${alertId}/read`);
+  return response.data;
+}
+
+export async function sendDevTestPush(
+  type: "direct" | "expiry" | "routine" | "water" | "all" = "direct",
+) {
+  const response = await apiClient.post("/dev/test-push", { type });
   return response.data;
 }

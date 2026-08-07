@@ -1,5 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import Constants from "expo-constants";
+import { router } from "expo-router";
 import { registerPushToken, unregisterPushToken } from "../api/notifications";
 
 Notifications.setNotificationHandler({
@@ -35,9 +37,39 @@ export async function getExpoPushToken(): Promise<string | null> {
     });
   }
 
-  const tokenData = await Notifications.getExpoPushTokenAsync();
+  const tokenData = await Notifications.getExpoPushTokenAsync({
+    projectId:
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      Constants.easConfig?.projectId,
+  });
   cachedPushToken = tokenData.data;
   return cachedPushToken;
+}
+
+export async function getPushToken(): Promise<string | null> {
+  if (cachedPushToken) {
+    return cachedPushToken;
+  }
+  return getExpoPushToken();
+}
+
+export function setupNotificationListeners(): () => void {
+  const responseSubscription =
+    Notifications.addNotificationResponseReceivedListener(() => {
+      router.push("/(modals)/notifications");
+    });
+
+  Notifications.getLastNotificationResponseAsync()
+    .then((response) => {
+      if (response) {
+        router.push("/(modals)/notifications");
+      }
+    })
+    .catch(() => {});
+
+  return () => {
+    responseSubscription.remove();
+  };
 }
 
 export async function registerPushNotificationsWithBackend(): Promise<void> {

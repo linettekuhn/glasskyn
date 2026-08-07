@@ -9,6 +9,7 @@ class UserPreference(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True, index=True)
     water_reminder_enabled = Column(Boolean, default=True, nullable=False)
     water_reminder_time = Column(String, default="12:00", nullable=False)
+    timezone = Column(String, nullable=True)
     units = Column(String, default="imperial", nullable=False)
     water_goal_ml = Column(Integer, nullable=True)
     water_weight_lb = Column(Float, nullable=True)

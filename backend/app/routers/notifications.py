@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,6 +9,13 @@ from app.middleware.auth import get_db, get_current_user
 from app.models.user import User
 from app.models.device_token import DeviceToken
 from app.models.alert import Alert
+from app.core.config import IS_PRODUCTION
+from app.services.push import send_push_notifications
+from app.services.scheduler import (
+    check_expiring_products,
+    send_routine_digests,
+    send_water_reminders,
+)
 
 router = APIRouter(tags=["notifications"])
 
@@ -120,3 +127,48 @@ def mark_alert_read(
     db.commit()
     db.refresh(alert)
     return alert
+
+
+class DevTestPushIn(BaseModel):
+    type: Literal["direct", "expiry", "routine", "water", "all"] = "direct"
+
+
+@router.post("/dev/test-push", status_code=200)
+def dev_test_push(
+    body: DevTestPushIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if IS_PRODUCTION:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Not found"
+        )
+
+    triggered: List[str] = []
+
+    if body.type == "direct":
+        tokens = [
+            row[0]
+            for row in db.query(DeviceToken.token)
+            .filter(DeviceToken.user_id == current_user.id)
+            .all()
+        ]
+        send_push_notifications(
+            tokens,
+            "Test notification",
+            "Push notifications are working!",
+            {"type": "test"},
+        )
+        triggered.append("direct")
+
+    if body.type in ("expiry", "all"):
+        check_expiring_products()
+        triggered.append("expiry")
+    if body.type in ("routine", "all"):
+        send_routine_digests()
+        triggered.append("routine")
+    if body.type in ("water", "all"):
+        send_water_reminders()
+        triggered.append("water")
+
+    return {"ok": True, "triggered": triggered}

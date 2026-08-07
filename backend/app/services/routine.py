@@ -46,6 +46,7 @@ def clone_template_to_routine(
         name=name or template.name,
         source="template",
         routine_type=template.routine_type,
+        is_active=True,
     )
     db.add(routine)
     db.flush()

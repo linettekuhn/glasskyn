@@ -18,6 +18,7 @@ import * as auth from "../api/auth";
 import {
   registerPushNotificationsWithBackend,
   unregisterPushNotificationsFromBackend,
+  setupNotificationListeners,
 } from "../services/notifications";
 
 interface AuthContextType {
@@ -65,6 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       registerPushNotificationsWithBackend();
     }
   }, [token]);
+
+  useEffect(() => setupNotificationListeners(), []);
 
   const performLogin = async (email: string, password: string) => {
     const data = await auth.login(email, password);

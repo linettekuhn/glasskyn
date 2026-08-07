@@ -140,6 +140,7 @@ export type Units = "imperial" | "metric";
 export interface UserPreference {
   water_reminder_enabled: boolean;
   water_reminder_time: string;
+  timezone: string | null;
   units: Units;
   water_goal_ml: number | null;
   water_weight_lb: number | null;

@@ -5,6 +5,7 @@ from pydantic import BaseModel
 class PreferenceUpdate(BaseModel):
     water_reminder_enabled: Optional[bool] = None
     water_reminder_time: Optional[str] = None
+    timezone: Optional[str] = None
     units: Optional[str] = None
     water_goal_ml: Optional[int] = None
     water_weight_lb: Optional[float] = None
@@ -18,6 +19,7 @@ class PreferenceUpdate(BaseModel):
 class PreferenceOut(BaseModel):
     water_reminder_enabled: bool
     water_reminder_time: str
+    timezone: Optional[str]
     units: str
     water_goal_ml: Optional[int]
     water_weight_lb: Optional[float]

@@ -17,6 +17,7 @@ def send_push_notifications(
     """Send push notifications to Expo push tokens. Returns True on success."""
     tokens = [t for t in tokens if t]
     if not tokens:
+        logger.info("No push tokens to send to")
         return False
 
     messages = [
@@ -33,6 +34,22 @@ def send_push_notifications(
     try:
         response = httpx.post(EXPO_PUSH_URL, json=messages, timeout=15)
         response.raise_for_status()
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {}
+        logger.info(
+            "Expo push response for %d message(s): %s",
+            len(messages),
+            payload,
+        )
+        failed = [
+            receipt
+            for receipt in payload.get("data", [])
+            if receipt.get("status") != "ok"
+        ]
+        if failed:
+            logger.warning("Expo push reported %d failed receipt(s): %s", len(failed), failed)
         return True
     except httpx.HTTPError as exc:
         logger.warning("Failed to send push notifications: %s", exc)

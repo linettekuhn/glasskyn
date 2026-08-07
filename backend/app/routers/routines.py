@@ -304,6 +304,7 @@ def create_routine(
         name=body.name,
         source=body.source,
         routine_type=body.routine_type,
+        is_active=True,
     )
     db.add(routine)
     db.flush()

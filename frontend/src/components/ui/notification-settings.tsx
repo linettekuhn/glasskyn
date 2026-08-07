@@ -32,7 +32,20 @@ export default function NotificationSettings() {
 
   useEffect(() => {
     getPreferences()
-      .then(setPrefs)
+      .then((fetched) => {
+        setPrefs(fetched);
+        if (!fetched.timezone) {
+          let deviceTz: string | null = null;
+          try {
+            deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? null;
+          } catch {
+            deviceTz = null;
+          }
+          if (deviceTz) {
+            update({ timezone: deviceTz });
+          }
+        }
+      })
       .catch(() => {});
   }, []);
 

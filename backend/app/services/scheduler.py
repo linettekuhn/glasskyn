@@ -1,9 +1,9 @@
 import logging
 from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
 
 from app.core.config import (
     EXPIRY_ALERT_WINDOW_DAYS,
@@ -38,6 +38,38 @@ def _alert_exists(db, user_id: int, alert_type: str, day: date) -> bool:
     )
 
 
+def _is_due(prefs_time: str | None, now: datetime, tolerance_minutes: int = 2) -> bool:
+    """True when prefs_time falls within the current poll window.
+
+    Polls land on :00/:05/... boundaries (plus a few seconds of drift), so an
+    exact HH:MM string match would silently skip reminders. Compare within a
+    small tolerance instead.
+    """
+    if not prefs_time:
+        return False
+    try:
+        hour, minute = (int(part) for part in prefs_time.split(":"))
+    except (ValueError, TypeError):
+        return False
+    target_minutes = hour * 60 + minute
+    current_minutes = now.hour * 60 + now.minute
+    return abs(current_minutes - target_minutes) <= tolerance_minutes
+
+
+def _local_now(timezone_str: str | None) -> datetime:
+    """Naive local datetime for a user's IANA timezone.
+
+    Falls back to the server's local time when the timezone is missing or
+    invalid so existing users keep working after schema changes.
+    """
+    if timezone_str:
+        try:
+            return datetime.now(ZoneInfo(timezone_str)).replace(tzinfo=None)
+        except Exception:
+            logger.debug("Invalid timezone %r, using server local", timezone_str)
+    return datetime.now()
+
+
 def _push_to_user(db, user_id: int, title: str, body: str, data: dict) -> None:
     tokens = [
         row[0]
@@ -45,6 +77,13 @@ def _push_to_user(db, user_id: int, title: str, body: str, data: dict) -> None:
         .filter(DeviceToken.user_id == user_id)
         .all()
     ]
+    logger.info(
+        "Sending push to user %s (%d token(s)): %s - %s",
+        user_id,
+        len(tokens),
+        title,
+        body,
+    )
     send_push_notifications(tokens, title, body, data)
 
 
@@ -110,14 +149,9 @@ def check_expiring_products() -> None:
 
 
 def send_routine_digests() -> None:
-    """Interval job: fire AM/PM routine reminders at each user's chosen time."""
-    now = datetime.now()
-    current_time = now.strftime("%H:%M")
-    time_of_day = "AM" if now.hour < 12 else "PM"
-    alert_type = f"routine_reminder_{time_of_day.lower()}"
+    """Polling job: fire AM/PM routine reminders at each user's chosen time."""
     db = SessionLocal()
     try:
-        today = date.today()
         users = db.query(User).filter(User.is_active == True).all()
         for user in users:
             prefs = (
@@ -127,12 +161,16 @@ def send_routine_digests() -> None:
             )
             if prefs is None:
                 continue
+            now = _local_now(prefs.timezone)
+            time_of_day = "AM" if now.hour < 12 else "PM"
+            today = now.date()
+            alert_type = f"routine_reminder_{time_of_day.lower()}"
             prefs_time = (
                 prefs.routine_digest_am_time
                 if time_of_day == "AM"
                 else prefs.routine_digest_pm_time
             )
-            if not prefs_time or prefs_time != current_time:
+            if not _is_due(prefs_time, now):
                 continue
             if _alert_exists(db, user.id, alert_type, today):
                 continue
@@ -148,6 +186,10 @@ def send_routine_digests() -> None:
                 .first()
             )
             if not routine:
+                logger.info(
+                    "Routine digest due for user %s but no active skincare routine",
+                    user.id,
+                )
                 continue
 
             step_count = (
@@ -160,6 +202,11 @@ def send_routine_digests() -> None:
                 .count()
             )
             if step_count == 0:
+                logger.info(
+                    "Routine digest due for user %s but no %s daily steps",
+                    user.id,
+                    time_of_day,
+                )
                 continue
 
             label = "morning" if time_of_day == "AM" else "evening"
@@ -176,6 +223,7 @@ def send_routine_digests() -> None:
                     title=title,
                     body=body,
                     scheduled_for=datetime.combine(today, time.min),
+                    sent_at=datetime.utcnow(),
                 )
             )
             db.flush()
@@ -195,24 +243,25 @@ def send_routine_digests() -> None:
 
 
 def send_water_reminders() -> None:
-    """Interval job: fire water reminders for users whose time has arrived."""
+    """Polling job: fire water reminders for users whose time has arrived."""
     db = SessionLocal()
     try:
-        now = datetime.now()
-        today = now.date()
-        current_time = now.strftime("%H:%M")
-
         prefs_rows = (
             db.query(UserPreference)
             .filter(UserPreference.water_reminder_enabled == True)
             .all()
         )
         for prefs in prefs_rows:
-            if not prefs.water_reminder_time:
-                continue
-            if prefs.water_reminder_time != current_time:
+            now = _local_now(prefs.timezone)
+            today = now.date()
+            if not _is_due(prefs.water_reminder_time, now):
                 continue
             if _alert_exists(db, prefs.user_id, "water", today):
+                logger.info(
+                    "Water reminder due for user %s at %s but already sent today",
+                    prefs.user_id,
+                    prefs.water_reminder_time,
+                )
                 continue
 
             title = "Hydration reminder"
@@ -224,6 +273,7 @@ def send_water_reminders() -> None:
                     title=title,
                     body=body,
                     scheduled_for=datetime.combine(today, time.min),
+                    sent_at=datetime.utcnow(),
                 )
             )
             db.flush()
@@ -252,13 +302,13 @@ def build_scheduler() -> BackgroundScheduler:
     )
     scheduler.add_job(
         send_routine_digests,
-        IntervalTrigger(minutes=5),
+        CronTrigger(minute="*/5"),
         id="routine_digests",
         replace_existing=True,
     )
     scheduler.add_job(
         send_water_reminders,
-        IntervalTrigger(minutes=5),
+        CronTrigger(minute="*/5"),
         id="water_reminders",
         replace_existing=True,
     )
