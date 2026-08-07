@@ -332,27 +332,21 @@ export default function ChatScreen() {
     >
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <View style={styles.headerText}>
-            <ThemedText type="h1">Cur.ai</ThemedText>
-            <ThemedText
-              type="bodySmall"
-              style={{ color: colors.secondary[600] }}
+          <ThemedText type="h1">Cur.ai</ThemedText>
+          {displayMessages.length > 0 && (
+            <TouchableOpacity
+              onPress={handleNewChat}
+              disabled={loading}
+              style={[styles.newChatButton, loading && { opacity: 0.4 }]}
+              accessibilityLabel="Start a new chat"
             >
-              Personalized skincare guidance, powered by your vanity
-            </ThemedText>
-          </View>
-          <TouchableOpacity
-            onPress={handleNewChat}
-            disabled={loading}
-            style={[styles.newChatButton, loading && { opacity: 0.4 }]}
-            accessibilityLabel="Start a new chat"
-          >
-            <MaterialCommunityIcons
-              name="chat-plus-outline"
-              size={24}
-              color={colors.primary[700]}
-            />
-          </TouchableOpacity>
+              <MaterialCommunityIcons
+                name="chat-plus-outline"
+                size={24}
+                color={colors.primary[700]}
+              />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -483,7 +477,6 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    justifyContent: "space-between",
     gap: 12,
   },
   headerText: {

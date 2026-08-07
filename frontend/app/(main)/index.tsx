@@ -7,6 +7,7 @@ import { useHomeRoutine } from "@/hooks/use-home-routine";
 import RoutineStatusCard from "@/components/routine/routine-status-card";
 import WaterIntakeCard from "@/components/water-intake-card";
 import ExpiringSoonCard from "@/components/expiring/expiring-soon-card";
+import EntryCards from "@/components/entry-cards";
 import { router } from "expo-router";
 import {
   View,
@@ -89,6 +90,7 @@ export default function HomeScreen() {
           />
         ) : null}
         <WaterIntakeCard />
+        <EntryCards />
       </ScrollView>
     </View>
   );
