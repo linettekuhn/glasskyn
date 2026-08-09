@@ -15,8 +15,8 @@ import { useScanContext } from "../../contexts/ScanContext";
 import { Colors, getTheme } from "@/constants/theme";
 import ScanOverlay from "./scan-overlay";
 import { ThemedText } from "../ui/themed-text";
-import { MaterialIcons } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Pao12 from "../../../assets/icons/pao12.svg";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import { useBlurCheck } from "../../hooks/use-blur-check";
 import ThemedButton from "../ui/themed-button";
@@ -218,9 +218,9 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
                         { backgroundColor: colors.primary[400] },
                       ]}
                     >
-                      <MaterialIcons
-                        name="lightbulb-outline"
-                        size={32}
+                      <Pao12
+                        width={48}
+                        height={48}
                         color={colors.primary[700]}
                       />
                     </View>

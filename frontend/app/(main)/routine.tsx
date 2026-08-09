@@ -133,10 +133,10 @@ export default function RoutineScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: "center",
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "flex-start",
     paddingHorizontal: 32,
     paddingTop: 16,
@@ -145,8 +145,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   emptyState: {
-    flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     gap: 8,
     paddingHorizontal: 32,
   },
