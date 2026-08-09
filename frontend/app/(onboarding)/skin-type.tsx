@@ -4,6 +4,7 @@ import {
   StyleSheet,
   useColorScheme,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/ui/themed-text";
@@ -11,28 +12,36 @@ import { Colors, getTheme } from "@/constants/theme";
 import ThemedButton from "@/components/ui/themed-button";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 import OnboardingStep from "@/components/ui/onboarding-step";
-import Svg, { Circle } from "react-native-svg";
+
+const DRY_SKIN_ICON = require("../../assets/icons/dry-skin-icon.png");
+const OILY_SKIN_ICON = require("../../assets/icons/oily-skin-icon.png");
+const COMBO_SKIN_ICON = require("../../assets/icons/combo-skin-icon.png");
+const NORMAL_SKIN_ICON = require("../../assets/icons/normal-skin-icon.png");
 
 const SKIN_TYPES = [
   {
     key: "dry",
     label: "Dry",
     desc: "Tight, flaky, or rough, needs extra moisture",
+    icon: DRY_SKIN_ICON,
   },
   {
     key: "oily",
     label: "Oily",
     desc: "Shine, larger pores, tendency to break out",
+    icon: OILY_SKIN_ICON,
   },
   {
     key: "combination",
     label: "Combination",
     desc: "Oily down the center, drier along the cheeks",
+    icon: COMBO_SKIN_ICON,
   },
   {
     key: "normal",
     label: "Normal",
     desc: "Balanced, not too oily or dry, few concerns",
+    icon: NORMAL_SKIN_ICON,
   },
 ];
 
@@ -85,9 +94,11 @@ export default function SkinTypeScreen() {
               >
                 {st.label}
               </ThemedText>
-              <Svg width={100} height={100}>
-                <Circle cx={50} cy={50} r={50} />
-              </Svg>
+              <Image
+                source={st.icon}
+                style={{ width: 100, height: 100 }}
+                resizeMode="contain"
+              />
               <ThemedText
                 type="captionSmall"
                 italic

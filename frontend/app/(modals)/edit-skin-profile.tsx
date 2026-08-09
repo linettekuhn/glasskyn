@@ -6,38 +6,47 @@ import {
   TouchableOpacity,
   useColorScheme,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Svg, { Circle } from "react-native-svg";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
 import { getSkinProfile, upsertSkinProfile } from "@/api/routines";
 import type { SkinType } from "@/types";
 
-const SKIN_TYPES: { key: SkinType; label: string; desc: string }[] = [
+const DRY_SKIN_ICON = require("../../assets/icons/dry-skin-icon.png");
+const OILY_SKIN_ICON = require("../../assets/icons/oily-skin-icon.png");
+const COMBO_SKIN_ICON = require("../../assets/icons/combo-skin-icon.png");
+const NORMAL_SKIN_ICON = require("../../assets/icons/normal-skin-icon.png");
+
+const SKIN_TYPES = [
   {
     key: "dry",
     label: "Dry",
     desc: "Tight, flaky, or rough, needs extra moisture",
+    icon: DRY_SKIN_ICON,
   },
   {
     key: "oily",
     label: "Oily",
     desc: "Shine, larger pores, tendency to break out",
+    icon: OILY_SKIN_ICON,
   },
   {
     key: "combination",
     label: "Combination",
     desc: "Oily down the center, drier along the cheeks",
+    icon: COMBO_SKIN_ICON,
   },
   {
     key: "normal",
     label: "Normal",
     desc: "Balanced, not too oily or dry, few concerns",
+    icon: NORMAL_SKIN_ICON,
   },
 ];
 
@@ -161,7 +170,7 @@ export default function EditSkinProfileScreen() {
                 return (
                   <TouchableOpacity
                     key={st.key}
-                    onPress={() => setSkinType(st.key)}
+                    onPress={() => setSkinType(st.key as SkinType)}
                     style={[
                       styles.card,
                       {
@@ -183,9 +192,11 @@ export default function EditSkinProfileScreen() {
                     >
                       {st.label}
                     </ThemedText>
-                    <Svg width={64} height={64}>
-                      <Circle cx={32} cy={32} r={32} />
-                    </Svg>
+                    <Image
+                      source={st.icon}
+                      style={{ width: 100, height: 100 }}
+                      resizeMode="contain"
+                    />
                     <ThemedText
                       type="captionSmall"
                       italic
