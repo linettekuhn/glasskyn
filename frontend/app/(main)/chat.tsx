@@ -14,6 +14,7 @@ import { useFocusEffect, router, useLocalSearchParams } from "expo-router";
 import { Colors, Fonts, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedTextInput from "@/components/ui/themed-text-input";
+import ChatMarkdown from "@/components/chat/chat-markdown";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   sendMessage,
@@ -270,13 +271,17 @@ export default function ChatScreen() {
             },
           ]}
         >
-          <ThemedText
-            style={{
-              color: isUser ? colors.neutral[100] : colors.text,
-            }}
-          >
-            {item.content}
-          </ThemedText>
+          {isUser ? (
+            <ThemedText
+              style={{
+                color: colors.neutral[100],
+              }}
+            >
+              {item.content}
+            </ThemedText>
+          ) : (
+            <ChatMarkdown content={item.content ?? ""} />
+          )}
         </View>
       </View>
     );
