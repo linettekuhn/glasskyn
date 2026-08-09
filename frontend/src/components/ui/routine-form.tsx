@@ -119,10 +119,21 @@ export default function RoutineForm({
 
   useFocusEffect(
     useCallback(() => {
-      return () => {
-        clearPendingChanges();
-      };
-    }, [clearPendingChanges]),
+      if (pendingProductChanges.size === 0) return;
+      setLocalSteps((prev) =>
+        prev.map((s) => {
+          const pendingProductId = pendingProductChanges.get(s.id);
+          if (pendingProductId === undefined) return s;
+          const product = products.find((p) => p.id === pendingProductId);
+          return {
+            ...s,
+            product_id: pendingProductId,
+            product_name: product?.name ?? s.product_name ?? null,
+          };
+        }),
+      );
+      clearPendingChanges();
+    }, [pendingProductChanges, clearPendingChanges, products]),
   );
 
   const enrichedSteps: StepDisplay[] = (() => {

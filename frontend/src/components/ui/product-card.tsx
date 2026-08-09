@@ -188,7 +188,7 @@ export default function ProductCard({
     <View style={[styles.card, { borderColor: colors.secondary[300] }]}>
       {renderIcon()}
       <View style={styles.cardBody}>
-        <ThemedText type="bodyLarge" weight="semiBold">
+        <ThemedText type="bodyLarge" weight="semiBold" numberOfLines={1}>
           {product.name ? product.name : "Product Name"}
         </ThemedText>
         <ThemedText type="bodySmall" style={{ color: colors.neutral[700] }}>

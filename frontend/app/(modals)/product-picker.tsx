@@ -113,6 +113,14 @@ export default function ProductPickerScreen() {
               />
             </TouchableOpacity>
           )}
+          ListFooterComponent={
+            <ThemedButton
+              text="Scan a Product"
+              onPress={() => router.push("/(modals)/scan")}
+              leftIconName="camera"
+              LeftIconComponent={MaterialIcons}
+            />
+          }
           contentContainerStyle={styles.listContent}
         />
       )}
