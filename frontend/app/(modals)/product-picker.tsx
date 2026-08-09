@@ -19,14 +19,10 @@ import LoadingSpinner from "@/components/ui/loading-spinner";
 import { MaterialIcons } from "@expo/vector-icons";
 
 export default function ProductPickerScreen() {
-  const { routineId, stepId, stepType, returnTo, templateId } =
-    useLocalSearchParams<{
-      routineId: string;
-      stepId: string;
-      stepType: string;
-      returnTo: string;
-      templateId: string;
-    }>();
+  const { stepId, stepType } = useLocalSearchParams<{
+    stepId: string;
+    stepType: string;
+  }>();
   const { setPendingProduct } = useTemplateSelection();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -76,17 +72,7 @@ export default function ProductPickerScreen() {
           </ThemedText>
           <ThemedButton
             text="Scan a Product"
-            onPress={() =>
-              router.push({
-                pathname: "/(modals)/scan",
-                params: {
-                  returnTo: returnTo || "/(modals)/product-picker",
-                  templateId,
-                  stepId,
-                  stepType,
-                },
-              })
-            }
+            onPress={() => router.push("/(modals)/scan")}
             leftIconName="camera"
             LeftIconComponent={MaterialIcons}
           />

@@ -252,6 +252,7 @@ export default function RoutineForm({
         onChangeText={setRoutineName}
         placeholder="e.g. My Skincare"
         autoCapitalize="words"
+        maxLength={40}
       />
     </View>
   );

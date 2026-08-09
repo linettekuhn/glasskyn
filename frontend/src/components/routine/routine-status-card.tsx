@@ -71,7 +71,7 @@ export default function RoutineStatusCard({
 
       <View style={styles.content}>
         <View style={styles.textColumn}>
-          <ThemedText type="overline" style={{ color: captionColor }}>
+          <ThemedText type="overline" style={{ color: captionColor }} numberOfLines={1}>
             {routineName}
           </ThemedText>
           <View>

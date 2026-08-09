@@ -120,7 +120,7 @@ export default function RoutineCard({
   return (
     <View style={[styles.card, { backgroundColor: colors.neutral[200] }]}>
       <View style={styles.cardHeader}>
-        <ThemedText type="h3" italic>
+        <ThemedText type="h3" italic numberOfLines={1}>
           {routine.name}
         </ThemedText>
         <View style={styles.cardHeaderControls}>

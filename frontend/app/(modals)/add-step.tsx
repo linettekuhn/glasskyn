@@ -59,7 +59,6 @@ export default function AddStepScreen() {
       params: {
         stepId: nextId.toString(),
         stepType: selectedStepType!,
-        returnTo: "/(modals)/add-step",
         timeOfDay: timeOfDay ?? "AM",
       },
     });

@@ -29,15 +29,7 @@ import ThemedButton from "../ui/themed-button";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-interface StepConfirmProps {
-  returnTo?: string;
-  returnParams?: { templateId: string; stepId: string; stepType: string };
-}
-
-export default function StepConfirm({
-  returnTo,
-  returnParams,
-}: StepConfirmProps) {
+export default function StepConfirm() {
   const {
     scanResult,
     paoMonths,
@@ -161,12 +153,7 @@ export default function StepConfirm({
         text2: `${formData.name.trim()} saved to your vanity`,
         position: "top",
       });
-      if (returnTo && returnParams) {
-        router.dismissAll();
-        router.push({ pathname: returnTo, params: returnParams });
-      } else {
-        router.replace("/(main)/products");
-      }
+      router.back();
     } catch {
       // interceptor shows toast
     } finally {
