@@ -65,6 +65,11 @@ export default function EditRoutineScreen() {
     router.dismissAll();
   };
 
+  const handleDone = () => {
+    router.dismissAll();
+    if (returnTo) router.replace(`${returnTo}?routineSaved=1`);
+  };
+
   const handleDelete = () => {
     Alert.alert(
       "Delete Routine",
@@ -102,7 +107,7 @@ export default function EditRoutineScreen() {
       productPickerExtraParam={{ key: "routineId", value: routineId ?? "" }}
       submitLabel="Done"
       onSubmit={handleSubmit}
-      onSaved={handleClose}
+      onSaved={handleDone}
       saveOnBack
       onGoBack={handleClose}
       bottomBarExtra={

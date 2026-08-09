@@ -11,6 +11,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import UserAvatar from "@/components/ui/user-avatar";
 import GlasskynLogo from "@/components/icons/glasskyn-logo";
 
+export const TOP_BAR_HEIGHT = 56;
+
 export default function TopBar() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -66,7 +68,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: 56,
+    height: TOP_BAR_HEIGHT,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
   },

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import OPENAI_API_KEY, CHAT_HISTORY_WINDOW, CHAT_SUMMARY_INTERVAL
 from app.middleware.auth import get_current_user, get_db
 from app.models.chat import ChatMessage, ChatSession
-from app.models.routine import SkinProfile
+from app.models.routine import Routine, SkinProfile
 from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatResponse, ChatMessageOut
 from app.services.agent import create_chat_agent, summarize_conversation
@@ -65,11 +65,50 @@ def _messages_to_text(messages: list) -> str:
     return "\n".join(lines)
 
 
+def _sanitize_tool_pairs(messages: list) -> list:
+    """Drop tool messages whose tool_call_id was not declared by the preceding
+    assistant message, and strip tool_calls from any assistant message that has
+    no matching tool result. OpenAI rejects both patterns."""
+    result = []
+    pending: set = set()
+    last_ai = None
+    for msg in messages:
+        if isinstance(msg, HumanMessage):
+            if pending and last_ai is not None:
+                last_ai.tool_calls = []
+            pending = set()
+            last_ai = None
+            result.append(msg)
+        elif isinstance(msg, AIMessage):
+            if pending and last_ai is not None:
+                last_ai.tool_calls = []
+            pending = {
+                tc.get("id") for tc in msg.tool_calls if isinstance(tc, dict)
+            }
+            last_ai = msg
+            result.append(msg)
+        elif isinstance(msg, ToolMessage):
+            if msg.tool_call_id in pending:
+                pending.discard(msg.tool_call_id)
+                result.append(msg)
+            else:
+                logger.warning(
+                    "Dropping orphaned tool message (tool_call_id=%s)", msg.tool_call_id
+                )
+
+    if pending and last_ai is not None:
+        last_ai.tool_calls = []
+        if not last_ai.content:
+            result.pop()
+    return result
+
+
 def _langchain_to_db_messages(
     langchain_messages: list,
     session_id: str,
     user_id: int,
 ) -> list[ChatMessage]:
+    langchain_messages = _sanitize_tool_pairs(langchain_messages)
     db_messages = []
     for msg in langchain_messages:
         if isinstance(msg, HumanMessage):
@@ -116,7 +155,7 @@ def _db_to_langchain_messages(messages: list[ChatMessage]) -> list:
                 content=msg.content or "",
                 tool_call_id=msg.tool_call_id or "",
             ))
-    return result
+    return _sanitize_tool_pairs(result)
 
 
 @router.post("", response_model=ChatResponse)
@@ -144,7 +183,7 @@ async def send_message(
             ChatMessage.session_id == session_id,
             ChatMessage.user_id == current_user.id,
         )
-        .order_by(ChatMessage.created_at)
+        .order_by(ChatMessage.id)
         .all()
     )
 
@@ -222,6 +261,19 @@ async def send_message(
                 msg.content = _routine_confirmation(db, current_user.id)
                 break
 
+    routine_id = None
+    if routine_generated:
+        newest_routine = (
+            db.query(Routine)
+            .filter(
+                Routine.user_id == current_user.id,
+                Routine.is_active == True,
+            )
+            .order_by(Routine.id.desc())
+            .first()
+        )
+        routine_id = newest_routine.id if newest_routine else None
+
     if windowed:
         if session_row is None:
             session_row = ChatSession(
@@ -241,6 +293,7 @@ async def send_message(
         session_id=session_id,
         messages=[ChatMessageOut.model_validate(m) for m in saved],
         routine_generated=routine_generated,
+        routine_id=routine_id,
     )
 
 
@@ -256,7 +309,7 @@ def get_messages(
             ChatMessage.session_id == session_id,
             ChatMessage.user_id == current_user.id,
         )
-        .order_by(ChatMessage.created_at)
+        .order_by(ChatMessage.id)
         .all()
     )
     return [ChatMessageOut.model_validate(m) for m in messages]

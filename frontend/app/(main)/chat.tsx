@@ -11,6 +11,8 @@ import {
   Alert,
 } from "react-native";
 import { useFocusEffect, router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { TOP_BAR_HEIGHT } from "@/components/top-bar";
 import { Colors, Fonts, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedTextInput from "@/components/ui/themed-text-input";
@@ -24,6 +26,7 @@ import {
   type ChatMessageOut,
 } from "@/api/chat";
 import { useChatSession } from "@/contexts/ChatSessionContext";
+import { getRoutine } from "@/api/routines";
 
 const QUICK_ACTIONS = [
   {
@@ -41,6 +44,7 @@ const QUICK_ACTIONS = [
 ];
 
 export default function ChatScreen() {
+  const insets = useSafeAreaInsets();
   const { sessionId, resetSession } = useChatSession();
   const [messages, setMessages] = useState<ChatMessageOut[]>([]);
   const [inputText, setInputText] = useState("");
@@ -57,12 +61,14 @@ export default function ChatScreen() {
   const prevParamsRef = useRef<{
     generate?: string;
     routineDiscarded?: string;
+    routineSaved?: string;
   }>({});
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const { generate, routineDiscarded } = useLocalSearchParams<{
+  const { generate, routineDiscarded, routineSaved } = useLocalSearchParams<{
     generate?: string;
     routineDiscarded?: string;
+    routineSaved?: string;
   }>();
 
   useEffect(() => {
@@ -100,7 +106,15 @@ export default function ChatScreen() {
       } else if (!routineDiscarded) {
         prev.routineDiscarded = undefined;
       }
-    }, [sessionId, generate, routineDiscarded]),
+
+      if (routineSaved === "1" && prev.routineSaved !== "1") {
+        prev.routineSaved = "1";
+        router.setParams({ routineSaved: undefined } as any);
+        setEditableRoutine(null);
+      } else if (!routineSaved) {
+        prev.routineSaved = undefined;
+      }
+    }, [sessionId, generate, routineDiscarded, routineSaved]),
   );
 
   useFocusEffect(
@@ -191,7 +205,9 @@ export default function ChatScreen() {
       if (routineGenerated && !routineSavedRef.current) {
         routineSavedRef.current = true;
         try {
-          const routine = await generateRoutine();
+          const routine = response.routine_id
+            ? await getRoutine(response.routine_id)
+            : await generateRoutine();
           setEditableRoutine({ id: routine.id, name: routine.name });
           setTimeout(() => {
             router.push(
@@ -333,7 +349,9 @@ export default function ChatScreen() {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.neutral[100] }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 146 : 0}
+      keyboardVerticalOffset={
+        Platform.OS === "ios" ? insets.top + TOP_BAR_HEIGHT : 0
+      }
     >
       <View style={styles.header}>
         <View style={styles.headerRow}>

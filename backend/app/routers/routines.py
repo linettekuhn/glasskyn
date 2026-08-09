@@ -233,6 +233,10 @@ def generate_routine(
         routine_type="skincare",
         is_active=True,
     )
+    db.query(Routine).filter(
+        Routine.user_id == current_user.id,
+        Routine.is_active == True,
+    ).update({"is_active": False})
     db.add(routine)
     db.flush()
 
@@ -306,6 +310,10 @@ def create_routine(
         routine_type=body.routine_type,
         is_active=True,
     )
+    db.query(Routine).filter(
+        Routine.user_id == current_user.id,
+        Routine.is_active == True,
+    ).update({"is_active": False})
     db.add(routine)
     db.flush()
 

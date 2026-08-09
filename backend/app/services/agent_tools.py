@@ -294,6 +294,30 @@ def create_agent_tools(db: Session, user_id: int) -> list:
                         f"({s['frequency']})\n"
                     )
                 summary += f"\n\nRaw data:\n{content}"
+
+                db.query(Routine).filter(
+                    Routine.user_id == user_id,
+                    Routine.is_active == True,
+                ).update({"is_active": False})
+                routine = Routine(
+                    user_id=user_id,
+                    name=parsed.get("name", "AI-Generated Routine"),
+                    source="llm_generated",
+                    routine_type="skincare",
+                    is_active=True,
+                )
+                db.add(routine)
+                db.flush()
+                for s in steps:
+                    db.add(RoutineStep(
+                        routine_id=routine.id,
+                        step_order=s["step_order"],
+                        product_id=s.get("product_id"),
+                        step_type=s["step_type"],
+                        time_of_day=s["time_of_day"],
+                        frequency=s.get("frequency", "daily"),
+                    ))
+                db.commit()
                 return summary
             except json.JSONDecodeError:
                 return f"Generated routine data:\n{content}"
@@ -387,6 +411,7 @@ def create_agent_tools(db: Session, user_id: int) -> list:
                     Routine.user_id == user_id,
                     Routine.is_active == True,
                 )
+                .order_by(Routine.id.desc())
                 .first()
             )
             if not routine:
@@ -403,7 +428,7 @@ def create_agent_tools(db: Session, user_id: int) -> list:
 
             steps_str = "\n".join(
                 f"Step {s.step_order}: {s.time_of_day} {s.step_type} "
-                f"(product_id={s.product_id}, freq={s.frequency})"
+                f"(step_id={s.id}, product_id={s.product_id}, freq={s.frequency})"
                 for s in steps
             )
             products_str = "\n".join(
@@ -418,7 +443,7 @@ def create_agent_tools(db: Session, user_id: int) -> list:
                 "Return ONLY valid JSON with no markdown:\n"
                 "{\n"
                 '  "action": "swap|add|remove|replace_step_type",\n'
-                '  "step_id": integer or null,\n'
+                '  "step_id": integer or null (must be the exact step_id shown in the routine listing above),\n'
                 '  "target_step_type": "cleanse|tone|treat|moisturize|spf" or null,\n'
                 '  "time_of_day": "AM|PM" or null,\n'
                 '  "product_id": integer or null,\n'
@@ -426,6 +451,11 @@ def create_agent_tools(db: Session, user_id: int) -> list:
                 '  "new_step_type": "step type" or null,\n'
                 '  "explanation": "brief description of what changed"\n'
                 "}\n"
+                "Rules:\n"
+                "- For remove, swap, or replace_step_type you MUST set step_id to the "
+                "exact integer from the routine listing above.\n"
+                "- If the request doesn't clearly identify one step, also set "
+                "target_step_type and time_of_day to disambiguate.\n"
                 f"User's request: {request}"
             )
 
@@ -441,12 +471,47 @@ def create_agent_tools(db: Session, user_id: int) -> list:
             )
             content = response.choices[0].message.content.strip()
             parsed = json.loads(content)
+            logger.info("modify_routine parsed request: %s", parsed)
             action = parsed.get("action")
+
+            def _find_step(step_id):
+                if step_id is None:
+                    return None
+                return next(
+                    (s for s in steps if s.id == step_id or s.step_order == step_id),
+                    None,
+                )
+
+            def _find_step_by_type():
+                step_type = (parsed.get("target_step_type") or "").strip().lower()
+                time_of_day = (parsed.get("time_of_day") or "").strip().upper()
+                if not step_type:
+                    return None
+                matches = [
+                    s for s in steps
+                    if s.step_type == step_type
+                    and (not time_of_day or s.time_of_day == time_of_day)
+                ]
+                return matches[0] if matches else None
+
+            def _not_found_message():
+                if not steps:
+                    return "Your routine currently has no steps to modify."
+                listed = ", ".join(
+                    f"{s.time_of_day} {s.step_type} (step {s.step_order})"
+                    for s in steps
+                )
+                target = parsed.get("target_step_type") or "that step"
+                return (
+                    f"I couldn't find a {target} step in "
+                    f"{(parsed.get('time_of_day') or 'your routine').upper()}. "
+                    f"Your routine '{routine.name}' currently has: {listed}."
+                )
 
             if action == "swap" or action == "replace_step_type":
                 step_id = parsed.get("step_id")
                 product_id = parsed.get("product_id")
-                step = next((s for s in steps if s.id == step_id), None)
+                step = _find_step(step_id) or _find_step_by_type()
                 if step:
                     if product_id:
                         step.product_id = product_id
@@ -456,7 +521,7 @@ def create_agent_tools(db: Session, user_id: int) -> list:
                         step.time_of_day = parsed["time_of_day"]
                     db.commit()
                     return f"Done. {parsed.get('explanation', 'Routine updated.')}"
-                return f"Step {step_id} not found."
+                return _not_found_message()
 
             elif action == "add":
                 new_step = RoutineStep(
@@ -473,12 +538,12 @@ def create_agent_tools(db: Session, user_id: int) -> list:
 
             elif action == "remove":
                 step_id = parsed.get("step_id")
-                step = next((s for s in steps if s.id == step_id), None)
+                step = _find_step(step_id) or _find_step_by_type()
                 if step:
                     db.delete(step)
                     db.commit()
                     return f"Done. {parsed.get('explanation', 'Step removed.')}"
-                return f"Step {step_id} not found."
+                return _not_found_message()
 
             return f"Applied change: {parsed.get('explanation', content)}"
 
