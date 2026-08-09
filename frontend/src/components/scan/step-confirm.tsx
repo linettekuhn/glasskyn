@@ -90,10 +90,17 @@ export default function StepConfirm() {
     return months;
   };
 
+  const expiryFound = scanResult?.expiry_date ?? null;
+  const expiryLabel = expiryFound
+    ? `${expiryFound.slice(5, 7)}/${expiryFound.slice(0, 4)}`
+    : null;
+
   const paoHint =
     paoMonths !== null
-      ? `Currently set to ${paoMonths} months — edit if incorrect`
-      : "PAO was not detected — enter it manually";
+      ? `Currently set to ${paoMonths} months`
+      : expiryLabel
+        ? `Expiry date found (${expiryLabel})`
+        : "PAO was not detected, please enter it manually";
 
   const handleSave = async () => {
     if (!formData.name.trim()) {

@@ -1,18 +1,6 @@
 import apiClient from './client';
 import type { ProcessMultiResult, ProcessPaoResult, IngredientAnalysisResponse } from '../types';
 
-export interface ProcessImageResult {
-  name: string | null;
-  brand: string | null;
-  category: string | null;
-  barcode: string | null;
-  scan_id: number | null;
-  pao_months: number | null;
-  expiry_date: string | null;
-  category_method: string | null;
-  extraction_method: string | null;
-}
-
 export async function getProducts() {
   const response = await apiClient.get('/products');
   return response.data;
@@ -67,16 +55,6 @@ export async function markProductReplaced(id: number, expiryDate?: string) {
       ? { opened_date: iso, expiry_date: expiryDate }
       : { opened_date: iso },
   );
-}
-
-export async function processImage(fileKey: string, barcode?: string | null): Promise<ProcessImageResult> {
-  console.log("[API] processImage called, fileKey:", fileKey, "barcode:", barcode);
-  const response = await apiClient.post('/uploads/process', {
-    file_key: fileKey,
-    barcode: barcode || null,
-  });
-  console.log("[API] processImage response:", response.data);
-  return response.data;
 }
 
 export async function processMultiImages(

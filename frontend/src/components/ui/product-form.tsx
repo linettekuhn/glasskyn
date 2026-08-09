@@ -272,16 +272,6 @@ export default function ProductForm({
           />
         </View>
       )}
-      {sourceMethod === "barcode_lookup" && (
-        <ThemedText type="caption">
-          Name & brand extracted from barcode data
-        </ThemedText>
-      )}
-      {sourceMethod === "llm_extraction" && (
-        <ThemedText type="caption">
-          Name & brand extracted from label
-        </ThemedText>
-      )}
 
       {showPaoInput && (
         <>

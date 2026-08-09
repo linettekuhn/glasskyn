@@ -140,6 +140,8 @@ export default function StepBack({ onClose }: { onClose: () => void }) {
       if (resultData.pao_months !== null) {
         setPaoMonths(resultData.pao_months);
         setStep("confirm");
+      } else if (resultData.expiry_date) {
+        setStep("confirm");
       } else {
         setStep("pao");
       }

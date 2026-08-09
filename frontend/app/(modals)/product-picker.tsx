@@ -135,9 +135,9 @@ export default function ProductPickerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 24,
   },
   header: {
-    paddingHorizontal: 24,
     paddingTop: 16,
     gap: 4,
   },
@@ -148,7 +148,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   listContent: {
-    paddingHorizontal: 24,
     paddingBottom: 40,
     gap: 8,
     paddingTop: 16,
@@ -165,7 +164,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   bottomBar: {
-    paddingHorizontal: 24,
     paddingVertical: 16,
     borderTopWidth: 1,
   },
