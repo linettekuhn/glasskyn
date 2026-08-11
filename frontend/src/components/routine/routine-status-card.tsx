@@ -7,6 +7,7 @@ import ProgressRing from "@/components/ui/progress-ring";
 import ThemedButton from "@/components/ui/themed-button";
 import CelebrationBurst from "./celebration-burst";
 import type { RoutineStatus } from "@/utils/routine-status";
+import GlassSurface from "../ui/glass-surface";
 
 interface RoutineStatusCardProps {
   status: RoutineStatus;
@@ -51,12 +52,11 @@ export default function RoutineStatusCard({
   const titleColor = isFullDay ? colors.text : colors.text;
   const btnColor = colors.primary[600];
   return (
-    <View
+    <GlassSurface
       style={[
         styles.card,
         {
           backgroundColor: isFullDay ? undefined : colors.background,
-          borderColor: colors.neutral[200],
         },
       ]}
     >
@@ -71,7 +71,11 @@ export default function RoutineStatusCard({
 
       <View style={styles.content}>
         <View style={styles.textColumn}>
-          <ThemedText type="overline" style={{ color: captionColor }} numberOfLines={1}>
+          <ThemedText
+            type="overline"
+            style={{ color: captionColor }}
+            numberOfLines={1}
+          >
             {routineName}
           </ThemedText>
           <View>
@@ -108,7 +112,7 @@ export default function RoutineStatusCard({
       )}
 
       {burstActive && <CelebrationBurst color={colors.secondary[600]} />}
-    </View>
+    </GlassSurface>
   );
 }
 
@@ -117,7 +121,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     gap: 16,
-    borderWidth: 1,
     overflow: "hidden",
   },
   content: {

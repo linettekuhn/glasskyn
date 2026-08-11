@@ -259,7 +259,6 @@ export default function ExpiringProductRow({
           <GlassSurface
             style={styles.sheetCard}
             radius={0}
-            border={false}
             blur
             onPress={() => {}}
           >
@@ -368,9 +367,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheetCard: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderWidth: 1,
     paddingTop: 20,
     paddingHorizontal: 24,
     paddingBottom: 32,

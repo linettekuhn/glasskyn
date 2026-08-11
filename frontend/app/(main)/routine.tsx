@@ -65,7 +65,12 @@ export default function RoutineScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <View style={{ flexDirection: "row", gap: 8 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 8,
+            }}
+          >
             <ThemedText type="h1">{`My Routine${hasMultipleRoutines ? "s" : ""}`}</ThemedText>
             {hasRoutine && (
               <IconButton

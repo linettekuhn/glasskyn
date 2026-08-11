@@ -145,13 +145,13 @@ export default function VanityScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingVertical: 16,
+    paddingTop: 16,
   },
   chipRow: {
     flexDirection: "row",
     gap: 4,
     paddingHorizontal: 24,
-    paddingVertical: 24,
+    paddingVertical: 16,
   },
   emptyFilter: {
     flex: 1,

@@ -18,6 +18,7 @@ import ThemedButton from "@/components/ui/themed-button";
 import GlassSurface, { withAlpha } from "@/components/ui/glass-surface";
 import Divider from "./ui/divider";
 import CelebrationBurst from "./routine/celebration-burst";
+import { LinearGradient } from "expo-linear-gradient";
 
 const INFO_SUBTITLE =
   "Hydration from within helps skin stay plump and resilient.";
@@ -282,6 +283,14 @@ export default function WaterIntakeCard() {
 
   return (
     <GlassSurface style={styles.card}>
+      {goalMet && (
+        <LinearGradient
+          colors={[colors.neutral[100], colors.neutral[200]]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <MaterialCommunityIcons
