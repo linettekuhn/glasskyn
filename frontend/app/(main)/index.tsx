@@ -1,5 +1,6 @@
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
+import GradientBackground from "@/components/ui/gradient-background";
 import { Colors, getTheme } from "@/constants/theme";
 import { affirmations } from "@/constants/affirmations";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,7 +40,8 @@ export default function HomeScreen() {
   const openRoutine = () => router.navigate("/(main)/routine");
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.neutral[100] }]}>
+    <View style={styles.container}>
+      <GradientBackground />
       <View style={styles.header}>
         <ThemedText type="h1" style={{ color: colors.text }}>
           {greeting}

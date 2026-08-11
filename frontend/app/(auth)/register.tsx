@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Toast from "react-native-toast-message";
 import { ThemedText } from "@/components/ui/themed-text";
 import Divider from "@/components/ui/divider";
+import GradientBackground from "@/components/ui/gradient-background";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedTextInput from "@/components/ui/themed-text-input";
 import { MaterialIcons, Octicons } from "@expo/vector-icons";
@@ -51,107 +52,110 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.content}>
-          <View style={styles.heading}>
-            <ThemedText type="h1">Create your vanity</ThemedText>
-            <ThemedText
-              type="bodyLarge"
-              style={{ color: colors.secondary[600] }}
-            >
-              Keep your cosmetics fresh and effective.
-            </ThemedText>
-          </View>
-          <View style={styles.form}>
-            <View style={styles.inputWrapper}>
-              <ThemedText type="caption" weight="medium">
-                Name
-              </ThemedText>
-              <ThemedTextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter your full name"
-                autoCapitalize="words"
-                editable={!loading}
-              />
-            </View>
-            <View style={styles.inputWrapper}>
-              <ThemedText type="caption" weight="medium">
-                Email
-              </ThemedText>
-              <ThemedTextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="hello@example.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={!loading}
-              />
-            </View>
-            <View style={styles.inputWrapper}>
-              <ThemedText type="caption" weight="medium">
-                Password
-              </ThemedText>
-              <ThemedTextInput
-                placeholder="* * *"
-                value={password}
-                onChangeText={setPassword}
-                editable={!loading}
-                secureTextEntry={!showPass}
+    <View style={styles.container}>
+      <GradientBackground />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.content}>
+            <View style={styles.heading}>
+              <ThemedText type="h1">Create your vanity</ThemedText>
+              <ThemedText
+                type="bodyLarge"
+                style={{ color: colors.secondary[600] }}
               >
-                <Pressable
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  onPress={() => setShowPass((prev) => !prev)}
-                >
-                  {showPass ? (
-                    <Octicons
-                      name="eye-closed"
-                      size={20}
-                      color={colors.primary[500]}
-                    />
-                  ) : (
-                    <Octicons
-                      name="eye"
-                      size={20}
-                      color={colors.primary[500]}
-                    />
-                  )}
-                </Pressable>
-              </ThemedTextInput>
+                Keep your cosmetics fresh and effective.
+              </ThemedText>
             </View>
-            <ThemedButton
-              text="Create Account"
-              onPress={handleRegister}
-              disabled={loading}
-              loading={loading}
-              rightIconName="arrow-forward"
-              RightIconComponent={MaterialIcons}
-            />
+            <View style={styles.form}>
+              <View style={styles.inputWrapper}>
+                <ThemedText type="caption" weight="medium">
+                  Name
+                </ThemedText>
+                <ThemedTextInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Enter your full name"
+                  autoCapitalize="words"
+                  editable={!loading}
+                />
+              </View>
+              <View style={styles.inputWrapper}>
+                <ThemedText type="caption" weight="medium">
+                  Email
+                </ThemedText>
+                <ThemedTextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="hello@example.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!loading}
+                />
+              </View>
+              <View style={styles.inputWrapper}>
+                <ThemedText type="caption" weight="medium">
+                  Password
+                </ThemedText>
+                <ThemedTextInput
+                  placeholder="* * *"
+                  value={password}
+                  onChangeText={setPassword}
+                  editable={!loading}
+                  secureTextEntry={!showPass}
+                >
+                  <Pressable
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    onPress={() => setShowPass((prev) => !prev)}
+                  >
+                    {showPass ? (
+                      <Octicons
+                        name="eye-closed"
+                        size={20}
+                        color={colors.primary[500]}
+                      />
+                    ) : (
+                      <Octicons
+                        name="eye"
+                        size={20}
+                        color={colors.primary[500]}
+                      />
+                    )}
+                  </Pressable>
+                </ThemedTextInput>
+              </View>
+              <ThemedButton
+                text="Create Account"
+                onPress={handleRegister}
+                disabled={loading}
+                loading={loading}
+                rightIconName="arrow-forward"
+                RightIconComponent={MaterialIcons}
+              />
+            </View>
+            <Divider color={colors.secondary[500]}>
+              <ThemedText
+                type="overline"
+                style={{ paddingHorizontal: 16, color: colors.secondary[600] }}
+              >
+                or
+              </ThemedText>
+            </Divider>
+            <View style={styles.link}>
+              <ThemedText>Already have an account?</ThemedText>
+              <ThemedButton
+                link
+                onPress={() => router.push("/(auth)/login")}
+                color={colors.secondary[700]}
+                text="Log in"
+              />
+            </View>
           </View>
-          <Divider color={colors.secondary[500]}>
-            <ThemedText
-              type="overline"
-              style={{ paddingHorizontal: 16, color: colors.secondary[600] }}
-            >
-              or
-            </ThemedText>
-          </Divider>
-          <View style={styles.link}>
-            <ThemedText>Already have an account?</ThemedText>
-            <ThemedButton
-              link
-              onPress={() => router.push("/(auth)/login")}
-              color={colors.secondary[700]}
-              text="Log in"
-            />
-          </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 

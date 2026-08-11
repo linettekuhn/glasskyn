@@ -6,7 +6,7 @@ export function getTheme(colorScheme: string | null | undefined): ThemeKey {
   return colorScheme === "dark" ? "dark" : "light";
 }
 
-export const Colors = {
+const palettes = {
   light: {
     primary: {
       100: "#E7ECEB",
@@ -117,6 +117,35 @@ export const Colors = {
     tabBackground: "#F5ECEA",
     error: "#FF5C5C",
     warning: "#FBBF24",
+  },
+};
+
+export const Colors = {
+  light: {
+    ...palettes.light,
+    bg: {
+      gradient: [
+        palettes.light.secondary[200],
+        palettes.light.secondary[300],
+        palettes.light.primary[300],
+        palettes.light.primary[200],
+      ] as const,
+      gradientLocations: [0, 0.2, 0.4, 0.7] as const,
+      oval: palettes.light.neutral[100],
+    },
+  },
+  dark: {
+    ...palettes.dark,
+    bg: {
+      gradient: [
+        palettes.dark.secondary[200],
+        palettes.dark.secondary[300],
+        palettes.dark.primary[300],
+        palettes.dark.primary[200],
+      ] as const,
+      gradientLocations: [0, 0.2, 0.4, 0.7] as const,
+      oval: palettes.dark.neutral[100],
+    },
   },
 };
 

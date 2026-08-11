@@ -27,6 +27,7 @@ import {
 } from "@/api/chat";
 import { useChatSession } from "@/contexts/ChatSessionContext";
 import { getRoutine } from "@/api/routines";
+import GradientBackground from "@/components/ui/gradient-background";
 
 const QUICK_ACTIONS = [
   {
@@ -353,6 +354,7 @@ export default function ChatScreen() {
         Platform.OS === "ios" ? insets.top + TOP_BAR_HEIGHT : 0
       }
     >
+      <GradientBackground />
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <ThemedText type="h1">Cur.ai</ThemedText>
