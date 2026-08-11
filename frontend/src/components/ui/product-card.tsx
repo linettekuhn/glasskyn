@@ -19,6 +19,7 @@ import { fromValue } from "./icon-selector";
 import { ThemedText } from "./themed-text";
 import { useEffect, useState } from "react";
 import GlassSurface from "./glass-surface";
+import ExpiryBadge from "./expiry-badge";
 
 interface ProductCardProps {
   product: Product;
@@ -186,8 +187,47 @@ export default function ProductCard({
   };
 
   return (
-    <GlassSurface style={styles.card}>
-      {renderIcon()}
+    <GlassSurface style={styles.card} clipsContent={false}>
+      {expiryStatus && (
+        <View style={styles.badge}>
+          <ExpiryBadge status={expiryStatus} />
+        </View>
+      )}
+      <View style={{ gap: 4 }}>
+        {renderIcon()}
+        {!isPreview && (
+          <View style={styles.actions}>
+            <TouchableOpacity
+              onPress={handleEdit}
+              style={[
+                styles.actionButton,
+                { borderColor: colors.secondary[300] },
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <MaterialCommunityIcons
+                name="pencil-outline"
+                size={18}
+                color={colors.secondary[700]}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDelete}
+              style={[
+                styles.actionButton,
+                { borderColor: colors.secondary[300] },
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <MaterialCommunityIcons
+                name="trash-can-outline"
+                size={18}
+                color={colors.secondary[700]}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
       <View style={styles.cardBody}>
         <ThemedText type="bodyLarge" weight="semiBold" numberOfLines={1}>
           {product.name ? product.name : "Product Name"}
@@ -195,15 +235,7 @@ export default function ProductCard({
         <ThemedText type="bodySmall" style={{ color: colors.neutral[700] }}>
           {product.brand ? product.brand : "Brand"}
         </ThemedText>
-        {expiryLabel && (
-          <ThemedText
-            type="captionSmall"
-            weight="extraLight"
-            style={{ color: expiryColor }}
-          >
-            Expires {expiryLabel}
-          </ThemedText>
-        )}
+
         {!isPreview && (
           <TouchableOpacity
             onPress={handleSeeMore}
@@ -225,38 +257,6 @@ export default function ProductCard({
           </TouchableOpacity>
         )}
       </View>
-      {!isPreview && (
-        <View style={styles.actions}>
-          <TouchableOpacity
-            onPress={handleEdit}
-            style={[
-              styles.actionButton,
-              { borderColor: colors.secondary[300] },
-            ]}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <MaterialCommunityIcons
-              name="pencil-outline"
-              size={18}
-              color={colors.secondary[700]}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleDelete}
-            style={[
-              styles.actionButton,
-              { borderColor: colors.secondary[300] },
-            ]}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <MaterialCommunityIcons
-              name="trash-can-outline"
-              size={18}
-              color={colors.secondary[700]}
-            />
-          </TouchableOpacity>
-        </View>
-      )}
     </GlassSurface>
   );
 }
@@ -269,10 +269,15 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     gap: 16,
   },
+  badge: {
+    position: "absolute",
+    top: -10,
+    right: -8,
+    zIndex: 1,
+  },
   iconBox: {
-    width: 64,
-    height: 64,
     borderRadius: 8,
+    paddingVertical: 12,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -280,6 +285,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actions: {
+    flexDirection: "row",
     justifyContent: "center",
     gap: 4,
     paddingVertical: 2,

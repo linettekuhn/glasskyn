@@ -65,7 +65,18 @@ export default function RoutineScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <ThemedText type="h1">{`My Routine${hasMultipleRoutines ? "s" : ""}`}</ThemedText>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <ThemedText type="h1">{`My Routine${hasMultipleRoutines ? "s" : ""}`}</ThemedText>
+            {hasRoutine && (
+              <IconButton
+                iconSize={20}
+                onPress={() => setShowCreateSheet(true)}
+                IconComponent={MaterialCommunityIcons}
+                iconName="plus"
+                backgroundColor={colors.primary[600]}
+              />
+            )}
+          </View>
           {hasRoutine && (
             <ThemedText
               type="bodyLarge"
@@ -77,14 +88,6 @@ export default function RoutineScreen() {
             </ThemedText>
           )}
         </View>
-        {hasRoutine && (
-          <IconButton
-            onPress={() => setShowCreateSheet(true)}
-            IconComponent={MaterialCommunityIcons}
-            iconName="plus"
-            backgroundColor={colors.primary[600]}
-          />
-        )}
       </View>
 
       {hasRoutine ? (

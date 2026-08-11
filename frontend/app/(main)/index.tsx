@@ -94,6 +94,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingVertical: 16,
+    gap: 8,
   },
   header: {
     gap: 8,

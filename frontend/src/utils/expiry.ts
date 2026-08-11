@@ -37,6 +37,16 @@ export function sortByExpiry(a: Product, b: Product): number {
   return ad - bd;
 }
 
+export function sortByExpiryPriority(a: Product, b: Product): number {
+  const rank = (d: number | null | undefined) =>
+    d === null || d === undefined ? 2 : d > 30 ? 1 : 0;
+  const ar = rank(a.days_until_expiry);
+  const br = rank(b.days_until_expiry);
+  if (ar !== br) return ar - br;
+  if (ar === 0) return (a.days_until_expiry as number) - (b.days_until_expiry as number);
+  return a.name.localeCompare(b.name);
+}
+
 export function tierColor(tier: ExpiryTier, colors: (typeof Colors)["light"]): string {
   if (tier === "expired" || tier === "critical") return colors.error;
   return colors.warning;

@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    gap: 12,
+    gap: 8,
   },
   optionIcon: {
     width: 44,

@@ -16,6 +16,7 @@ import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import ProductCard from "../../src/components/ui/product-card";
+import { sortByExpiryPriority } from "@/utils/expiry";
 
 const categoryLabels: { key: "all" | ProductCategory; label: string }[] = [
   { key: "all", label: "All" },
@@ -33,12 +34,15 @@ export default function VanityScreen() {
   const router = useRouter();
   const colors = Colors[getTheme(colorScheme)];
   const bgColor = colors.background;
-  const filteredProducts =
+  const filteredProducts = (
     selectedCategories.length === 0
       ? products
       : products.filter(
           (p) => p.category && selectedCategories.includes(p.category),
-        );
+        )
+  )
+    .slice()
+    .sort(sortByExpiryPriority);
 
   if (loading) {
     return <LoadingSpinner />;
@@ -66,7 +70,11 @@ export default function VanityScreen() {
 
   return (
     <View style={styles.container}>
-      <View>
+      <View
+        style={{
+          paddingHorizontal: 24,
+        }}
+      >
         <ThemedText type="h1">My vanity</ThemedText>
         <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
           Organize and monitor your cosmetics.
@@ -137,12 +145,12 @@ export default function VanityScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 24,
     paddingVertical: 16,
   },
   chipRow: {
     flexDirection: "row",
     gap: 4,
+    paddingHorizontal: 24,
     paddingVertical: 24,
   },
   emptyFilter: {
@@ -157,6 +165,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   listContent: {
+    paddingTop: 12,
+    paddingLeft: 12,
+    paddingRight: 12,
     paddingBottom: 96,
     gap: 12,
   },
