@@ -18,6 +18,7 @@ import { Colors, getTheme } from "@/constants/theme";
 import { fromValue } from "./icon-selector";
 import { ThemedText } from "./themed-text";
 import { useEffect, useState } from "react";
+import GlassSurface from "./glass-surface";
 
 interface ProductCardProps {
   product: Product;
@@ -185,7 +186,7 @@ export default function ProductCard({
   };
 
   return (
-    <View style={[styles.card, { borderColor: colors.secondary[300] }]}>
+    <GlassSurface style={styles.card}>
       {renderIcon()}
       <View style={styles.cardBody}>
         <ThemedText type="bodyLarge" weight="semiBold" numberOfLines={1}>
@@ -256,15 +257,13 @@ export default function ProductCard({
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "transparent",

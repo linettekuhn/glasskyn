@@ -10,6 +10,7 @@ import { useProducts } from "@/hooks/use-products";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
+import GlassSurface from "@/components/ui/glass-surface";
 import ExpiringProductRow from "./expiring-product-row";
 import { isExpiringSoon, sortByExpiry } from "@/utils/expiry";
 import { markProductReplaced, deleteProduct } from "@/api/products";
@@ -50,15 +51,7 @@ export default function ExpiringSoonCard() {
   if (loading || items.length === 0) return null;
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.background,
-          borderColor: colors.neutral[200],
-        },
-      ]}
-    >
+    <GlassSurface style={styles.card}>
       <ThemedText type="overline" weight="semiBold">
         Expiring Cosmetics
       </ThemedText>
@@ -97,15 +90,13 @@ export default function ExpiringSoonCard() {
           )}
         </>
       )}
-    </View>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
     padding: 20,
     gap: 12,
-    overflow: "hidden",
   },
 });

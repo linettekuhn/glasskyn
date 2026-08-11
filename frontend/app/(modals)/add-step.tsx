@@ -13,6 +13,7 @@ import { Colors, getTheme } from "@/constants/theme";
 import ThemedTextInput from "@/components/ui/themed-text-input";
 import ThemedButton from "@/components/ui/themed-button";
 import ThemedDropdown from "@/components/ui/themed-dropdown";
+import { withAlpha } from "@/components/ui/glass-surface";
 import { useTemplateSelection } from "@/contexts/TemplateContext";
 import { useProducts } from "@/hooks/use-products";
 import { STEP_LABELS } from "@/constants/routine";
@@ -81,7 +82,7 @@ export default function AddStepScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.neutral[100] }]}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <ThemedButton
           link
@@ -145,7 +146,7 @@ export default function AddStepScreen() {
                 styles.productPickerButton,
                 {
                   borderColor: colors.neutral[300],
-                  backgroundColor: colors.background,
+                  backgroundColor: withAlpha(colors.background, 0.4),
                 },
               ]}
               onPress={handleOpenProductPicker}

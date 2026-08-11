@@ -62,7 +62,7 @@ export default function RoutineScreen() {
   const hasMultipleRoutines = routines.length > 1;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.neutral[100] }]}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <ThemedText type="h1">{`My Routine${hasMultipleRoutines ? "s" : ""}`}</ThemedText>
@@ -115,7 +115,6 @@ export default function RoutineScreen() {
                 onPress={() => option.route && router.push(option.route as any)}
                 iconSize={28}
                 chevronSize={24}
-                style={{ backgroundColor: colors.background }}
               />
             ))}
           </View>

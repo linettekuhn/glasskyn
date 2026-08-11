@@ -20,6 +20,7 @@ import { Colors, getTheme } from "../../src/constants/theme";
 import { ThemedText } from "../../src/components/ui/themed-text";
 import UserAvatar from "../../src/components/ui/user-avatar";
 import ThemedButton from "@/components/ui/themed-button";
+import GlassSurface from "@/components/ui/glass-surface";
 
 const SKIN_TYPE_LABELS: Record<string, string> = {
   dry: "Dry",
@@ -137,7 +138,7 @@ export default function ProfileScreen() {
     (skinProfile.skin_type !== null || skinProfile.concerns.length > 0);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.neutral[100] }]}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <UserAvatar seed={user?.name ?? "guest"} size={80} />
@@ -151,7 +152,7 @@ export default function ProfileScreen() {
           <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
             Account
           </ThemedText>
-          <View style={[styles.card, { backgroundColor: colors.background }]}>
+          <GlassSurface style={styles.card}>
             <SettingsRow
               label="Edit name & email"
               icon="account-edit-outline"
@@ -169,15 +170,15 @@ export default function ProfileScreen() {
               last
               onPress={handleDeleteAccount}
             />
-          </View>
+          </GlassSurface>
         </View>
 
         <View style={styles.section}>
           <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
             Skin Profile
           </ThemedText>
-          <TouchableOpacity
-            style={[styles.card, { backgroundColor: colors.background }]}
+          <GlassSurface
+            style={styles.card}
             onPress={() => router.push("/(modals)/edit-skin-profile")}
           >
             <View style={styles.skinRow}>
@@ -217,7 +218,7 @@ export default function ProfileScreen() {
                 color={colors.neutral[400]}
               />
             </View>
-          </TouchableOpacity>
+          </GlassSurface>
         </View>
 
         <View style={styles.section}>

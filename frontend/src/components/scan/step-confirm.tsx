@@ -65,7 +65,6 @@ export default function StepConfirm() {
 
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const bgColor = colors.background;
 
   useEffect(() => {
     if (hasTriggeredAnalysis.current) return;
@@ -174,12 +173,9 @@ export default function StepConfirm() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: bgColor }]}
+        style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView

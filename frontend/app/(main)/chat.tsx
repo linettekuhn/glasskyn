@@ -27,20 +27,21 @@ import {
 } from "@/api/chat";
 import { useChatSession } from "@/contexts/ChatSessionContext";
 import { getRoutine } from "@/api/routines";
-import GradientBackground from "@/components/ui/gradient-background";
+import GlassSurface from "@/components/ui/glass-surface";
+import ChatIcon from "@/components/icons/chat-icon";
 
 const QUICK_ACTIONS = [
   {
-    label: "Generate a Skincare Routine",
+    label: "Build Me a Routine",
     message: "Generate a skincare routine for me",
   },
   {
-    label: "Audit My Vanity",
-    message: "Check my saved products for any risky or concerning ingredients",
+    label: "What's Missing From My Routine?",
+    message: "What am I missing from my current routine?",
   },
   {
-    label: "Find Routine Gaps",
-    message: "What am I missing from my current routine?",
+    label: "Check My Vanity for Risks",
+    message: "Check my saved products for any risky or concerning ingredients",
   },
 ];
 
@@ -348,17 +349,16 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
+      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={
         Platform.OS === "ios" ? insets.top + TOP_BAR_HEIGHT : 0
       }
     >
-      <GradientBackground />
       <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <ThemedText type="h1">Cur.ai</ThemedText>
-          {displayMessages.length > 0 && (
+        {displayMessages.length > 0 && (
+          <View style={styles.headerRow}>
+            <ThemedText type="h1">Cur.ai</ThemedText>
             <TouchableOpacity
               onPress={handleNewChat}
               disabled={loading}
@@ -371,8 +371,8 @@ export default function ChatScreen() {
                 color={colors.primary[700]}
               />
             </TouchableOpacity>
-          )}
-        </View>
+          </View>
+        )}
       </View>
 
       <FlatList
@@ -384,17 +384,20 @@ export default function ChatScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons
-                name="chat-outline"
-                size={48}
-                color={colors.neutral[400]}
-              />
-              <ThemedText
-                type="bodyLarge"
-                style={{ color: colors.secondary[600], textAlign: "center" }}
-              >
-                Start a conversation about your skincare
-              </ThemedText>
+              <ChatIcon color={colors.primary[300]} />
+              <View style={{ alignItems: "center", gap: 4 }}>
+                <ThemedText type="h2">Cur.ai</ThemedText>
+                <ThemedText
+                  type="bodyLarge"
+                  style={{
+                    color: colors.primary[600],
+                    textAlign: "center",
+                    paddingHorizontal: 60,
+                  }}
+                >
+                  Start a conversation about your skincare
+                </ThemedText>
+              </View>
             </View>
           ) : null
         }
@@ -449,14 +452,12 @@ export default function ChatScreen() {
         </TouchableOpacity>
       )}
 
-      <View
-        style={[
-          styles.inputBar,
-          {
-            backgroundColor: colors.background,
-            borderTopColor: colors.neutral[200],
-          },
-        ]}
+      <GlassSurface
+        radius={0}
+        border={false}
+        intensity={50}
+        alpha={0.65}
+        style={[styles.inputBar, { borderTopColor: colors.neutral[200] }]}
       >
         <ThemedTextInput
           value={inputText}
@@ -485,7 +486,7 @@ export default function ChatScreen() {
             color={colors.neutral[100]}
           />
         </TouchableOpacity>
-      </View>
+      </GlassSurface>
     </KeyboardAvoidingView>
   );
 }
@@ -495,9 +496,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 32,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   headerRow: {
     flexDirection: "row",

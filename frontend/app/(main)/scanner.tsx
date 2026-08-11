@@ -46,9 +46,7 @@ export default function ScannerScreen() {
 
   if (!permission) {
     return (
-      <View
-        style={[styles.container, { backgroundColor: colors.background }]}
-      >
+      <View style={styles.container}>
         <ActivityIndicator color={colors.primary[600]} />
       </View>
     );
@@ -57,7 +55,7 @@ export default function ScannerScreen() {
   if (permission.status === PermissionStatus.GRANTED) {
     return (
       <TouchableOpacity
-        style={[styles.container, { backgroundColor: colors.background }]}
+        style={styles.container}
         onPress={handleTap}
         activeOpacity={0.7}
       >
@@ -89,14 +87,14 @@ export default function ScannerScreen() {
   if (permission.status === PermissionStatus.UNDETERMINED) {
     return (
       <TouchableOpacity
-        style={[styles.container, { backgroundColor: colors.background }]}
+        style={styles.container}
         onPress={handleRequest}
         activeOpacity={0.7}
       >
         <View
           style={[styles.placeholder, { borderColor: colors.primary[300] }]}
         >
-          <TapCameraIcon color={colors.primary[300]} />
+          <TapCameraIcon color={colors.primary[400]} />
           <View style={{ alignItems: "center", gap: 4 }}>
             <ThemedText type="h2">Camera Access Needed</ThemedText>
             <ThemedText
@@ -124,10 +122,7 @@ export default function ScannerScreen() {
   }
 
   return (
-    <TouchableOpacity
-      style={[styles.container, { backgroundColor: colors.background }]}
-      activeOpacity={0.7}
-    >
+    <TouchableOpacity style={styles.container} activeOpacity={0.7}>
       <View style={[styles.placeholder, { borderColor: colors.error }]}>
         <NoCameraIcon color={colors.error} />
         <View style={{ alignItems: "center", gap: 4 }}>
@@ -136,7 +131,8 @@ export default function ScannerScreen() {
             type="bodyLarge"
             style={{ color: colors.primary[600], textAlign: "center" }}
           >
-            To scan your labels, enable camera access in your phone's Settings.{" "}
+            To scan your labels, enable camera access in your phone's
+            Settings.{" "}
           </ThemedText>
         </View>
       </View>

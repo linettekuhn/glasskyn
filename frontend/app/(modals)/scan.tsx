@@ -34,5 +34,5 @@ export default function ScanScreen() {
 
 const styles = StyleSheet.create({
   cameraContainer: { flex: 1, backgroundColor: "#000" },
-  nonCameraContainer: { flex: 1, backgroundColor: "#fff" },
+  nonCameraContainer: { flex: 1 },
 });

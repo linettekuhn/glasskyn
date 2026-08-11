@@ -1,6 +1,6 @@
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
-import GradientBackground from "@/components/ui/gradient-background";
+import GlassSurface from "@/components/ui/glass-surface";
 import { Colors, getTheme } from "@/constants/theme";
 import { affirmations } from "@/constants/affirmations";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,7 +41,6 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <GradientBackground />
       <View style={styles.header}>
         <ThemedText type="h1" style={{ color: colors.text }}>
           {greeting}
@@ -63,15 +62,7 @@ export default function HomeScreen() {
             <ActivityIndicator color={colors.primary[600]} />
           </View>
         ) : routine === null ? (
-          <View
-            style={[
-              styles.emptyCard,
-              {
-                backgroundColor: colors.background,
-                borderColor: colors.neutral[200],
-              },
-            ]}
-          >
+          <GlassSurface style={styles.emptyCard}>
             <ThemedText type="bodyLarge" weight="semiBold">
               No routine yet
             </ThemedText>
@@ -83,7 +74,7 @@ export default function HomeScreen() {
               onPress={openRoutine}
               alignment="flex-start"
             />
-          </View>
+          </GlassSurface>
         ) : status ? (
           <RoutineStatusCard
             status={status}
@@ -101,15 +92,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   header: {
-    paddingHorizontal: 32,
-    paddingTop: 16,
     gap: 8,
   },
   body: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
     gap: 12,
   },
   loadingRow: {
@@ -118,9 +107,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyCard: {
-    borderRadius: 16,
     padding: 20,
     gap: 8,
-    borderWidth: 1,
   },
 });

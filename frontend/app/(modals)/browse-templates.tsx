@@ -85,9 +85,7 @@ export default function BrowseTemplatesScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      >
+      <SafeAreaView style={styles.container}>
         <LoadingSpinner />
       </SafeAreaView>
     );
@@ -95,10 +93,7 @@ export default function BrowseTemplatesScreen() {
 
   if (templates.length === 0) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-        edges={["top", "bottom"]}
-      >
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.header}>
           <ThemedButton
             link
@@ -124,10 +119,7 @@ export default function BrowseTemplatesScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <ThemedButton
           link

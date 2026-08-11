@@ -10,6 +10,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { withAlpha } from "./glass-surface";
 
 type Props = TextInputProps & {
   value: string;
@@ -35,7 +36,7 @@ export default function ThemedDropdownSelector({
 }: Props) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const bgDefault = colors.background;
+  const bgDefault = withAlpha(colors.background, 0.4);
   const defaultColor = colors.neutral[700];
   const focusColor = colors.secondary[500];
   const color = colors.text;

@@ -12,6 +12,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import GlassSurface, { withAlpha } from "./glass-surface";
 
 export interface DropdownOption {
   label: string;
@@ -41,7 +42,7 @@ export default function ThemedDropdown({
 }: ThemedDropdownProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const bgDefault = colors.background;
+  const bgDefault = withAlpha(colors.background, 0.4);
   const defaultColor = colors.neutral[700];
   const focusColor = colors.secondary[500];
   const color = colors.text;
@@ -105,14 +106,10 @@ export default function ThemedDropdown({
           style={styles.backdrop}
           onPress={() => setOpen(false)}
         >
-          <Pressable
-            style={[
-              styles.dropdownCard,
-              {
-                backgroundColor: bgDefault,
-                borderColor: defaultColor,
-              },
-            ]}
+          <GlassSurface
+            style={styles.dropdownCard}
+            radius={12}
+            border={false}
             onPress={() => {}}
           >
             <FlatList
@@ -162,7 +159,7 @@ export default function ThemedDropdown({
                 );
               }}
             />
-          </Pressable>
+          </GlassSurface>
         </Pressable>
       </Modal>
     </>
@@ -195,7 +192,6 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 340,
     borderRadius: 10,
-    borderWidth: 1,
     maxHeight: "60%",
     overflow: "hidden",
   },

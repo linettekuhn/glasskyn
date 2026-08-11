@@ -14,7 +14,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import Toast from "react-native-toast-message";
 import { ThemedText } from "@/components/ui/themed-text";
 import Divider from "@/components/ui/divider";
-import GradientBackground from "@/components/ui/gradient-background";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedTextInput from "@/components/ui/themed-text-input";
 import { MaterialIcons, Octicons } from "@expo/vector-icons";
@@ -53,7 +52,6 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      <GradientBackground />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}

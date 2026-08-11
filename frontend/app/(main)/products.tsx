@@ -10,7 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import LoadingSpinner from "../../src/components/ui/loading-spinner";
 import { useProducts } from "../../src/hooks/use-products";
-import { ProductCategory } from "../../src/types";
+import { Product, ProductCategory } from "../../src/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
@@ -46,7 +46,7 @@ export default function VanityScreen() {
 
   if (products.length === 0) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: bgColor }]}>
+      <View style={styles.centerContainer}>
         <View style={{ alignItems: "center" }}>
           <ThemedText type="h1">Your vanity is empty</ThemedText>
           <ThemedText type="bodyLarge">
@@ -65,7 +65,7 @@ export default function VanityScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: bgColor }]}>
+    <View style={styles.container}>
       <View>
         <ThemedText type="h1">My vanity</ThemedText>
         <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
@@ -113,8 +113,8 @@ export default function VanityScreen() {
       ) : (
         <FlatList
           data={filteredProducts}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
+          keyExtractor={(item: Product) => item.id.toString()}
+          renderItem={({ item }: { item: Product }) => (
             <ProductCard product={item} onDelete={refetch} />
           )}
           contentContainerStyle={styles.listContent}
@@ -137,7 +137,8 @@ export default function VanityScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   chipRow: {
     flexDirection: "row",

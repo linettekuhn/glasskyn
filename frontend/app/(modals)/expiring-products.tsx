@@ -52,10 +52,7 @@ export default function ExpiringProductsScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <ThemedText type="h2">Expiring products</ThemedText>
         <TouchableOpacity onPress={() => router.back()} hitSlop={12}>

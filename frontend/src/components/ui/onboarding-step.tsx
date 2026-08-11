@@ -26,7 +26,7 @@ export default function OnboardingStep({
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
+      style={styles.container}
       contentContainerStyle={styles.content}
     >
       <View style={styles.controls}>

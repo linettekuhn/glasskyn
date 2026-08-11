@@ -1,15 +1,10 @@
-import {
-  Modal,
-  TouchableOpacity,
-  StyleSheet,
-  useColorScheme,
-  View,
-} from "react-native";
+import { Modal, TouchableOpacity, StyleSheet, useColorScheme, View } from "react-native";
 import { router } from "expo-router";
 import { Colors, getTheme } from "@/constants/theme";
 import { CREATE_ROUTINE_OPTIONS } from "@/constants/routine";
 import { ThemedText } from "./themed-text";
 import CreateRoutineOptionRow from "./create-routine-option";
+import GlassSurface from "./glass-surface";
 
 interface CreateRoutineSheetProps {
   visible: boolean;
@@ -40,9 +35,10 @@ export default function CreateRoutineSheet({
         activeOpacity={1}
         onPress={onClose}
       >
-        <TouchableOpacity
-          activeOpacity={1}
-          style={[styles.sheet, { backgroundColor: colors.background }]}
+        <GlassSurface
+          style={styles.sheet}
+          radius={16}
+          border={false}
         >
           <View>
             <ThemedText type="h2">New Routine</ThemedText>
@@ -58,7 +54,7 @@ export default function CreateRoutineSheet({
               onPress={() => handleOption(option.route)}
             />
           ))}
-        </TouchableOpacity>
+        </GlassSurface>
       </TouchableOpacity>
     </Modal>
   );

@@ -49,7 +49,6 @@ export default function AddProductScreen() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const bgColor = colors.background;
 
   const isEditing = editId !== null;
 
@@ -134,12 +133,9 @@ export default function AddProductScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: bgColor }}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: bgColor }]}
+        style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView

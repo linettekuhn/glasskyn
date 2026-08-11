@@ -10,7 +10,7 @@ export default function WelcomeScreen() {
   const router = useRouter();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.neutral[100] }]}>
+    <View style={styles.container}>
       <View style={styles.content}>
         <View style={styles.heading}>
           <ThemedText type="h1" style={{ textAlign: "center" }}>

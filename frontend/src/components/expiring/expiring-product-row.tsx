@@ -24,6 +24,7 @@ import { Colors, getTheme } from "@/constants/theme";
 import { fromValue, DEFAULT_ICON } from "@/components/ui/icon-selector";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
+import GlassSurface from "@/components/ui/glass-surface";
 import {
   getExpiryTier,
   expirySubtext,
@@ -204,14 +205,10 @@ export default function ExpiringProductRow({
         onRequestClose={() => setMenuOpen(false)}
       >
         <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)}>
-          <Pressable
-            style={[
-              styles.menuCard,
-              {
-                backgroundColor: colors.background,
-                borderColor: colors.neutral[200],
-              },
-            ]}
+          <GlassSurface
+            style={styles.menuCard}
+            radius={10}
+            border={false}
             onPress={() => {}}
           >
             <ThemedText
@@ -245,7 +242,7 @@ export default function ExpiringProductRow({
                 Remove from vanity
               </ThemedText>
             </TouchableOpacity>
-          </Pressable>
+          </GlassSurface>
         </Pressable>
       </Modal>
 
@@ -259,14 +256,11 @@ export default function ExpiringProductRow({
           style={styles.sheetBackdrop}
           onPress={() => setPickerOpen(false)}
         >
-          <Pressable
-            style={[
-              styles.sheetCard,
-              {
-                backgroundColor: colors.background,
-                borderColor: colors.neutral[200],
-              },
-            ]}
+          <GlassSurface
+            style={styles.sheetCard}
+            radius={0}
+            border={false}
+            blur
             onPress={() => {}}
           >
             <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
@@ -311,7 +305,7 @@ export default function ExpiringProductRow({
                 </View>
               </View>
             )}
-          </Pressable>
+          </GlassSurface>
         </Pressable>
       </Modal>
     </>

@@ -1,5 +1,11 @@
-import { View, TouchableOpacity, StyleSheet, useColorScheme } from "react-native";
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  useColorScheme,
+} from "react-native";
 import { Colors, getTheme } from "@/constants/theme";
+import GlassSurface, { withAlpha } from "./glass-surface";
 import type { CreateRoutineOption } from "@/constants/routine";
 import { ThemedText } from "./themed-text";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -23,23 +29,9 @@ export default function CreateRoutineOptionRow({
   const colors = Colors[getTheme(colorScheme)];
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.option,
-        {
-          borderColor: colors.primary[200],
-          backgroundColor: colors.neutral[100],
-        },
-        style,
-      ]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
+    <GlassSurface style={[styles.option, style]} onPress={onPress}>
       <View
-        style={[
-          styles.optionIcon,
-          { backgroundColor: colors.primary[100] },
-        ]}
+        style={[styles.optionIcon, { backgroundColor: colors.primary[100] }]}
       >
         <MaterialCommunityIcons
           name={option.icon}
@@ -51,10 +43,7 @@ export default function CreateRoutineOptionRow({
         <ThemedText type="bodyLarge" weight="semiBold">
           {option.title}
         </ThemedText>
-        <ThemedText
-          type="bodySmall"
-          style={{ color: colors.neutral[700] }}
-        >
+        <ThemedText type="bodySmall" style={{ color: colors.neutral[700] }}>
           {option.subtitle}
         </ThemedText>
       </View>
@@ -63,7 +52,7 @@ export default function CreateRoutineOptionRow({
         size={chevronSize}
         color={colors.neutral[500]}
       />
-    </TouchableOpacity>
+    </GlassSurface>
   );
 }
 
@@ -71,8 +60,6 @@ const styles = StyleSheet.create({
   option: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
     padding: 16,
     gap: 12,
   },

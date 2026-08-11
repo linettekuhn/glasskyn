@@ -10,6 +10,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import UserAvatar from "@/components/ui/user-avatar";
 import GlasskynLogo from "@/components/icons/glasskyn-logo";
+import GlassSurface from "@/components/ui/glass-surface";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const TOP_BAR_HEIGHT = 56;
 
@@ -17,15 +19,17 @@ export default function TopBar() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View
+    <GlassSurface
+      intensity={45}
+      alpha={0.6}
+      radius={0}
+      border={false}
       style={[
         styles.container,
-        {
-          backgroundColor: colors.background,
-          borderBottomColor: colors.neutral[200],
-        },
+        { paddingTop: insets.top, borderBottomColor: colors.neutral[200] },
       ]}
     >
       <TouchableOpacity
@@ -59,7 +63,7 @@ export default function TopBar() {
           <UserAvatar seed={user?.name ?? "guest"} size={36} />
         </TouchableOpacity>
       </View>
-    </View>
+    </GlassSurface>
   );
 }
 
@@ -68,8 +72,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: TOP_BAR_HEIGHT,
+    minHeight: TOP_BAR_HEIGHT,
     paddingHorizontal: 20,
+    paddingVertical: 8,
     borderBottomWidth: 1,
   },
   right: {

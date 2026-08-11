@@ -166,10 +166,7 @@ export default function ProductDetailScreen() {
     : null;
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"

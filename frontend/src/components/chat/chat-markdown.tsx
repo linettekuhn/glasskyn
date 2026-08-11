@@ -1,6 +1,7 @@
 import { useColorScheme } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { Colors, Fonts, getTheme } from "@/constants/theme";
+import { withAlpha } from "@/components/ui/glass-surface";
 
 interface ChatMarkdownProps {
   content: string;
@@ -113,7 +114,7 @@ export default function ChatMarkdown({ content }: ChatMarkdownProps) {
       textDecorationLine: "underline",
     },
     blockquote: {
-      backgroundColor: colors.neutral[100],
+      backgroundColor: withAlpha(colors.neutral[100], 0.5),
       borderColor: colors.primary[300],
       borderLeftWidth: 4,
       marginLeft: 4,

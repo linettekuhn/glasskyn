@@ -16,6 +16,7 @@ import { STEP_TO_PRODUCT_TYPES } from "@/constants/routine";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import GlassSurface, { withAlpha } from "@/components/ui/glass-surface";
 import { MaterialIcons } from "@expo/vector-icons";
 
 export default function ProductPickerScreen() {
@@ -50,10 +51,7 @@ export default function ProductPickerScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <ThemedText type="h2">Choose a Product</ThemedText>
         <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
@@ -87,7 +85,7 @@ export default function ProductPickerScreen() {
                 styles.productRow,
                 {
                   borderColor: colors.neutral[300],
-                  backgroundColor: colors.background,
+                  backgroundColor: withAlpha(colors.background, 0.4),
                 },
               ]}
               onPress={() => handleSelect(item)}
@@ -125,17 +123,13 @@ export default function ProductPickerScreen() {
         />
       )}
 
-      <View
-        style={[
-          styles.bottomBar,
-          {
-            backgroundColor: colors.background,
-            borderTopColor: colors.neutral[300],
-          },
-        ]}
+      <GlassSurface
+        style={[styles.bottomBar, { borderTopColor: colors.neutral[300] }]}
+        radius={0}
+        border={false}
       >
         <ThemedButton text="Cancel" outlined onPress={() => router.back()} />
-      </View>
+      </GlassSurface>
     </SafeAreaView>
   );
 }

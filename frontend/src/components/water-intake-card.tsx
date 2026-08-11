@@ -15,6 +15,7 @@ import { ThemedText } from "@/components/ui/themed-text";
 import ThemedTextInput from "@/components/ui/themed-text-input";
 import ThemedDropdown from "@/components/ui/themed-dropdown";
 import ThemedButton from "@/components/ui/themed-button";
+import GlassSurface, { withAlpha } from "@/components/ui/glass-surface";
 import Divider from "./ui/divider";
 import CelebrationBurst from "./routine/celebration-burst";
 
@@ -280,15 +281,7 @@ export default function WaterIntakeCard() {
       ];
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.background,
-          borderColor: colors.neutral[200],
-        },
-      ]}
-    >
+    <GlassSurface style={styles.card}>
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <MaterialCommunityIcons
@@ -409,7 +402,7 @@ export default function WaterIntakeCard() {
               style={[
                 styles.stepperRow,
                 {
-                  backgroundColor: colors.neutral[100],
+                  backgroundColor: withAlpha(colors.neutral[100], 0.5),
                   borderColor: colors.neutral[200],
                 },
               ]}
@@ -456,7 +449,7 @@ export default function WaterIntakeCard() {
           style={[
             styles.calculator,
             {
-              backgroundColor: colors.neutral[100],
+              backgroundColor: withAlpha(colors.neutral[100], 0.5),
               borderColor: colors.neutral[200],
             },
           ]}
@@ -580,17 +573,14 @@ export default function WaterIntakeCard() {
       )}
 
       {burstActive && <CelebrationBurst color={colors.success[500]} />}
-    </View>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
     padding: 20,
     gap: 12,
-    borderWidth: 1,
-    overflow: "hidden",
   },
   headerRow: {
     flexDirection: "row",

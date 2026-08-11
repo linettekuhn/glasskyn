@@ -10,6 +10,7 @@ import { FREQUENCY_LABELS } from "@/constants/routine";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import GlassSurface from "@/components/ui/glass-surface";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 
 const STEP_LABELS: Record<StepType, string> = {
@@ -50,10 +51,7 @@ export default function TemplatePreviewScreen() {
 
   if (error || !template) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-        edges={["top", "bottom"]}
-      >
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.center}>
           <ThemedText type="bodyLarge">
             {error ?? "Template not found"}
@@ -87,10 +85,7 @@ export default function TemplatePreviewScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -153,13 +148,10 @@ export default function TemplatePreviewScreen() {
         )}
       </ScrollView>
 
-      <View
-        style={[
-          styles.bottomBar,
-          {
-            backgroundColor: colors.background,
-          },
-        ]}
+      <GlassSurface
+        style={styles.bottomBar}
+        radius={0}
+        border={false}
       >
         <ThemedButton
           text="Use this Routine"
@@ -174,7 +166,7 @@ export default function TemplatePreviewScreen() {
           onPress={() => router.back()}
           color={colors.neutral[800]}
         />
-      </View>
+      </GlassSurface>
     </SafeAreaView>
   );
 }

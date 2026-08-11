@@ -13,6 +13,7 @@ import { getPresignedUrl, uploadToS3 } from "../../api/uploads";
 import { processPaoImage } from "../../api/products";
 import { useScanContext } from "../../contexts/ScanContext";
 import { Colors, getTheme } from "@/constants/theme";
+import { withAlpha } from "../ui/glass-surface";
 import ScanOverlay from "./scan-overlay";
 import { ThemedText } from "../ui/themed-text";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -209,7 +210,7 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
                   <View
                     style={[
                       styles.hint,
-                      { backgroundColor: colors.neutral[100] },
+                      { backgroundColor: withAlpha(colors.neutral[100], 0.5) },
                     ]}
                   >
                     <View

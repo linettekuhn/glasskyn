@@ -1,12 +1,12 @@
 import { Colors, getTheme } from "@/constants/theme";
 import {
   View,
-  TouchableOpacity,
   StyleSheet,
   useColorScheme,
 } from "react-native";
 import { ThemedText } from "@/components/ui/themed-text";
 import Divider from "@/components/ui/divider";
+import GlassSurface from "@/components/ui/glass-surface";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { RoutineTemplate } from "@/types";
 
@@ -47,17 +47,17 @@ export default function TemplateCard({
   );
 
   return (
-    <TouchableOpacity
+    <GlassSurface
+      onPress={onPress}
+      radius={12}
+      border={false}
       style={[
         styles.card,
         {
           borderColor: isSelected ? colors.primary[500] : colors.neutral[400],
-          backgroundColor: colors.background,
           borderWidth: isSelected ? 2 : 1,
         },
       ]}
-      onPress={onPress}
-      activeOpacity={0.7}
     >
       <View style={styles.cardContent}>
         {isRecommended && (
@@ -153,7 +153,7 @@ export default function TemplateCard({
         color={colors.neutral[600]}
         style={styles.chevron}
       />
-    </TouchableOpacity>
+    </GlassSurface>
   );
 }
 

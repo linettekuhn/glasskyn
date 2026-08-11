@@ -71,10 +71,7 @@ export default function EditAccountScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View
         style={[styles.header, { borderBottomColor: colors.neutral[200] }]}
       >

@@ -10,6 +10,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { getRoutineCalendar } from "@/api/routines";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "./themed-text";
+import GlassSurface from "./glass-surface";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 const MONTHS = [
@@ -118,14 +119,8 @@ export default function RoutineCalendar({
   }
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: colors.background,
-          borderColor: colors.neutral[300],
-        },
-      ]}
+    <GlassSurface
+      style={styles.container}
     >
       <View style={styles.header}>
         <TouchableOpacity
@@ -222,14 +217,12 @@ export default function RoutineCalendar({
           ))}
         </View>
       )}
-    </View>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    borderWidth: 1,
-    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginHorizontal: 24,

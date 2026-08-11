@@ -1,13 +1,9 @@
 import { router } from "expo-router";
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  useColorScheme,
-} from "react-native";
+import { View, StyleSheet, useColorScheme } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
+import GlassSurface from "@/components/ui/glass-surface";
 
 export default function EntryCards() {
   const colorScheme = useColorScheme();
@@ -33,17 +29,11 @@ export default function EntryCards() {
   return (
     <View style={styles.row}>
       {entries.map((entry) => (
-        <TouchableOpacity
+        <GlassSurface
           key={entry.key}
-          style={[
-            styles.card,
-            {
-              backgroundColor: colors.background,
-              borderColor: colors.neutral[200],
-            },
-          ]}
-          activeOpacity={0.7}
+          style={styles.card}
           onPress={entry.onPress}
+          clipsContent={false}
         >
           <View style={[styles.icon, { backgroundColor: colors.primary[100] }]}>
             <MaterialCommunityIcons
@@ -58,7 +48,7 @@ export default function EntryCards() {
           <ThemedText type="caption" style={{ color: colors.neutral[600] }}>
             {entry.subtext}
           </ThemedText>
-        </TouchableOpacity>
+        </GlassSurface>
       ))}
     </View>
   );
@@ -68,11 +58,11 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     gap: 12,
+    paddingTop: 2,
+    paddingHorizontal: 8,
   },
   card: {
     flex: 1,
-    borderRadius: 16,
-    borderWidth: 1,
     paddingVertical: 16,
     paddingHorizontal: 8,
     position: "relative",

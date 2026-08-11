@@ -15,6 +15,7 @@ import { getPreferences, savePreferences } from "@/api/preferences";
 import type { UserPreference } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "./themed-text";
+import GlassSurface from "./glass-surface";
 
 type TimeTarget = "water" | "am" | "pm";
 
@@ -200,11 +201,10 @@ export default function NotificationSettings() {
           onRequestClose={() => setTimeTarget(null)}
         >
           <View style={styles.modalOverlay}>
-            <View
-              style={[
-                styles.modalContent,
-                { backgroundColor: colors.background },
-              ]}
+            <GlassSurface
+              style={styles.modalContent}
+              radius={12}
+              border={false}
             >
               <View style={styles.modalHeader}>
                 <ThemedText type="bodyLarge" weight="semiBold">
@@ -229,7 +229,7 @@ export default function NotificationSettings() {
                 minuteInterval={5}
                 onChange={onTimeChange}
               />
-            </View>
+            </GlassSurface>
           </View>
         </Modal>
       )}

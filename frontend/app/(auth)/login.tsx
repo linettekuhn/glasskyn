@@ -14,7 +14,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import Toast from "react-native-toast-message";
 import { ThemedText } from "@/components/ui/themed-text";
 import Divider from "@/components/ui/divider";
-import GradientBackground from "@/components/ui/gradient-background";
 import { Colors, getTheme } from "@/constants/theme";
 import ThemedTextInput from "@/components/ui/themed-text-input";
 import { MaterialIcons, Octicons } from "@expo/vector-icons";
@@ -52,7 +51,6 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <GradientBackground />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -114,7 +112,10 @@ export default function LoginScreen() {
                 </ThemedTextInput>
                 {/* TOOD: implement forgot password functionality */}
                 <ThemedText
-                  style={{ alignSelf: "flex-end", color: colors.secondary[700] }}
+                  style={{
+                    alignSelf: "flex-end",
+                    color: colors.secondary[700],
+                  }}
                   type="caption"
                   weight="medium"
                 >
@@ -158,6 +159,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
+    backgroundColor: "transparent",
   },
   content: {
     paddingHorizontal: 32,
