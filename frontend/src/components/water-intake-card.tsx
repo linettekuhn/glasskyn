@@ -333,7 +333,7 @@ export default function WaterIntakeCard() {
       </View>
 
       {goalMet ? (
-        <ThemedText type="bodySmall" style={{ color: colors.primary[600] }}>
+        <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
           {GOAL_MET_MESSAGE}
         </ThemedText>
       ) : (
