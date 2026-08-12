@@ -78,15 +78,12 @@ export default function RoutineScreen() {
                 onPress={() => setShowCreateSheet(true)}
                 IconComponent={MaterialCommunityIcons}
                 iconName="plus"
-                backgroundColor={colors.primary[600]}
+                backgroundColor={colors.secondary[500]}
               />
             )}
           </View>
           {hasRoutine && (
-            <ThemedText
-              type="bodyLarge"
-              style={{ color: colors.secondary[600] }}
-            >
+            <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
               {hasMultipleRoutines
                 ? "Swipe to switch between your routines"
                 : "Track your steps and stay consistent"}

@@ -174,13 +174,11 @@ export default function ProductCard({
           ? FontAwesome6
           : MaterialCommunityIcons;
     return (
-      <View
-        style={[styles.iconBox, { backgroundColor: colors.secondary[200] }]}
-      >
+      <View style={[styles.iconBox, { backgroundColor: colors.tertiary[200] }]}>
         <IconComponent
           name={iconConfig.name as any}
           size={24}
-          color={colors.secondary[700]}
+          color={colors.tertiary[700]}
         />
       </View>
     );
@@ -201,28 +199,28 @@ export default function ProductCard({
               onPress={handleEdit}
               style={[
                 styles.actionButton,
-                { borderColor: colors.secondary[300] },
+                { borderColor: colors.neutral[300] },
               ]}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <MaterialCommunityIcons
                 name="pencil-outline"
                 size={18}
-                color={colors.secondary[700]}
+                color={colors.neutral[700]}
               />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleDelete}
               style={[
                 styles.actionButton,
-                { borderColor: colors.secondary[300] },
+                { borderColor: colors.neutral[300] },
               ]}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <MaterialCommunityIcons
                 name="trash-can-outline"
                 size={18}
-                color={colors.secondary[700]}
+                color={colors.neutral[700]}
               />
             </TouchableOpacity>
           </View>
@@ -245,7 +243,7 @@ export default function ProductCard({
             <ThemedText
               type="captionSmall"
               weight="medium"
-              style={{ color: colors.primary[600] }}
+              style={{ color: colors.secondary[600] }}
             >
               See more
             </ThemedText>

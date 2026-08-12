@@ -34,8 +34,8 @@ const TabIcon = (props: TabIconProps) => {
 export default function MainLayout() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const inactiveColor = colors.primary[600];
-  const focusedColor = colors.primary[800];
+  const inactiveColor = colors.neutral[500];
+  const focusedColor = colors.primary[500];
   const strokeColor = colors.neutral[200];
 
   return (
@@ -103,7 +103,7 @@ export default function MainLayout() {
               tabBarIcon: ({ focused, color }: TabBarIconProps) => (
                 <TabIcon
                   IconComponent={MaterialCommunityIcons}
-                  outlineName="qrcode-scan"
+                  outlineName="cube-scan"
                   fillName="scan-helper"
                   size={28}
                   color={color}

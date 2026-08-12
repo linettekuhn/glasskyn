@@ -66,7 +66,7 @@ export default function SkinTypeScreen() {
     <OnboardingStep currentStep={1}>
       <View style={styles.header}>
         <ThemedText type="h1">What's your skin type?</ThemedText>
-        <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
+        <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
           Pick the one that fits most days. You can always update this later.
         </ThemedText>
       </View>

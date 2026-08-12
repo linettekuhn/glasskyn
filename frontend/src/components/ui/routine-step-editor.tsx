@@ -185,7 +185,7 @@ export default function RoutineStepEditor({
             text="+ Add Step"
             textType="bodySmall"
             onPress={() => onAddStep(timeOfDay)}
-            alignment="flex-start"
+            color={colors.secondary[600]}
           />
         )}
       </View>
@@ -209,7 +209,7 @@ export default function RoutineStepEditor({
             alignment="flex-start"
           />
           <ThemedText type="h1">{title}</ThemedText>
-          <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
+          <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
             {subtitle}
           </ThemedText>
         </View>

@@ -146,10 +146,7 @@ export default function AddProductScreen() {
             <ThemedText type="h1">
               {isEditing ? "Edit Product Details" : "Add a New Product"}
             </ThemedText>
-            <ThemedText
-              type="bodyLarge"
-              style={{ color: colors.secondary[600] }}
-            >
+            <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
               {isEditing
                 ? "Tweak anything that needs a little fixing!"
                 : "What's the new addition to your vanity?"}

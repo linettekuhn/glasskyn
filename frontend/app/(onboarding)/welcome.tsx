@@ -18,7 +18,7 @@ export default function WelcomeScreen() {
           </ThemedText>
           <ThemedText
             type="bodyLarge"
-            style={{ textAlign: "center", color: colors.secondary[600] }}
+            style={{ textAlign: "center", color: colors.neutral[600] }}
           >
             A few quick questions so we can recommend the right products and
             routines for you.

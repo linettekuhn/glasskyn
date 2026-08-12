@@ -53,13 +53,13 @@ export default function VanityScreen() {
       <View style={styles.centerContainer}>
         <View style={{ alignItems: "center" }}>
           <ThemedText type="h1">Your vanity is empty</ThemedText>
-          <ThemedText type="bodyLarge">
+          <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
             Scan your first product to start tracking
           </ThemedText>
         </View>
         <ThemedButton
           LeftIconComponent={MaterialCommunityIcons}
-          leftIconName="qrcode-scan"
+          leftIconName="cube-scan"
           text="Scan Product"
           onPress={() => router.push("/(main)/scanner")}
           alignment="center"
@@ -76,7 +76,7 @@ export default function VanityScreen() {
         }}
       >
         <ThemedText type="h1">My vanity</ThemedText>
-        <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
+        <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
           Organize and monitor your cosmetics.
         </ThemedText>
       </View>
@@ -93,7 +93,7 @@ export default function VanityScreen() {
               key={cat.key}
               text={cat.label}
               textType="bodySmall"
-              color={active ? colors.primary[600] : colors.primary[500]}
+              color={active ? colors.primary[500] : colors.neutral[500]}
               outlined={!active}
               onPress={() => {
                 if (isAll) {
@@ -133,7 +133,7 @@ export default function VanityScreen() {
       )}
 
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.secondary[500] }]}
+        style={[styles.fab, { backgroundColor: colors.secondary[400] }]}
         onPress={() => router.push("/(main)/scanner")}
       >
         <MaterialCommunityIcons size={32} name="plus" color={bgColor} />

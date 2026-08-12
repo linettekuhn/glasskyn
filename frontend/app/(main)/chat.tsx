@@ -29,6 +29,7 @@ import { useChatSession } from "@/contexts/ChatSessionContext";
 import { getRoutine } from "@/api/routines";
 import GlassSurface from "@/components/ui/glass-surface";
 import ChatIcon from "@/components/icons/chat-icon";
+import ThemedButton from "@/components/ui/themed-button";
 
 const QUICK_ACTIONS = [
   {
@@ -328,15 +329,14 @@ export default function ChatScreen() {
         </ThemedText>
         <View style={styles.chipRow}>
           {QUICK_ACTIONS.map((action) => (
-            <TouchableOpacity
+            <ThemedButton
+              color={colors.secondary[500]}
+              outlined
               key={action.label}
-              style={[styles.chip, { borderColor: colors.primary[300] }]}
               onPress={() => handleSend(action.message)}
-            >
-              <ThemedText type="caption" style={{ color: colors.primary[700] }}>
-                {action.label}
-              </ThemedText>
-            </TouchableOpacity>
+              text={action.label}
+              textType="caption"
+            ></ThemedButton>
           ))}
         </View>
       </View>
@@ -368,7 +368,7 @@ export default function ChatScreen() {
               <MaterialCommunityIcons
                 name="chat-plus-outline"
                 size={24}
-                color={colors.primary[700]}
+                color={colors.secondary[600]}
               />
             </TouchableOpacity>
           </View>
@@ -384,13 +384,13 @@ export default function ChatScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyState}>
-              <ChatIcon color={colors.primary[300]} />
+              <ChatIcon color={colors.neutral[300]} />
               <View style={{ alignItems: "center", gap: 4 }}>
                 <ThemedText type="h2">Cur.ai</ThemedText>
                 <ThemedText
                   type="bodyLarge"
                   style={{
-                    color: colors.primary[600],
+                    color: colors.neutral[500],
                     textAlign: "center",
                     paddingHorizontal: 60,
                   }}

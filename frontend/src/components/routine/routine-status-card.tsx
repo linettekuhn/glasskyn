@@ -47,7 +47,7 @@ export default function RoutineStatusCard({
     return () => clearTimeout(timer);
   }, [status.key]);
 
-  const ringColor = isFullDay ? colors.secondary[600] : colors.primary[600];
+  const ringColor = isFullDay ? colors.tertiary[600] : colors.primary[600];
   const captionColor = isFullDay ? colors.neutral[800] : colors.neutral[600];
   const titleColor = isFullDay ? colors.text : colors.text;
   const btnColor = colors.primary[600];
@@ -111,7 +111,7 @@ export default function RoutineStatusCard({
         />
       )}
 
-      {burstActive && <CelebrationBurst color={colors.secondary[600]} />}
+      {burstActive && <CelebrationBurst color={colors.tertiary[600]} />}
     </GlassSurface>
   );
 }

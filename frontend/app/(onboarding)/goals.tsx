@@ -45,7 +45,7 @@ export default function GoalsScreen() {
     <OnboardingStep currentStep={3}>
       <View style={styles.header}>
         <ThemedText type="h1">What are you hoping to achieve?</ThemedText>
-        <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
+        <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
           Choose your goals and we'll tailor routine suggestions around them.
         </ThemedText>
       </View>

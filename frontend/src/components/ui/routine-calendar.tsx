@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   View,
   TouchableOpacity,
@@ -27,9 +27,28 @@ const MONTHS = [
   "November",
   "December",
 ];
+const SHORT_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 function isoDate(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+interface CalendarCell {
+  day: number;
+  key: string;
 }
 
 interface RoutineCalendarProps {
@@ -42,12 +61,17 @@ export default function RoutineCalendar({
   refreshKey = 0,
 }: RoutineCalendarProps) {
   const now = new Date();
-  const [viewMonth, setViewMonth] = useState(now.getMonth());
-  const [viewYear, setViewYear] = useState(now.getFullYear());
+  const [anchor, setAnchor] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [days, setDays] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
-  const prevMonthKey = useRef<string | null>(null);
+  const fetchedMonths = useRef<Set<string>>(new Set());
+  const lastRefreshKey = useRef(refreshKey);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
 
@@ -57,23 +81,67 @@ export default function RoutineCalendar({
     now.getDate(),
   );
 
-  const monthKey = `${routineId}-${viewMonth}-${viewYear}`;
+  const weekStart = useMemo(() => {
+    const d = new Date(anchor);
+    d.setDate(anchor.getDate() - anchor.getDay());
+    return d;
+  }, [anchor]);
+
+  const weekEnd = useMemo(() => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + 6);
+    return d;
+  }, [weekStart]);
+
+  const monthsNeeded = useMemo(() => {
+    const months = new Map<string, { year: number; month: number }>();
+    const targets = viewMode === "week" ? [weekStart, weekEnd] : [anchor];
+    for (const d of targets) {
+      months.set(`${d.getFullYear()}-${d.getMonth()}`, {
+        year: d.getFullYear(),
+        month: d.getMonth(),
+      });
+    }
+    return Array.from(months.values());
+  }, [anchor, viewMode, weekStart, weekEnd]);
+
+  const fetchKey = useMemo(
+    () =>
+      monthsNeeded
+        .map(({ year, month }) => `${year}-${month}`)
+        .sort()
+        .join(","),
+    [monthsNeeded],
+  );
 
   useEffect(() => {
     if (routineId == null) return;
     let cancelled = false;
-    const firstLoadForMonth = prevMonthKey.current !== monthKey;
-    prevMonthKey.current = monthKey;
-    if (firstLoadForMonth) {
-      setDays(new Map());
-      setLoading(true);
+    if (refreshKey !== lastRefreshKey.current) {
+      fetchedMonths.current.clear();
+      lastRefreshKey.current = refreshKey;
     }
-    getRoutineCalendar(routineId, viewMonth + 1, viewYear)
-      .then((data) => {
+    const missing = monthsNeeded.filter(
+      ({ year, month }) => !fetchedMonths.current.has(`${year}-${month}`),
+    );
+    if (missing.length === 0) return;
+    setLoading(true);
+    Promise.all(
+      missing.map(({ year, month }) =>
+        getRoutineCalendar(routineId, month + 1, year),
+      ),
+    )
+      .then((results) => {
         if (cancelled) return;
-        const m = new Map<string, boolean>();
-        for (const d of data) m.set(d.date, d.completed);
-        setDays(m);
+        setDays((prev) => {
+          const next = new Map(prev);
+          results.forEach((data, i) => {
+            const { year, month } = missing[i];
+            fetchedMonths.current.add(`${year}-${month}`);
+            for (const d of data) next.set(d.date, d.completed);
+          });
+          return next;
+        });
       })
       .catch(() => {})
       .finally(() => {
@@ -82,49 +150,137 @@ export default function RoutineCalendar({
     return () => {
       cancelled = true;
     };
-  }, [routineId, viewMonth, viewYear, refreshKey, monthKey]);
+  }, [routineId, monthsNeeded, fetchKey, refreshKey]);
 
-  const firstWeekday = new Date(viewYear, viewMonth, 1).getDay();
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const changeWeek = useCallback((delta: number) => {
+    setSelected(null);
+    setAnchor((prev) => {
+      const next = new Date(prev);
+      next.setDate(prev.getDate() + delta * 7);
+      return next;
+    });
+  }, []);
+
+  const changeMonth = useCallback((delta: number) => {
+    setSelected(null);
+    setAnchor((prev) => {
+      const targetMonth = prev.getMonth() + delta;
+      const targetYear = prev.getFullYear();
+      const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+      return new Date(
+        targetYear,
+        targetMonth,
+        Math.min(prev.getDate(), lastDay),
+      );
+    });
+  }, []);
+
+  const toggleViewMode = useCallback(() => {
+    setViewMode((prev) => (prev === "week" ? "month" : "week"));
+  }, []);
+
+  const weekTitle = useMemo(() => {
+    const sameMonth =
+      weekStart.getMonth() === weekEnd.getMonth() &&
+      weekStart.getFullYear() === weekEnd.getFullYear();
+    const sameYear = weekStart.getFullYear() === weekEnd.getFullYear();
+    if (sameMonth) {
+      return `${SHORT_MONTHS[weekStart.getMonth()]} ${weekStart.getDate()} – ${weekEnd.getDate()}`;
+    }
+    if (sameYear) {
+      return `${SHORT_MONTHS[weekStart.getMonth()]} ${weekStart.getDate()} – ${SHORT_MONTHS[weekEnd.getMonth()]} ${weekEnd.getDate()}`;
+    }
+    return `${SHORT_MONTHS[weekStart.getMonth()]} ${weekStart.getDate()}, ${weekStart.getFullYear()} – ${SHORT_MONTHS[weekEnd.getMonth()]} ${weekEnd.getDate()}`;
+  }, [weekStart, weekEnd]);
+
+  const weekCells = useMemo(() => {
+    const out: CalendarCell[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      out.push({
+        day: d.getDate(),
+        key: isoDate(d.getFullYear(), d.getMonth() + 1, d.getDate()),
+      });
+    }
+    return out;
+  }, [weekStart]);
+
+  const firstWeekday = new Date(
+    anchor.getFullYear(),
+    anchor.getMonth(),
+    1,
+  ).getDay();
+  const daysInMonth = new Date(
+    anchor.getFullYear(),
+    anchor.getMonth() + 1,
+    0,
+  ).getDate();
   const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
 
-  const changeMonth = useCallback(
-    (delta: number) => {
-      setSelected(null);
-      setViewMonth((prev) => {
-        const next = new Date(viewYear, prev + delta, 1);
-        setViewYear(next.getFullYear());
-        return next.getMonth();
-      });
-    },
-    [viewYear],
-  );
-
-  const completedCount = Array.from(days.values()).filter(Boolean).length;
-
-  const selectedCompleted = selected ? (days.get(selected) ?? false) : null;
-  const selectedDate = selected ? new Date(`${selected}T00:00:00`) : null;
-
-  const cells: ({ day: number; key: string } | null)[] = [];
+  const monthCells: (CalendarCell | null)[] = [];
   for (let i = 0; i < totalCells; i++) {
     const dayNumber = i - firstWeekday + 1;
     if (dayNumber < 1 || dayNumber > daysInMonth) {
-      cells.push(null);
+      monthCells.push(null);
       continue;
     }
-    cells.push({
+    monthCells.push({
       day: dayNumber,
-      key: isoDate(viewYear, viewMonth + 1, dayNumber),
+      key: isoDate(anchor.getFullYear(), anchor.getMonth() + 1, dayNumber),
     });
   }
 
+  const renderCell = (cell: CalendarCell | null, key: string) =>
+    cell ? (
+      <TouchableOpacity
+        key={key}
+        style={styles.cell}
+        onPress={() =>
+          setSelected((prev) => (prev === cell.key ? null : cell.key))
+        }
+      >
+        <View
+          style={[
+            styles.dayCircle,
+            cell.key === todayKey && {
+              borderColor: colors.primary[600],
+              borderWidth: 1.5,
+            },
+            cell.key === selected && {
+              backgroundColor: colors.primary[100],
+            },
+          ]}
+        >
+          <ThemedText
+            type="overline"
+            weight={cell.key === todayKey ? "semiBold" : "regular"}
+          >
+            {cell.day}
+          </ThemedText>
+        </View>
+        <View
+          style={[
+            styles.dot,
+            {
+              backgroundColor: days.get(cell.key)
+                ? colors.secondary[500]
+                : "transparent",
+            },
+          ]}
+        />
+      </TouchableOpacity>
+    ) : (
+      <View key={key} style={styles.cell} />
+    );
+
   return (
-    <GlassSurface
-      style={styles.container}
-    >
+    <GlassSurface style={styles.container} color={colors.tertiary[200]}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => changeMonth(-1)}
+          onPress={() =>
+            viewMode === "week" ? changeWeek(-1) : changeMonth(-1)
+          }
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           disabled={loading}
         >
@@ -134,20 +290,45 @@ export default function RoutineCalendar({
             color={colors.primary[600]}
           />
         </TouchableOpacity>
-        <ThemedText type="overline" weight="semiBold">
-          {MONTHS[viewMonth]} {viewYear}
-        </ThemedText>
-        <TouchableOpacity
-          onPress={() => changeMonth(1)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          disabled={loading}
+        <ThemedText
+          type="overline"
+          weight="semiBold"
+          numberOfLines={1}
+          style={styles.headerTitle}
         >
-          <MaterialCommunityIcons
-            name="chevron-right"
-            size={22}
-            color={colors.primary[600]}
-          />
-        </TouchableOpacity>
+          {viewMode === "week"
+            ? weekTitle
+            : `${MONTHS[anchor.getMonth()]} ${anchor.getFullYear()}`}
+        </ThemedText>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={toggleViewMode}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <MaterialCommunityIcons
+              name={
+                viewMode === "week"
+                  ? "chevron-double-down"
+                  : "chevron-double-up"
+              }
+              size={20}
+              color={colors.primary[600]}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              viewMode === "week" ? changeWeek(1) : changeMonth(1)
+            }
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            disabled={loading}
+          >
+            <MaterialCommunityIcons
+              name="chevron-right"
+              size={22}
+              color={colors.primary[600]}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.weekRow}>
@@ -161,58 +342,27 @@ export default function RoutineCalendar({
       </View>
 
       {loading ? (
-        <View style={styles.loadingRow}>
+        <View
+          style={[
+            styles.loadingRow,
+            viewMode === "week" && styles.loadingRowWeek,
+          ]}
+        >
           <ActivityIndicator color={colors.primary[600]} />
+        </View>
+      ) : viewMode === "week" ? (
+        <View style={styles.weekRow}>
+          {weekCells.map((cell) => renderCell(cell, cell.key))}
         </View>
       ) : (
         <View>
           {Array.from({ length: totalCells / 7 }, (_, week) => (
             <View key={week} style={styles.weekRow}>
-              {cells.slice(week * 7, week * 7 + 7).map((cell, i) =>
-                cell ? (
-                  <TouchableOpacity
-                    key={cell.key}
-                    style={styles.cell}
-                    onPress={() =>
-                      setSelected((prev) =>
-                        prev === cell.key ? null : cell.key,
-                      )
-                    }
-                  >
-                    <View
-                      style={[
-                        styles.dayCircle,
-                        cell.key === todayKey && {
-                          borderColor: colors.primary[600],
-                          borderWidth: 1.5,
-                        },
-                        cell.key === selected && {
-                          backgroundColor: colors.primary[100],
-                        },
-                      ]}
-                    >
-                      <ThemedText
-                        type="overline"
-                        weight={cell.key === todayKey ? "semiBold" : "regular"}
-                      >
-                        {cell.day}
-                      </ThemedText>
-                    </View>
-                    <View
-                      style={[
-                        styles.dot,
-                        {
-                          backgroundColor: days.get(cell.key)
-                            ? colors.secondary[500]
-                            : "transparent",
-                        },
-                      ]}
-                    />
-                  </TouchableOpacity>
-                ) : (
-                  <View key={`blank-${i}`} style={styles.cell} />
-                ),
-              )}
+              {monthCells
+                .slice(week * 7, week * 7 + 7)
+                .map((cell, i) =>
+                  renderCell(cell, cell ? cell.key : `blank-${i}`),
+                )}
             </View>
           ))}
         </View>
@@ -233,6 +383,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 8,
     paddingBottom: 8,
+  },
+  headerTitle: {
+    flexShrink: 1,
+    marginHorizontal: 4,
+    textAlign: "center",
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   weekRow: {
     flexDirection: "row",
@@ -261,8 +421,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  footer: {
-    alignItems: "center",
-    paddingTop: 6,
+  loadingRowWeek: {
+    height: 70,
   },
 });

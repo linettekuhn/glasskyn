@@ -59,7 +59,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         {loading ? (
           <View style={styles.loadingRow}>
-            <ActivityIndicator color={colors.primary[600]} />
+            <ActivityIndicator />
           </View>
         ) : routine === null ? (
           <GlassSurface style={styles.emptyCard}>
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingTop: 16,
     gap: 8,
   },
   header: {

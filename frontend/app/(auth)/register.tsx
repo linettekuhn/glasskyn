@@ -62,7 +62,7 @@ export default function RegisterScreen() {
               <ThemedText type="h1">Create your vanity</ThemedText>
               <ThemedText
                 type="bodyLarge"
-                style={{ color: colors.secondary[600] }}
+                style={{ color: colors.neutral[600] }}
               >
                 Keep your cosmetics fresh and effective.
               </ThemedText>
@@ -112,13 +112,13 @@ export default function RegisterScreen() {
                       <Octicons
                         name="eye-closed"
                         size={20}
-                        color={colors.primary[500]}
+                        color={colors.neutral[400]}
                       />
                     ) : (
                       <Octicons
                         name="eye"
                         size={20}
-                        color={colors.primary[500]}
+                        color={colors.neutral[400]}
                       />
                     )}
                   </Pressable>
@@ -133,10 +133,10 @@ export default function RegisterScreen() {
                 RightIconComponent={MaterialIcons}
               />
             </View>
-            <Divider color={colors.secondary[500]}>
+            <Divider color={colors.neutral[500]}>
               <ThemedText
                 type="overline"
-                style={{ paddingHorizontal: 16, color: colors.secondary[600] }}
+                style={{ paddingHorizontal: 16, color: colors.neutral[600] }}
               >
                 or
               </ThemedText>

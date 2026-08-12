@@ -1,9 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
-import { StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
+import {
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  useColorScheme,
+} from "react-native";
 import { getPreferences, savePreferences } from "@/api/preferences";
 import type { Units, UserPreference } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "./themed-text";
+import GlassSurface from "./glass-surface";
 
 const OPTIONS: { label: string; value: Units }[] = [
   { label: "Imperial", value: "imperial" },
@@ -46,11 +52,11 @@ export default function UnitsSetting() {
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.neutral[200] }]}>
+    <GlassSurface style={styles.card}>
       <ThemedText type="captionSmall" style={{ color: colors.neutral[500] }}>
         {saving ? "Saving…" : "Weight and water amounts use these units."}
       </ThemedText>
-      <View style={styles.segment}>
+      <GlassSurface style={styles.segment}>
         {OPTIONS.map((option, index) => {
           const selected = prefs.units === option.value;
           return (
@@ -60,11 +66,8 @@ export default function UnitsSetting() {
                 styles.segmentOption,
                 {
                   backgroundColor: selected
-                    ? colors.background
+                    ? colors.secondary[300]
                     : "transparent",
-                  borderColor: colors.neutral[300],
-                  borderRightWidth:
-                    index < OPTIONS.length - 1 ? 0 : 1,
                 },
               ]}
               onPress={() => onChange(option.value)}
@@ -81,26 +84,23 @@ export default function UnitsSetting() {
             </TouchableOpacity>
           );
         })}
-      </View>
-    </View>
+      </GlassSurface>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
     padding: 16,
     gap: 12,
   },
   segment: {
     flexDirection: "row",
-    borderRadius: 10,
     overflow: "hidden",
   },
   segmentOption: {
     flex: 1,
     paddingVertical: 10,
     alignItems: "center",
-    borderWidth: 1,
   },
 });

@@ -1,9 +1,5 @@
 import { Colors, getTheme } from "@/constants/theme";
-import {
-  View,
-  StyleSheet,
-  useColorScheme,
-} from "react-native";
+import { View, StyleSheet, useColorScheme } from "react-native";
 import { ThemedText } from "@/components/ui/themed-text";
 import Divider from "@/components/ui/divider";
 import GlassSurface from "@/components/ui/glass-surface";
@@ -64,17 +60,17 @@ export default function TemplateCard({
           <View
             style={[
               styles.recommendedBadge,
-              { backgroundColor: colors.secondary[200] },
+              { backgroundColor: colors.tertiary[200] },
             ]}
           >
             <MaterialCommunityIcons
               name="star"
               size={12}
-              color={colors.secondary[700]}
+              color={colors.tertiary[700]}
             />
             <ThemedText
               type="captionSmall"
-              style={{ color: colors.secondary[700] }}
+              style={{ color: colors.tertiary[700] }}
               weight="semiBold"
             >
               Recommended
@@ -107,11 +103,14 @@ export default function TemplateCard({
               {template.concern_tags.map((tag) => (
                 <View
                   key={tag}
-                  style={[styles.tag, { backgroundColor: colors.primary[100] }]}
+                  style={[
+                    styles.tag,
+                    { backgroundColor: colors.secondary[100] },
+                  ]}
                 >
                   <ThemedText
                     type="captionSmall"
-                    style={{ color: colors.primary[700] }}
+                    style={{ color: colors.secondary[700] }}
                   >
                     {SKIN_TYPE_LABELS[tag] || tag}
                   </ThemedText>
@@ -133,11 +132,14 @@ export default function TemplateCard({
               {template.skin_type_tags.map((tag) => (
                 <View
                   key={tag}
-                  style={[styles.tag, { backgroundColor: colors.primary[100] }]}
+                  style={[
+                    styles.tag,
+                    { backgroundColor: colors.secondary[100] },
+                  ]}
                 >
                   <ThemedText
                     type="captionSmall"
-                    style={{ color: colors.primary[700] }}
+                    style={{ color: colors.secondary[700] }}
                   >
                     {SKIN_TYPE_LABELS[tag] || tag}
                   </ThemedText>

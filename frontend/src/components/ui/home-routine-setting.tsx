@@ -6,6 +6,7 @@ import type { Routine, UserPreference } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "./themed-text";
 import ThemedDropdown, { type DropdownOption } from "./themed-dropdown";
+import GlassSurface from "./glass-surface";
 
 const AUTOMATIC_VALUE = "";
 
@@ -59,7 +60,7 @@ export default function HomeRoutineSetting() {
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.neutral[200] }]}>
+    <GlassSurface style={styles.card}>
       <ThemedText type="captionSmall" style={{ color: colors.neutral[500] }}>
         {saving ? "Saving…" : "Choose which routine shows on the status card."}
       </ThemedText>
@@ -69,13 +70,12 @@ export default function HomeRoutineSetting() {
         onChange={onChange}
         placeholder="Select a routine"
       />
-    </View>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
     padding: 16,
     gap: 12,
   },

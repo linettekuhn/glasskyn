@@ -77,9 +77,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View
-        style={[styles.header, { borderBottomColor: colors.neutral[200] }]}
-      >
+      <View style={[styles.header, { borderBottomColor: colors.neutral[200] }]}>
         <ThemedText type="h2">Change Password</ThemedText>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -102,12 +100,8 @@ export default function ChangePasswordScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <ThemedText
-            type="bodySmall"
-            style={{ color: colors.neutral[600] }}
-          >
-            You'll be signed out on all devices after updating your
-            password.
+          <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
+            You'll be signed out on all devices after updating your password.
           </ThemedText>
 
           <View style={styles.field}>
@@ -146,10 +140,10 @@ export default function ChangePasswordScreen() {
                   <Octicons
                     name="eye-closed"
                     size={20}
-                    color={colors.primary[500]}
+                    color={colors.neutral[400]}
                   />
                 ) : (
-                  <Octicons name="eye" size={20} color={colors.primary[500]} />
+                  <Octicons name="eye" size={20} color={colors.neutral[400]} />
                 )}
               </Pressable>
             </ThemedTextInput>

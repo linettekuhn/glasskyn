@@ -156,7 +156,7 @@ export default function WaterIntakeCard() {
   const progress = goalMl > 0 ? Math.min(1, intakeMl / goalMl) : 0;
   const percent = Math.round(progress * 100);
 
-  const accent = goalMet ? colors.success[500] : colors.primary[500];
+  const accent = goalMet ? colors.tertiary[600] : colors.secondary[500];
 
   const displayMl = (ml: number) =>
     isMetric ? `${ml}ml` : `${Math.round(mlToOz(ml))}oz`;
@@ -333,7 +333,7 @@ export default function WaterIntakeCard() {
       </View>
 
       {goalMet ? (
-        <ThemedText type="bodySmall" style={{ color: colors.success[600] }}>
+        <ThemedText type="bodySmall" style={{ color: colors.primary[600] }}>
           {GOAL_MET_MESSAGE}
         </ThemedText>
       ) : (
@@ -569,7 +569,7 @@ export default function WaterIntakeCard() {
                 <ThemedText
                   type="bodyLarge"
                   weight="semiBold"
-                  style={{ color: colors.primary[600] }}
+                  style={{ color: colors.secondary[600] }}
                 >
                   {isMetric
                     ? `Recommended: ${roundTo10(recommendedMl)}ml/day`
@@ -581,7 +581,7 @@ export default function WaterIntakeCard() {
         </View>
       )}
 
-      {burstActive && <CelebrationBurst color={colors.success[500]} />}
+      {burstActive && <CelebrationBurst color={colors.tertiary[600]} />}
     </GlassSurface>
   );
 }

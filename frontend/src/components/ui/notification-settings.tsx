@@ -66,7 +66,7 @@ export default function NotificationSettings() {
         ? prefs?.routine_digest_am_time
         : timeTarget === "pm"
           ? prefs?.routine_digest_pm_time
-          : prefs?.water_reminder_time ?? "12:00";
+          : (prefs?.water_reminder_time ?? "12:00");
     const [h, m] = (value ?? "12:00").split(":").map(Number);
     const d = new Date();
     d.setHours(h || 12, m || 0, 0, 0);
@@ -102,7 +102,7 @@ export default function NotificationSettings() {
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.neutral[200] }]}>
+    <GlassSurface style={styles.card}>
       <ThemedText type="captionSmall" style={{ color: colors.neutral[500] }}>
         {saving ? "Saving…" : "Reminders are delivered as push notifications."}
       </ThemedText>
@@ -139,9 +139,7 @@ export default function NotificationSettings() {
           value={prefs.routine_digest_am_time != null}
           onValueChange={(v: boolean) =>
             update({
-              routine_digest_am_time: v
-                ? DIGEST_DEFAULT_TIMES.am
-                : null,
+              routine_digest_am_time: v ? DIGEST_DEFAULT_TIMES.am : null,
             })
           }
           trackColor={{ true: colors.secondary[500] }}
@@ -170,9 +168,7 @@ export default function NotificationSettings() {
           value={prefs.routine_digest_pm_time != null}
           onValueChange={(v: boolean) =>
             update({
-              routine_digest_pm_time: v
-                ? DIGEST_DEFAULT_TIMES.pm
-                : null,
+              routine_digest_pm_time: v ? DIGEST_DEFAULT_TIMES.pm : null,
             })
           }
           trackColor={{ true: colors.secondary[500] }}
@@ -243,13 +239,12 @@ export default function NotificationSettings() {
           onChange={onTimeChange}
         />
       )}
-    </View>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
     padding: 16,
     gap: 12,
   },

@@ -47,7 +47,7 @@ export default function ConcernsScreen() {
     <OnboardingStep currentStep={2}>
       <View style={styles.header}>
         <ThemedText type="h1">Any concerns you're focused on?</ThemedText>
-        <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
+        <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
           Select as many as apply. This helps us flag ingredients that matter to
           you.
         </ThemedText>

@@ -60,14 +60,14 @@ export default function ScannerScreen() {
         activeOpacity={0.7}
       >
         <View
-          style={[styles.placeholder, { borderColor: colors.primary[300] }]}
+          style={[styles.placeholder, { borderColor: colors.primary[400] }]}
         >
-          <TapCameraIcon color={colors.primary[300]} />
+          <TapCameraIcon color={colors.primary[500]} />
           <View style={{ alignItems: "center", gap: 4 }}>
             <ThemedText type="h2">Skip the Typing</ThemedText>
             <ThemedText
               type="bodyLarge"
-              style={{ color: colors.primary[600], textAlign: "center" }}
+              style={{ color: colors.neutral[500], textAlign: "center" }}
             >
               Tap to snap your product's labels and we'll take it from there.
             </ThemedText>
@@ -92,14 +92,14 @@ export default function ScannerScreen() {
         activeOpacity={0.7}
       >
         <View
-          style={[styles.placeholder, { borderColor: colors.primary[300] }]}
+          style={[styles.placeholder, { borderColor: colors.primary[400] }]}
         >
-          <TapCameraIcon color={colors.primary[400]} />
+          <TapCameraIcon color={colors.primary[500]} />
           <View style={{ alignItems: "center", gap: 4 }}>
             <ThemedText type="h2">Camera Access Needed</ThemedText>
             <ThemedText
               type="bodyLarge"
-              style={{ color: colors.primary[600], textAlign: "center" }}
+              style={{ color: colors.neutral[500], textAlign: "center" }}
             >
               Allow camera access to scan your product labels.
             </ThemedText>
@@ -129,7 +129,7 @@ export default function ScannerScreen() {
           <ThemedText type="h2">Camera Access Blocked</ThemedText>
           <ThemedText
             type="bodyLarge"
-            style={{ color: colors.primary[600], textAlign: "center" }}
+            style={{ color: colors.neutral[500], textAlign: "center" }}
           >
             To scan your labels, enable camera access in your phone's
             Settings.{" "}

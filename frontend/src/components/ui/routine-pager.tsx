@@ -48,7 +48,7 @@ export default function RoutinePager({
       <FlatList
         ref={flatListRef}
         data={routines}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item: Routine) => item.id.toString()}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -58,7 +58,7 @@ export default function RoutinePager({
         contentContainerStyle={styles.listContent}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        renderItem={({ item }) => (
+        renderItem={({ item }: { item: Routine }) => (
           <View style={[styles.page, { width: CARD_WIDTH }]}>
             <RoutineCard
               routine={item}
@@ -78,7 +78,7 @@ export default function RoutinePager({
                 {
                   backgroundColor:
                     index === currentIndex
-                      ? colors.primary[600]
+                      ? colors.secondary[600]
                       : colors.neutral[400],
                 },
               ]}

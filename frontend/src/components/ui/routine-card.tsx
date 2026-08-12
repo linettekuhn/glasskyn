@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { router } from "expo-router";
-import type { Routine, Product } from "@/types";
+import type { Routine, Product, RoutineStep } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { FREQUENCY_LABELS } from "@/constants/routine";
 import { markStepComplete } from "@/api/routines";
@@ -16,6 +16,7 @@ import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import DayNightToggle from "./day-night-toggle";
 import ThemedButton from "./themed-button";
 import IconButton from "./icon-button";
+import GlassSurface from "./glass-surface";
 
 const STEP_TYPE_LABELS: Record<string, string> = {
   cleanse: "Cleanse",
@@ -118,7 +119,7 @@ export default function RoutineCard({
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.neutral[200] }]}>
+    <GlassSurface style={styles.card}>
       <View style={styles.cardHeader}>
         <ThemedText type="h3" italic numberOfLines={1}>
           {routine.name}
@@ -143,8 +144,8 @@ export default function RoutineCard({
                   : "checkbox-multiple-marked-circle"
               }
               iconSize={24}
-              iconColor={colors.primary[600]}
-              backgroundColor="rgba(0,0,0,0.2)"
+              iconColor={colors.neutral[600]}
+              backgroundColor={colors.neutral[300]}
             />
             <IconButton
               onPress={() =>
@@ -156,16 +157,16 @@ export default function RoutineCard({
               IconComponent={MaterialIcons}
               iconName="edit"
               iconSize={24}
-              iconColor={colors.primary[600]}
-              backgroundColor="rgba(0,0,0,0.2)"
+              iconColor={colors.neutral[600]}
+              backgroundColor={colors.neutral[300]}
             />
           </View>
         </View>
       </View>
       <FlatList
         data={filteredSteps}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item, index }) => {
+        keyExtractor={(item: RoutineStep) => item.id.toString()}
+        renderItem={({ item, index }: { item: RoutineStep; index: number }) => {
           const isChecked = completedSteps.has(item.id);
           const productName = item.product_id
             ? productMap.get(item.product_id)?.name
@@ -183,7 +184,7 @@ export default function RoutineCard({
                     : "checkbox-blank-circle-outline"
                 }
                 size={20}
-                color={isChecked ? colors.primary[600] : colors.neutral[500]}
+                color={isChecked ? colors.primary[600] : colors.neutral[300]}
                 style={{ marginTop: 4 }}
               />
               <View>
@@ -201,7 +202,7 @@ export default function RoutineCard({
         }}
         contentContainerStyle={styles.listContent}
       />
-    </View>
+    </GlassSurface>
   );
 }
 

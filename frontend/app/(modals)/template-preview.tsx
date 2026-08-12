@@ -94,14 +94,18 @@ export default function TemplatePreviewScreen() {
           <ThemedText type="h1" italic>
             {template.name}
           </ThemedText>
-          <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
+          <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
             {template.description}
           </ThemedText>
         </View>
 
         {morningSteps.length > 0 && (
           <View style={styles.section}>
-            <ThemedText type="overline" weight="bold">
+            <ThemedText
+              type="overline"
+              weight="bold"
+              style={{ alignSelf: "center" }}
+            >
               <MaterialIcons name="sunny" size={12} color={colors.text} />{" "}
               morning steps
             </ThemedText>
@@ -123,7 +127,11 @@ export default function TemplatePreviewScreen() {
 
         {nightSteps.length > 0 && (
           <View style={styles.section}>
-            <ThemedText type="overline" weight="bold">
+            <ThemedText
+              type="overline"
+              weight="bold"
+              style={{ alignSelf: "center" }}
+            >
               <MaterialCommunityIcons
                 name="moon-waning-crescent"
                 size={12}
@@ -148,11 +156,7 @@ export default function TemplatePreviewScreen() {
         )}
       </ScrollView>
 
-      <GlassSurface
-        style={styles.bottomBar}
-        radius={0}
-        border={false}
-      >
+      <GlassSurface style={styles.bottomBar} radius={0} border={false}>
         <ThemedButton
           text="Use this Routine"
           onPress={handleSelect}

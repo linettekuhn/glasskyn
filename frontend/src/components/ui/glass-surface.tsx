@@ -21,6 +21,7 @@ export function withAlpha(hex: string, alpha: number): string {
 interface GlassSurfaceProps {
   intensity?: number;
   alpha?: number;
+  color?: string;
   radius?: number;
   border?: boolean;
   blur?: boolean;
@@ -33,6 +34,7 @@ interface GlassSurfaceProps {
 export default function GlassSurface({
   intensity = 40,
   alpha = 0.55,
+  color,
   radius = 16,
   border = true,
   blur = true,
@@ -58,7 +60,7 @@ export default function GlassSurface({
       style={[
         StyleSheet.absoluteFill,
         {
-          backgroundColor: withAlpha(colors.background, alpha),
+          backgroundColor: withAlpha(color ?? colors.background, alpha),
           borderRadius: radius,
           borderWidth: border ? StyleSheet.hairlineWidth : 0,
           borderColor,
