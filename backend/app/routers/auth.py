@@ -10,6 +10,8 @@ from app.schemas.auth import (
     RefreshResponse,
     UserUpdate,
     ChangePasswordRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
 )
 from sqlalchemy.orm import Session
 from app.middleware.auth import get_db, get_current_user
@@ -29,9 +31,13 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
     hash_refresh_token,
+    generate_reset_code,
+    hash_reset_code,
 )
 from app.core import config
 from app.models.refresh_token import RefreshToken
+from app.models.password_reset_token import PasswordResetToken
+from app.services.email import send_password_reset_code
 from jose import JWTError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -102,6 +108,84 @@ async def login(body: LoginRequest, response: Response, db: Session = Depends(ge
         token_type="bearer",
         user=UserOut.model_validate(user),
     )
+
+
+@router.post("/forgot-password", status_code=202)
+async def forgot_password(
+    body: ForgotPasswordRequest, db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.email == body.email).first()
+
+    # always return 202 regardless of whether the email exists (no enumeration)
+    if not user:
+        return None
+
+    # invalidate any prior unused codes for this user
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.is_used == False,
+    ).update({"is_used": True})
+    db.commit()
+
+    code = generate_reset_code()
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=config.PASSWORD_RESET_CODE_EXPIRE_MINUTES
+    )
+    db_token = PasswordResetToken(
+        user_id=user.id,
+        token_hash=hash_reset_code(code),
+        expires_at=expires_at,
+    )
+    db.add(db_token)
+    db.commit()
+
+    send_password_reset_code(user.email, code)
+
+    return None
+
+
+@router.post("/reset-password", status_code=204)
+async def reset_password(
+    body: ResetPasswordRequest, db: Session = Depends(get_db)
+):
+    code_hash = hash_reset_code(body.code.strip())
+    db_token = (
+        db.query(PasswordResetToken)
+        .filter(
+            PasswordResetToken.token_hash == code_hash,
+            PasswordResetToken.is_used == False,
+        )
+        .first()
+    )
+
+    if not db_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset code"
+        )
+
+    if db_token.expires_at < datetime.now(timezone.utc):
+        db_token.is_used = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset code has expired",
+        )
+
+    user = db.get(User, db_token.user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User not found"
+        )
+
+    user.hashed_password = hash_password(body.new_password)
+    db_token.is_used = True
+    # revoke all refresh tokens so other sessions are signed out
+    db.query(RefreshToken).filter(
+        RefreshToken.user_id == user.id,
+        RefreshToken.is_revoked == False,
+    ).update({"is_revoked": True})
+    db.commit()
+    return None
 
 
 @router.post("/refresh", response_model=RefreshResponse)

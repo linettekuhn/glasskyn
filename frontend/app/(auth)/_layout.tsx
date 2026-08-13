@@ -9,6 +9,8 @@ export default function AuthLayout() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" } }}>
         <Stack.Screen name="login" options={{ gestureEnabled: false }} />
         <Stack.Screen name="register" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="forgot-password" />
+        <Stack.Screen name="reset-password" />
       </Stack>
     </SafeAreaView>
   );

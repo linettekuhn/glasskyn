@@ -17,6 +17,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
 REFRESH_TOKEN_EXPIRE_MINUTES: int = 7 * 24 * 60
 
+PASSWORD_RESET_CODE_EXPIRE_MINUTES: int = int(
+    os.environ.get("PASSWORD_RESET_CODE_EXPIRE_MINUTES", "15")
+)
+
+EMAIL_FROM: str = os.environ.get("EMAIL_FROM", "")
+SES_REGION: str = os.environ.get("SES_REGION", os.environ.get("AWS_REGION", "us-east-1"))
+
 OBF_API_BASE_URL: str = os.environ.get(
     "OBF_API_BASE_URL", "https://world.openbeautyfacts.org"
 )

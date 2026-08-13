@@ -38,6 +38,17 @@ export async function changePassword(
   });
 }
 
+export async function forgotPassword(email: string) {
+  await apiClient.post('/auth/forgot-password', { email });
+}
+
+export async function resetPassword(code: string, newPassword: string) {
+  await apiClient.post('/auth/reset-password', {
+    code,
+    new_password: newPassword,
+  });
+}
+
 export async function deleteAccount() {
   await apiClient.delete('/auth/me');
 }

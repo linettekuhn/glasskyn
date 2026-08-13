@@ -2,7 +2,7 @@ import os
 import sys
 from logging.config import fileConfig
 from app.db.base_class import Base
-from app.models import User, Product, ScanResult, Alert, DeviceToken, RefreshToken, SkinProfile, Routine, RoutineStep, RoutineTemplate, RoutineTemplateStep, ChatMessage, ChatSession, RoutineStepCompletion, UserPreference, WaterIntake
+from app.models import User, Product, ScanResult, Alert, DeviceToken, RefreshToken, PasswordResetToken, SkinProfile, Routine, RoutineStep, RoutineTemplate, RoutineTemplateStep, ChatMessage, ChatSession, RoutineStepCompletion, UserPreference, WaterIntake
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 

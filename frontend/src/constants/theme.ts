@@ -21,10 +21,10 @@ type ColorScale = Record<Shade, string>;
 type Rgb = [number, number, number];
 
 const BASE_COLORS = {
-  primary: "#7caba6",
-  secondary: "#a0bf71",
-  tertiary: "#4d837f",
-  neutral: "#9c9c9a",
+  primary: "#34beac",
+  secondary: "#fa855a",
+  tertiary: "#ffa43a",
+  neutral: "#c99279",
 };
 
 // How far each shade blends toward white (100-400) or black (600-900).

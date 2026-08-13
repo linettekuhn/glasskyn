@@ -110,17 +110,21 @@ export default function LoginScreen() {
                     )}
                   </Pressable>
                 </ThemedTextInput>
-                {/* TOOD: implement forgot password functionality */}
-                <ThemedText
-                  style={{
-                    alignSelf: "flex-end",
-                    color: colors.secondary[700],
-                  }}
-                  type="caption"
-                  weight="medium"
+                <Pressable
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  onPress={() => router.push("/(auth)/forgot-password")}
                 >
-                  Forgot password?
-                </ThemedText>
+                  <ThemedText
+                    style={{
+                      alignSelf: "flex-end",
+                      color: colors.secondary[700],
+                    }}
+                    type="caption"
+                    weight="medium"
+                  >
+                    Forgot password?
+                  </ThemedText>
+                </Pressable>
               </View>
               <ThemedButton
                 text="Sign in"

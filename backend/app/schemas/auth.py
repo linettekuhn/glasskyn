@@ -27,6 +27,17 @@ class LoginRequest(BaseModel):
     password: str
 
 
+# expected body on POST /auth/forgot-password
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+# expected body on POST /auth/reset-password
+class ResetPasswordRequest(BaseModel):
+    code: str
+    new_password: str
+
+
 # user schema
 class UserOut(BaseModel):
     id: int

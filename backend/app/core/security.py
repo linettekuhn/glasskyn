@@ -1,4 +1,5 @@
 import hashlib
+import secrets
 from datetime import timedelta, datetime, timezone
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -57,3 +58,12 @@ def decode_token(token: str, expected_type: str | None = None) -> dict:
 
 def hash_refresh_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+# generates a 6-digit password reset code using a cryptographically secure RNG
+def generate_reset_code() -> str:
+    return str(secrets.randbelow(1_000_000)).zfill(6)
+
+
+def hash_reset_code(code: str) -> str:
+    return hashlib.sha256(code.encode()).hexdigest()
