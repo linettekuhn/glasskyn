@@ -123,13 +123,9 @@ export default function ProductPickerScreen() {
         />
       )}
 
-      <GlassSurface
-        style={[styles.bottomBar, { borderTopColor: colors.neutral[300] }]}
-        radius={0}
-        border={false}
-      >
+      <View style={[styles.bottomBar, { borderTopColor: colors.neutral[300] }]}>
         <ThemedButton text="Cancel" outlined onPress={() => router.back()} />
-      </GlassSurface>
+      </View>
     </SafeAreaView>
   );
 }
