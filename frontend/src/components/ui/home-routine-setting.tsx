@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { StyleSheet, View, useColorScheme } from "react-native";
-import { listRoutines, localToday } from "@/api/routines";
+import { useState, useCallback } from "react";
+import { useFocusEffect } from "expo-router";
+import { StyleSheet, useColorScheme } from "react-native";
 import { getPreferences, savePreferences } from "@/api/preferences";
 import type { Routine, UserPreference } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
@@ -11,38 +11,32 @@ import GlassSurface from "./glass-surface";
 const AUTOMATIC_VALUE = "";
 
 type HomeRoutineSettingProps = {
-  onReady?: (hasRoutines: boolean) => void;
+  routines: Routine[];
 };
 
-export default function HomeRoutineSetting({ onReady }: HomeRoutineSettingProps) {
+export default function HomeRoutineSetting({ routines }: HomeRoutineSettingProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const [routines, setRoutines] = useState<Routine[]>([]);
   const [prefs, setPrefs] = useState<UserPreference | null>(null);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const onReadyRef = useRef(onReady);
-  onReadyRef.current = onReady;
 
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all([listRoutines("skincare", localToday()), getPreferences()])
-      .then(([routineList, preference]) => {
-        if (cancelled) return;
-        setRoutines(routineList);
-        setPrefs(preference);
-        onReadyRef.current?.(routineList.length > 0);
-      })
-      .catch(() => {
-        if (!cancelled) onReadyRef.current?.(false);
-      })
-      .finally(() => {
-        if (!cancelled) setLoaded(true);
-      });
-    return () => {
-      cancelled = true;
-    };
+  const fetchPreferences = useCallback(async () => {
+    try {
+      const preference = await getPreferences();
+      setPrefs(preference);
+    } catch {
+      // keep existing data on background refresh errors
+    } finally {
+      setLoaded(true);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchPreferences();
+    }, [fetchPreferences]),
+  );
 
   const options: DropdownOption[] = [
     { label: "Automatic (active)", value: AUTOMATIC_VALUE },
@@ -64,7 +58,17 @@ export default function HomeRoutineSetting({ onReady }: HomeRoutineSettingProps)
       .finally(() => setSaving(false));
   }, []);
 
-  if (!loaded || routines.length === 0) {
+  if (!loaded) {
+    return (
+      <GlassSurface style={styles.card}>
+        <ThemedText type="captionSmall" style={{ color: colors.neutral[500] }}>
+          Loading…
+        </ThemedText>
+      </GlassSurface>
+    );
+  }
+
+  if (routines.length === 0) {
     return null;
   }
 

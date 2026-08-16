@@ -14,8 +14,8 @@ import { useAuth } from "../../src/contexts/AuthContext";
 import NotificationSettings from "../../src/components/ui/notification-settings";
 import HomeRoutineSetting from "../../src/components/ui/home-routine-setting";
 import UnitsSetting from "../../src/components/ui/units-setting";
-import { getSkinProfile } from "../../src/api/routines";
-import type { SkinProfile } from "../../src/types";
+import { getSkinProfile, listRoutines, localToday } from "../../src/api/routines";
+import type { Routine, SkinProfile } from "../../src/types";
 import { Colors, getTheme } from "../../src/constants/theme";
 import { ThemedText } from "../../src/components/ui/themed-text";
 import UserAvatar from "../../src/components/ui/user-avatar";
@@ -84,7 +84,7 @@ export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const [skinProfile, setSkinProfile] = useState<SkinProfile | null>(null);
-  const [showHomeRoutine, setShowHomeRoutine] = useState(false);
+  const [routines, setRoutines] = useState<Routine[]>([]);
 
   const fetchSkinProfile = useCallback(() => {
     getSkinProfile()
@@ -95,6 +95,9 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchSkinProfile();
+      listRoutines("skincare", localToday())
+        .then(setRoutines)
+        .catch(() => {});
     }, [fetchSkinProfile]),
   );
 
@@ -222,12 +225,12 @@ export default function ProfileScreen() {
           </GlassSurface>
         </View>
 
-        {showHomeRoutine && (
+        {routines.length > 0 && (
           <View style={styles.section}>
             <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
               Home Screen
             </ThemedText>
-            <HomeRoutineSetting onReady={setShowHomeRoutine} />
+            <HomeRoutineSetting routines={routines} />
           </View>
         )}
 
