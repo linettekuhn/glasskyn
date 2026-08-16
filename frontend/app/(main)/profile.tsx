@@ -84,6 +84,7 @@ export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const [skinProfile, setSkinProfile] = useState<SkinProfile | null>(null);
+  const [showHomeRoutine, setShowHomeRoutine] = useState(false);
 
   const fetchSkinProfile = useCallback(() => {
     getSkinProfile()
@@ -221,12 +222,14 @@ export default function ProfileScreen() {
           </GlassSurface>
         </View>
 
-        <View style={styles.section}>
-          <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
-            Home Screen
-          </ThemedText>
-          <HomeRoutineSetting />
-        </View>
+        {showHomeRoutine && (
+          <View style={styles.section}>
+            <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
+              Home Screen
+            </ThemedText>
+            <HomeRoutineSetting onReady={setShowHomeRoutine} />
+          </View>
+        )}
 
         <View style={styles.section}>
           <ThemedText type="overline" style={{ color: colors.neutral[600] }}>

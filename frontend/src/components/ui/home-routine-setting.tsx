@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { StyleSheet, View, useColorScheme } from "react-native";
 import { listRoutines, localToday } from "@/api/routines";
 import { getPreferences, savePreferences } from "@/api/preferences";
@@ -10,13 +10,19 @@ import GlassSurface from "./glass-surface";
 
 const AUTOMATIC_VALUE = "";
 
-export default function HomeRoutineSetting() {
+type HomeRoutineSettingProps = {
+  onReady?: (hasRoutines: boolean) => void;
+};
+
+export default function HomeRoutineSetting({ onReady }: HomeRoutineSettingProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [prefs, setPrefs] = useState<UserPreference | null>(null);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     let cancelled = false;
@@ -25,8 +31,11 @@ export default function HomeRoutineSetting() {
         if (cancelled) return;
         setRoutines(routineList);
         setPrefs(preference);
+        onReadyRef.current?.(routineList.length > 0);
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) onReadyRef.current?.(false);
+      })
       .finally(() => {
         if (!cancelled) setLoaded(true);
       });

@@ -156,6 +156,11 @@ export default function ThemedButton({
           backgroundColor: bgColor,
           borderColor: outlined ? c : bgColor,
           alignSelf: alignment ?? "stretch",
+          shadowColor: colors.neutral[900],
+          shadowOffset: { width: 0, height: outlined ? 1 : 4 },
+          shadowOpacity: outlined ? 0.08 : 0.2,
+          shadowRadius: outlined ? 3 : 8,
+          elevation: outlined ? 1 : 5,
         },
       ]}
     >
