@@ -35,6 +35,37 @@ def match_products_to_step(
     return product.id if product else None
 
 
+def set_main_routine(db: Session, routine: Routine) -> None:
+    """Make this the user's single main routine, deactivating the others."""
+    db.query(Routine).filter(
+        Routine.user_id == routine.user_id,
+        Routine.routine_type == routine.routine_type,
+        Routine.is_main_routine == True,
+    ).update({"is_main_routine": False})
+    routine.is_main_routine = True
+    db.flush()
+
+
+def promote_main_routine(
+    db: Session,
+    user_id: int,
+    routine_type: str = "skincare",
+) -> None:
+    """Make the newest remaining routine the main one (used after deleting main)."""
+    next_routine = (
+        db.query(Routine)
+        .filter(
+            Routine.user_id == user_id,
+            Routine.routine_type == routine_type,
+        )
+        .order_by(Routine.created_at.desc())
+        .first()
+    )
+    if next_routine:
+        next_routine.is_main_routine = True
+        db.flush()
+
+
 def clone_template_to_routine(
     db: Session,
     user_id: int,
@@ -46,10 +77,10 @@ def clone_template_to_routine(
         name=name or template.name,
         source="template",
         routine_type=template.routine_type,
-        is_active=True,
     )
     db.add(routine)
     db.flush()
+    set_main_routine(db, routine)
 
     template_steps = (
         db.query(RoutineTemplateStep)

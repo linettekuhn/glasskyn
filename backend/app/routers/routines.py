@@ -9,6 +9,7 @@ from app.schemas.routine import (
     SkinProfileCreate, SkinProfileUpdate, SkinProfileOut,
     RoutineCreate, RoutineUpdate, RoutineOut, RoutineStepOut, RoutineStepUpdate,
     RoutineTemplateOut, TemplateCloneRequest, StepCompleteIn, CalendarDayOut,
+    MainRoutineSet,
 )
 import json
 
@@ -18,7 +19,7 @@ from collections import Counter
 import openai
 from app.core.config import OPENAI_API_KEY, OPENAI_MODEL
 from app.models.product import Product
-from app.services.routine import clone_template_to_routine
+from app.services.routine import clone_template_to_routine, set_main_routine, promote_main_routine
 from typing import List, Optional
 
 router = APIRouter(prefix="/routines", tags=["routines"])
@@ -231,14 +232,10 @@ def generate_routine(
         name=parsed.get("name", "AI-Generated Routine"),
         source="llm_generated",
         routine_type="skincare",
-        is_active=True,
     )
-    db.query(Routine).filter(
-        Routine.user_id == current_user.id,
-        Routine.is_active == True,
-    ).update({"is_active": False})
     db.add(routine)
     db.flush()
+    set_main_routine(db, routine)
 
     for s in parsed.get("steps", []):
         step = RoutineStep(
@@ -308,14 +305,10 @@ def create_routine(
         name=body.name,
         source=body.source,
         routine_type=body.routine_type,
-        is_active=True,
     )
-    db.query(Routine).filter(
-        Routine.user_id == current_user.id,
-        Routine.is_active == True,
-    ).update({"is_active": False})
     db.add(routine)
     db.flush()
+    set_main_routine(db, routine)
 
     if body.steps:
         for s in body.steps:
@@ -355,8 +348,8 @@ def list_routines(
     return routines
 
 
-@router.get("/active", response_model=RoutineOut)
-def get_active_routine(
+@router.get("/main", response_model=RoutineOut)
+def get_main_routine(
     routine_type: str = "skincare",
     on_date: Optional[date] = Query(default=None, alias="date"),
     db: Session = Depends(get_db),
@@ -367,15 +360,55 @@ def get_active_routine(
         db.query(Routine)
         .filter(
             Routine.user_id == current_user.id,
-            Routine.is_active == True,
+            Routine.is_main_routine == True,
             Routine.routine_type == routine_type,
         )
+        .order_by(Routine.created_at.desc())
         .first()
     )
     if not routine:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active routine found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No main routine found")
     routine.steps = db.query(RoutineStep).filter(RoutineStep.routine_id == routine.id).order_by(RoutineStep.step_order).all()
     _attach_completed_today(db, current_user.id, routine.steps, on_date)
+    return routine
+
+
+@router.put("/main", response_model=RoutineOut)
+def set_main_routine_endpoint(
+    body: MainRoutineSet,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    routine_type = "skincare"
+    if body.routine_id is not None:
+        routine = (
+            db.query(Routine)
+            .filter(
+                Routine.id == body.routine_id,
+                Routine.user_id == current_user.id,
+                Routine.routine_type == routine_type,
+            )
+            .first()
+        )
+        if not routine:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Routine not found")
+    else:
+        routine = (
+            db.query(Routine)
+            .filter(
+                Routine.user_id == current_user.id,
+                Routine.routine_type == routine_type,
+            )
+            .order_by(Routine.created_at.desc())
+            .first()
+        )
+        if not routine:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No routines found")
+
+    set_main_routine(db, routine)
+    db.commit()
+    db.refresh(routine)
+    routine.steps = db.query(RoutineStep).filter(RoutineStep.routine_id == routine.id).order_by(RoutineStep.step_order).all()
     return routine
 
 
@@ -477,6 +510,9 @@ def update_routine(
     for field, value in updates.items():
         setattr(routine, field, value)
 
+    if body.is_main_routine is True:
+        set_main_routine(db, routine)
+
     if body.steps is not None:
         db.query(RoutineStep).filter(RoutineStep.routine_id == routine.id).delete()
         for s in body.steps:
@@ -509,8 +545,13 @@ def delete_routine(
     )
     if not routine:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Routine not found")
+    was_main = routine.is_main_routine
+    routine_type = routine.routine_type
     db.delete(routine)
     db.commit()
+    if was_main:
+        promote_main_routine(db, current_user.id, routine_type)
+        db.commit()
     return None
 
 

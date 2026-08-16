@@ -60,7 +60,16 @@ export async function getActiveRoutine(
 ): Promise<Routine> {
   const params: Record<string, string> = { routine_type: routineType };
   if (date) params.date = date;
-  const response = await apiClient.get("/routines/active", { params });
+  const response = await apiClient.get("/routines/main", { params });
+  return response.data;
+}
+
+export async function setMainRoutine(
+  routineId: number | null,
+): Promise<Routine> {
+  const response = await apiClient.put("/routines/main", {
+    routine_id: routineId,
+  });
   return response.data;
 }
 
@@ -75,7 +84,7 @@ export async function updateRoutine(
   id: number,
   data: {
     name?: string;
-    is_active?: boolean;
+    is_main_routine?: boolean;
     steps?: {
       step_order: number;
       product_id?: number | null;

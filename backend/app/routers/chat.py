@@ -267,9 +267,9 @@ async def send_message(
             db.query(Routine)
             .filter(
                 Routine.user_id == current_user.id,
-                Routine.is_active == True,
+                Routine.is_main_routine == True,
             )
-            .order_by(Routine.id.desc())
+            .order_by(Routine.created_at.desc())
             .first()
         )
         routine_id = newest_routine.id if newest_routine else None

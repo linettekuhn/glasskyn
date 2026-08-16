@@ -113,7 +113,7 @@ export interface Routine {
   name: string;
   source: RoutineSource;
   routine_type: RoutineType;
-  is_active: boolean;
+  is_main_routine: boolean;
   steps: RoutineStep[];
   created_at: string;
   updated_at: string;
@@ -148,7 +148,6 @@ export interface UserPreference {
   water_climate: string | null;
   routine_digest_am_time: string | null;
   routine_digest_pm_time: string | null;
-  home_routine_id: number | null;
 }
 
 export interface WaterIntake {

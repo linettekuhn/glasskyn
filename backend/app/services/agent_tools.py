@@ -12,6 +12,7 @@ from app.core.config import OPENAI_API_KEY, OPENAI_MODEL
 from app.models.product import Product
 from app.models.routine import SkinProfile, Routine, RoutineStep
 from app.services.rag_retrieval import retrieve_single, retrieve_safety_records
+from app.services.routine import set_main_routine
 
 logger = logging.getLogger(__name__)
 
@@ -295,19 +296,15 @@ def create_agent_tools(db: Session, user_id: int) -> list:
                     )
                 summary += f"\n\nRaw data:\n{content}"
 
-                db.query(Routine).filter(
-                    Routine.user_id == user_id,
-                    Routine.is_active == True,
-                ).update({"is_active": False})
                 routine = Routine(
                     user_id=user_id,
                     name=parsed.get("name", "AI-Generated Routine"),
                     source="llm_generated",
                     routine_type="skincare",
-                    is_active=True,
                 )
                 db.add(routine)
                 db.flush()
+                set_main_routine(db, routine)
                 for s in steps:
                     db.add(RoutineStep(
                         routine_id=routine.id,
@@ -394,7 +391,7 @@ def create_agent_tools(db: Session, user_id: int) -> list:
 
     @tool
     def modify_routine(request: str) -> str:
-        """Modify the user's current active routine based on a natural language request.
+        """Modify the user's main routine based on a natural language request.
 
         Use when the user asks to change, swap, replace, add, or remove a step
         in their routine. Examples: 'swap my moisturizer for something lighter',
@@ -409,13 +406,13 @@ def create_agent_tools(db: Session, user_id: int) -> list:
                 db.query(Routine)
                 .filter(
                     Routine.user_id == user_id,
-                    Routine.is_active == True,
+                    Routine.is_main_routine == True,
                 )
-                .order_by(Routine.id.desc())
+                .order_by(Routine.created_at.desc())
                 .first()
             )
             if not routine:
-                return "You don't have an active routine. Create one first with generate_routine."
+                return "You don't have a main routine yet. Create one first with generate_routine."
 
             steps = (
                 db.query(RoutineStep)

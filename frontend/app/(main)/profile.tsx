@@ -14,7 +14,11 @@ import { useAuth } from "../../src/contexts/AuthContext";
 import NotificationSettings from "../../src/components/ui/notification-settings";
 import HomeRoutineSetting from "../../src/components/ui/home-routine-setting";
 import UnitsSetting from "../../src/components/ui/units-setting";
-import { getSkinProfile, listRoutines, localToday } from "../../src/api/routines";
+import {
+  getSkinProfile,
+  listRoutines,
+  localToday,
+} from "../../src/api/routines";
 import type { Routine, SkinProfile } from "../../src/types";
 import { Colors, getTheme } from "../../src/constants/theme";
 import { ThemedText } from "../../src/components/ui/themed-text";
@@ -228,7 +232,7 @@ export default function ProfileScreen() {
         {routines.length > 0 && (
           <View style={styles.section}>
             <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
-              Home Screen
+              Main Routine
             </ThemedText>
             <HomeRoutineSetting routines={routines} />
           </View>

@@ -13,7 +13,6 @@ class PreferenceUpdate(BaseModel):
     water_climate: Optional[str] = None
     routine_digest_am_time: Optional[str] = None
     routine_digest_pm_time: Optional[str] = None
-    home_routine_id: Optional[int] = None
 
 
 class PreferenceOut(BaseModel):
@@ -27,6 +26,5 @@ class PreferenceOut(BaseModel):
     water_climate: Optional[str]
     routine_digest_am_time: Optional[str]
     routine_digest_pm_time: Optional[str]
-    home_routine_id: Optional[int]
 
     model_config = {"from_attributes": True}

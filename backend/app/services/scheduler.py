@@ -180,9 +180,9 @@ def send_routine_digests() -> None:
                 .filter(
                     Routine.user_id == user.id,
                     Routine.routine_type == "skincare",
-                    Routine.is_active == True,
+                    Routine.is_main_routine == True,
                 )
-                .order_by(Routine.updated_at.desc())
+                .order_by(Routine.created_at.desc())
                 .first()
             )
             if not routine:

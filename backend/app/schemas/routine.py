@@ -84,7 +84,7 @@ class RoutineCreate(BaseModel):
 
 class RoutineUpdate(BaseModel):
     name: Optional[str] = None
-    is_active: Optional[bool] = None
+    is_main_routine: Optional[bool] = None
     steps: Optional[List[RoutineStepCreate]] = None
 
 
@@ -94,7 +94,7 @@ class RoutineOut(BaseModel):
     name: str
     source: str
     routine_type: str = "skincare"
-    is_active: bool = False
+    is_main_routine: bool = False
     steps: List[RoutineStepOut] = []
     created_at: datetime
     updated_at: datetime
@@ -136,3 +136,7 @@ class RoutineTemplateOut(BaseModel):
 class TemplateCloneRequest(BaseModel):
     template_id: int
     name: Optional[str] = None
+
+
+class MainRoutineSet(BaseModel):
+    routine_id: Optional[int] = None

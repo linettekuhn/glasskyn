@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 def _build_routine_context(db: Session, user_id: int) -> str:
     routine = (
         db.query(Routine)
-        .filter(Routine.user_id == user_id, Routine.is_active == True)
+        .filter(Routine.user_id == user_id, Routine.is_main_routine == True)
+        .order_by(Routine.created_at.desc())
         .first()
     )
     if not routine:
@@ -31,7 +32,7 @@ def _build_routine_context(db: Session, user_id: int) -> str:
         .all()
     )
 
-    parts = [f"Current active routine: **{routine.name}**"]
+    parts = [f"Current main routine: **{routine.name}**"]
     for s in steps:
         product = db.query(Product).filter(Product.id == s.product_id).first() if s.product_id else None
         product_str = f" \u2192 {product.name}" if product else " (no product assigned)"
@@ -89,7 +90,7 @@ You have 6 tools available:
 
 5. **recommend_products** — Recommend products from the user's shelf for a specific routine step. Use when the user asks what products they have for cleansing, moisturizing, etc., or wants suggestions based on skin type/concerns.
 
-6. **modify_routine** — Modify the user's current active routine based on a natural language request. Use when the user asks to swap, change, add, or remove a step. This tool directly updates the database — confirm the change before calling it.
+6. **modify_routine** — Modify the user's main routine based on a natural language request. Use when the user asks to swap, change, add, or remove a step. This tool directly updates the database — confirm the change before calling it.
 
 ## Rules
 
