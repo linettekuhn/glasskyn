@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Stack, useSegments } from "expo-router";
 import { ScanProvider } from "../../src/contexts/ScanContext";
 import { TemplateProvider } from "../../src/contexts/TemplateContext";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,9 +8,14 @@ import { Colors, getTheme } from "@/constants/theme";
 export default function ModalLayout() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+  const segments = useSegments();
+  const isScannerActive = segments[segments.length - 1] === "scan";
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      edges={isScannerActive ? [] : ["top", "bottom", "left", "right"]}
+    >
       <ScanProvider>
         <TemplateProvider>
           <Stack

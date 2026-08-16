@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import { CameraView } from "expo-camera";
 import Toast from "react-native-toast-message";
+import { StatusBar } from "expo-status-bar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getPresignedUrl, uploadToS3 } from "../../api/uploads";
 import { processPaoImage } from "../../api/products";
 import { useScanContext } from "../../contexts/ScanContext";
@@ -29,6 +31,7 @@ const txtColor = Colors["light"].neutral[100];
 const scanArea = { width: 300, height: 250, top: 120 };
 
 export default function StepPao({ onClose }: { onClose: () => void }) {
+  const insets = useSafeAreaInsets();
   const { scanResult, setPaoMonths, setStep } = useScanContext();
   const [isCapturing, setIsCapturing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -118,6 +121,7 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
   return (
     <GestureDetector gesture={pinchGesture}>
       <View style={styles.container}>
+        <StatusBar style="light" />
         {isPreview ? (
           <Image
             source={{ uri: capturedUri! }}
@@ -135,7 +139,7 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
         )}
 
         <ScanOverlay scanArea={scanArea}>
-          <View style={styles.topBar}>
+          <View style={[styles.topBar, { top: insets.top + 12 }]}>
             <IconButton
               onPress={isPreview ? handleRetake : onClose}
               IconComponent={MaterialCommunityIcons}
@@ -157,7 +161,7 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
             )}
           </View>
 
-          <View style={styles.bottomSection}>
+          <View style={[styles.bottomSection, { bottom: insets.bottom + 70 }]}>
             {isPreview ? (
               <>
                 <ScanBadge status={blurStatus} />
@@ -216,26 +220,22 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
                     <View
                       style={[
                         styles.hintIcon,
-                        { backgroundColor: colors.primary[400] },
+                        { backgroundColor: colors.neutral[400] },
                       ]}
                     >
                       <Pao12
                         width={48}
                         height={48}
-                        color={colors.primary[700]}
+                        color={colors.neutral[700]}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <ThemedText
-                        type="captionLarge"
-                        style={{ color: colors.primary[900] }}
-                        weight="medium"
-                      >
+                      <ThemedText type="captionLarge" weight="medium">
                         Can&apos;t find the PAO?
                       </ThemedText>
                       <ThemedText
                         type="caption"
-                        style={{ color: colors.primary[700] }}
+                        style={{ color: colors.neutral[700] }}
                       >
                         Check the bottle for a small open jar icon with a number
                         and capture it directly.

@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import { CameraView } from "expo-camera";
 import Toast from "react-native-toast-message";
+import { StatusBar } from "expo-status-bar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useScanContext } from "../../contexts/ScanContext";
 import { ThemedText } from "../ui/themed-text";
 import { Colors } from "@/constants/theme";
@@ -24,6 +26,7 @@ const txtColor = Colors["light"].neutral[100];
 const scanArea = { width: 300, height: 450, top: 120 };
 
 export default function StepFront({ onClose }: { onClose: () => void }) {
+  const insets = useSafeAreaInsets();
   const { setFrontImageUri, setBarcode, setStep } = useScanContext();
   const [isCapturing, setIsCapturing] = useState(false);
   const [zoom, setZoom] = useState(0);
@@ -109,6 +112,7 @@ export default function StepFront({ onClose }: { onClose: () => void }) {
   return (
     <GestureDetector gesture={pinchGesture}>
       <View style={styles.container}>
+        <StatusBar style="light" />
         {isPreview ? (
           <Image
             source={{ uri: capturedUri! }}
@@ -130,7 +134,7 @@ export default function StepFront({ onClose }: { onClose: () => void }) {
         )}
 
         <ScanOverlay scanArea={scanArea}>
-          <View style={styles.topBar}>
+          <View style={[styles.topBar, { top: insets.top + 12 }]}>
             <IconButton
               iconColor={txtColor}
               activeColor={btnColor}
@@ -153,7 +157,7 @@ export default function StepFront({ onClose }: { onClose: () => void }) {
             )}
           </View>
 
-          <View style={styles.bottomSection}>
+          <View style={[styles.bottomSection, { bottom: insets.bottom + 30 }]}>
             {isPreview ? (
               <>
                 <ScanBadge status={blurStatus} />
