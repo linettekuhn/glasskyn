@@ -457,35 +457,58 @@ export default function ChatScreen() {
         border={false}
         intensity={50}
         alpha={0.65}
-        style={[styles.inputBar, { borderTopColor: colors.neutral[200] }]}
+        style={{
+          borderTopWidth: 1,
+          borderTopColor: colors.neutral[200],
+        }}
       >
-        <ThemedTextInput
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="Ask about your routine..."
-          onSubmitEditing={() => handleSend()}
-          style={{ flex: 1 }}
-          editable={!loading}
-        />
-        <TouchableOpacity
-          onPress={() => handleSend()}
-          disabled={loading || !inputText.trim()}
-          style={[
-            styles.sendButton,
-            {
-              backgroundColor:
-                loading || !inputText.trim()
-                  ? colors.neutral[300]
-                  : colors.primary[600],
-            },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name="send"
-            size={20}
-            color={colors.neutral[100]}
+        <View style={[styles.inputBar]}>
+          <ThemedTextInput
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="Ask about your routine..."
+            onSubmitEditing={() => handleSend()}
+            style={{ flex: 1 }}
+            editable={!loading}
           />
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleSend()}
+            disabled={loading || !inputText.trim()}
+            style={[
+              styles.sendButton,
+              {
+                backgroundColor:
+                  loading || !inputText.trim()
+                    ? colors.neutral[300]
+                    : colors.primary[600],
+              },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="send"
+              size={20}
+              color={colors.neutral[100]}
+            />
+          </TouchableOpacity>
+        </View>
+        <View
+          style={{
+            paddingHorizontal: 12,
+            paddingBottom: 8,
+            alignItems: "center",
+          }}
+        >
+          <ThemedText
+            type="captionSmall"
+            style={{
+              textAlign: "center",
+              color: colors.neutral[600],
+            }}
+          >
+            Cur.ai can make mistakes. Ingredient and skin info is not medical
+            advice and doesn't replace a dermatologist.
+          </ThemedText>
+        </View>
       </GlassSurface>
     </KeyboardAvoidingView>
   );
@@ -575,7 +598,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderTopWidth: 1,
   },
   sendButton: {
     borderRadius: 25,
