@@ -14,7 +14,7 @@ import { ThemedText } from "../../src/components/ui/themed-text";
 import ThemedButton from "../../src/components/ui/themed-button";
 import Divider from "../../src/components/ui/divider";
 import IngredientAnalysisSection from "../../src/components/product/ingredient-analysis-section";
-import { analyzeIngredients, getProductScanText } from "../../src/api/products";
+import { getProductAnalysis } from "../../src/api/products";
 import { fromValue } from "../../src/components/ui/icon-selector";
 import type { FlaggedIngredient } from "../../src/types";
 
@@ -104,24 +104,21 @@ export default function ProductDetailScreen() {
     return colors.neutral[700];
   })();
 
-  const fetchAndAnalyze = useCallback(async () => {
-    const productId = params.productId ? parseInt(params.productId, 10) : null;
-    if (!productId) {
-      setIsLoadingAnalysis(false);
-      return;
-    }
+  const fetchAndAnalyze = useCallback(
+    async (refresh = false) => {
+      const productId = params.productId ? parseInt(params.productId, 10) : null;
+      if (!productId) {
+        setIsLoadingAnalysis(false);
+        return;
+      }
 
-    setIsLoadingAnalysis(true);
-    try {
-      const { raw_ocr_text } = await getProductScanText(productId);
-      if (raw_ocr_text) {
-        const result = await analyzeIngredients(raw_ocr_text);
-        console.log(result);
+      setIsLoadingAnalysis(true);
+      try {
+        const result = await getProductAnalysis(productId, refresh);
         const ingredients = [
           ...result.matched.map((m) => m.raw_text),
           ...result.not_found.map((n) => n.raw_text),
         ];
-        console.log(ingredients);
         setAllIngredients(ingredients.length > 0 ? ingredients : null);
         setSafetyScore(result.overall_safety_score);
         const flags: FlaggedIngredient[] = result.flags.map((f) => {
@@ -141,13 +138,14 @@ export default function ProductDetailScreen() {
           };
         });
         setFlaggedIngredients(flags.length > 0 ? flags : []);
+      } catch {
+        setFlaggedIngredients(null);
+      } finally {
+        setIsLoadingAnalysis(false);
       }
-    } catch {
-      setFlaggedIngredients(null);
-    } finally {
-      setIsLoadingAnalysis(false);
-    }
-  }, [params.productId]);
+    },
+    [params.productId],
+  );
 
   useEffect(() => {
     fetchAndAnalyze();
@@ -336,7 +334,7 @@ export default function ProductDetailScreen() {
             ingredients={allIngredients}
             flaggedIngredients={flaggedIngredients}
             isLoading={isLoadingAnalysis}
-            onRetry={fetchAndAnalyze}
+            onRetry={() => fetchAndAnalyze(true)}
           />
         </View>
       </ScrollView>

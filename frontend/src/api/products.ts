@@ -114,3 +114,14 @@ export async function getProductScanText(
   const response = await apiClient.get(`/products/${productId}/scan-text`);
   return response.data;
 }
+
+export async function getProductAnalysis(
+  productId: number,
+  refresh = false,
+): Promise<IngredientAnalysisResponse> {
+  const response = await apiClient.get(`/products/${productId}/analysis`, {
+    params: refresh ? { refresh: "1" } : {},
+    timeout: 60000,
+  });
+  return response.data;
+}
