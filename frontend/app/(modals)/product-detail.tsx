@@ -3,20 +3,68 @@ import {
   View,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
   useColorScheme,
   Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Colors, getTheme } from "../../src/constants/theme";
-import { ThemedText } from "../../src/components/ui/themed-text";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
+import { Colors, Fonts, getTheme } from "../../src/constants/theme";
 import ThemedButton from "../../src/components/ui/themed-button";
-import Divider from "../../src/components/ui/divider";
-import IngredientAnalysisSection from "../../src/components/product/ingredient-analysis-section";
-import { getProductAnalysis } from "../../src/api/products";
+import { ThemedText } from "../../src/components/ui/themed-text";
 import { fromValue } from "../../src/components/ui/icon-selector";
-import type { FlaggedIngredient } from "../../src/types";
+import {
+  FactsLabel,
+  FactsHeading,
+  FactsRow,
+  FactsRule,
+} from "../../src/components/product/facts-label";
+import IngredientAnalysisSection from "../../src/components/product/ingredient-analysis-section";
+import { getProductAnalysis, getProductScanText } from "../../src/api/products";
+import { getSkinProfile } from "../../src/api/routines";
+import type { IngredientAnalysisResponse } from "../../src/types";
+import Divider from "@/components/ui/divider";
+
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const SKIN_TYPE_LABELS: Record<string, string> = {
+  dry: "Dry",
+  oily: "Oily",
+  combination: "Combination",
+  normal: "Normal",
+  sensitive: "Sensitive",
+};
+
+function formatDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso.length <= 10 ? `${iso}T00:00:00` : iso);
+  if (isNaN(d.getTime())) return null;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+function skinTypeLabel(value: string | null | undefined): string {
+  if (!value) return "Not set";
+  return SKIN_TYPE_LABELS[value] ?? value;
+}
+
+function titleCase(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export default function ProductDetailScreen() {
   const params = useLocalSearchParams<{
@@ -37,12 +85,14 @@ export default function ProductDetailScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
 
-  const [allIngredients, setAllIngredients] = useState<string[] | null>(null);
-  const [flaggedIngredients, setFlaggedIngredients] = useState<
-    FlaggedIngredient[] | null
-  >(null);
+  const [analysisResult, setAnalysisResult] =
+    useState<IngredientAnalysisResponse | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(true);
-  const [safetyScore, setSafetyScore] = useState<number | null>(null);
+  const [scanText, setScanText] = useState<string | null>(null);
+  const [scanDate, setScanDate] = useState<string | null>(null);
+  const [scanExpanded, setScanExpanded] = useState(false);
+  const [skinType, setSkinType] = useState<string | null>(null);
+  const [isSensitive, setIsSensitive] = useState<boolean | null>(null);
 
   const paoMonths = params.paoMonths ? parseInt(params.paoMonths, 10) : null;
   const daysUntilExpiry = params.daysUntilExpiry
@@ -50,44 +100,17 @@ export default function ProductDetailScreen() {
     : null;
 
   const expiryLabel = (() => {
-    if (params.expiryDate) {
-      const expiry = new Date(`${params.expiryDate}T00:00:00`);
-      const months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ];
-      return `${months[expiry.getMonth()]} ${expiry.getDate()} ${expiry.getFullYear()}`;
-    }
+    const fromExpiry = formatDate(params.expiryDate);
+    if (fromExpiry) return fromExpiry;
     if (!paoMonths || !params.createdAt) return null;
     const created = new Date(params.createdAt);
     const expiry = new Date(created);
     expiry.setMonth(expiry.getMonth() + paoMonths);
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    return `${months[expiry.getMonth()]} ${expiry.getDate()} ${expiry.getFullYear()}`;
+    if (isNaN(expiry.getTime())) return null;
+    return `${MONTHS[expiry.getMonth()]} ${expiry.getDate()} ${expiry.getFullYear()}`;
   })();
+
+  const openedLabel = formatDate(params.openedDate);
 
   const expiryStatus =
     daysUntilExpiry === null
@@ -98,15 +121,11 @@ export default function ProductDetailScreen() {
           ? "expiring"
           : "ok";
 
-  const expiryColor = (() => {
-    if (expiryStatus === "expired") return "#A10000";
-    if (expiryStatus === "expiring") return colors.secondary[500];
-    return colors.neutral[700];
-  })();
-
   const fetchAndAnalyze = useCallback(
     async (refresh = false) => {
-      const productId = params.productId ? parseInt(params.productId, 10) : null;
+      const productId = params.productId
+        ? parseInt(params.productId, 10)
+        : null;
       if (!productId) {
         setIsLoadingAnalysis(false);
         return;
@@ -115,31 +134,9 @@ export default function ProductDetailScreen() {
       setIsLoadingAnalysis(true);
       try {
         const result = await getProductAnalysis(productId, refresh);
-        const ingredients = [
-          ...result.matched.map((m) => m.raw_text),
-          ...result.not_found.map((n) => n.raw_text),
-        ];
-        setAllIngredients(ingredients.length > 0 ? ingredients : null);
-        setSafetyScore(result.overall_safety_score);
-        const flags: FlaggedIngredient[] = result.flags.map((f) => {
-          const flagName = f.split(":")[0] || f;
-          const reason = f.includes(":")
-            ? f.split(":").slice(1).join(":").trim()
-            : "Flagged by analysis";
-          const matched = result.matched.find(
-            (m) =>
-              m.raw_text.toLowerCase() === flagName.toLowerCase() ||
-              m.ingredient_name.toLowerCase() === flagName.toLowerCase(),
-          );
-          return {
-            name: flagName,
-            reason,
-            known_risks: matched?.known_risks ?? [],
-          };
-        });
-        setFlaggedIngredients(flags.length > 0 ? flags : []);
+        setAnalysisResult(result);
       } catch {
-        setFlaggedIngredients(null);
+        setAnalysisResult(null);
       } finally {
         setIsLoadingAnalysis(false);
       }
@@ -149,19 +146,150 @@ export default function ProductDetailScreen() {
 
   useEffect(() => {
     fetchAndAnalyze();
-  }, [fetchAndAnalyze]);
+
+    const productId = params.productId ? parseInt(params.productId, 10) : null;
+    if (productId) {
+      getProductScanText(productId)
+        .then((res) => {
+          setScanText(res.raw_ocr_text ?? null);
+          setScanDate(res.scan_date ?? null);
+        })
+        .catch(() => {
+          setScanText(null);
+          setScanDate(null);
+        });
+    }
+
+    getSkinProfile()
+      .then((profile) => {
+        setSkinType(profile.skin_type ?? null);
+        setIsSensitive(profile.is_sensitive ?? null);
+      })
+      .catch(() => {
+        setSkinType(null);
+        setIsSensitive(null);
+      });
+  }, [fetchAndAnalyze, params.productId]);
 
   const iconConfig = params.icon ? fromValue(params.icon) : null;
+  const categoryLabel = titleCase(params.category);
+  const productTypeLabel = titleCase(params.productType);
 
-  const categoryLabel = params.category
-    ? params.category.charAt(0).toUpperCase() + params.category.slice(1)
-    : null;
+  const statusColor = (() => {
+    if (expiryStatus === "expired") return "#B00020";
+    if (expiryStatus === "expiring") return "#B45309";
+    return "#1F7A3D";
+  })();
 
-  const productTypeLabel = params.productType
-    ? params.productType
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase())
-    : null;
+  const statusBanner = (() => {
+    if (daysUntilExpiry === null) return null;
+    if (daysUntilExpiry < 0) {
+      const ago = -daysUntilExpiry;
+      return {
+        title: "EXPIRED",
+        sub: ago === 1 ? "Expired 1 day ago" : `Expired ${ago} days ago`,
+      };
+    }
+    if (daysUntilExpiry === 0) {
+      return { title: "EXPIRES TODAY", sub: "Use before the end of today" };
+    }
+    return {
+      title: `${daysUntilExpiry} DAY${daysUntilExpiry !== 1 ? "S" : ""} REMAINING`,
+      sub: expiryLabel ? `Until ${expiryLabel}` : undefined,
+    };
+  })();
+
+  const analysis = analysisResult?.stats.total ? analysisResult : null;
+  const avgScore = (() => {
+    const raw =
+      analysis?.overall_safety_score ??
+      (analysis ? analysis.stats.avg_safety_score : null);
+    if (raw === null || raw === undefined) return null;
+    return Math.max(0, Math.min(10, 10 - raw));
+  })();
+  const flags = analysis?.flags ?? [];
+  const notFoundCount = analysis?.stats.not_found ?? 0;
+  const riskFlags = flags.filter((f) => !f.includes("no verified safety data"));
+  const suitableCount =
+    analysis?.matched.filter((m) => 10 - m.safety_score >= 7).length ?? 0;
+
+  const personalized = (() => {
+    if (!skinType) return null;
+    let verdict: { label: string; color: string } = {
+      label: "GOOD",
+      color: "#1F7A3D",
+    };
+    if (avgScore === null) {
+      verdict = { label: "NO DATA", color: "#666666" };
+    } else if (avgScore < 5) {
+      verdict = { label: "CONCERN DETECTED", color: "#B00020" };
+    } else if (avgScore < 7 || flags.length > 0 || notFoundCount > 0) {
+      verdict = { label: "CAUTION", color: "#B45309" };
+    }
+
+    const bullets: { icon: string; text: string; color: string }[] = [];
+    if (suitableCount > 0) {
+      bullets.push({
+        icon: "✓",
+        text: `${suitableCount} suitable ingredient${suitableCount !== 1 ? "s" : ""} detected`,
+        color: "#1F7A3D",
+      });
+    }
+    if (flags.length === 0 && notFoundCount === 0) {
+      bullets.push({
+        icon: "✓",
+        text: "No major conflicts detected",
+        color: "#1F7A3D",
+      });
+    }
+    if (riskFlags.length > 0) {
+      bullets.push({
+        icon: "⚠",
+        text: `${riskFlags.length} ingredient${riskFlags.length !== 1 ? "s" : ""} may cause irritation`,
+        color: "#B45309",
+      });
+    }
+    if (isSensitive) {
+      bullets.push({
+        icon: "⚠",
+        text: "Sensitive skin detected. Review with caution",
+        color: "#B45309",
+      });
+    }
+    if (notFoundCount > 0) {
+      bullets.push({
+        icon: "⚠",
+        text: `${notFoundCount} ingredient${notFoundCount !== 1 ? "s" : ""} couldn't be identified`,
+        color: "#B45309",
+      });
+    }
+    return { verdict, bullets };
+  })();
+
+  const warnings = (() => {
+    if (flags.length === 0 && notFoundCount === 0) {
+      return [
+        "No significant concerns detected from the available ingredient information.",
+      ];
+    }
+    const list: string[] = flags.map((f) => {
+      const name = f.split(":")[0] || f;
+      const reason = f.includes(":")
+        ? f.split(":").slice(1).join(":").trim()
+        : "flagged by analysis";
+      return `${name} — ${reason}`;
+    });
+    if (notFoundCount > 0) {
+      list.push(
+        `${notFoundCount} ingredient${notFoundCount !== 1 ? "s" : ""} could not be identified from the scan.`,
+      );
+    }
+    return list;
+  })();
+
+  const headerTagline = [params.brand, categoryLabel, productTypeLabel]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -172,33 +300,12 @@ export default function ProductDetailScreen() {
         <View style={styles.topBar}>
           <ThemedButton
             link
+            text="Go Back"
+            leftIconName="arrow-back"
+            LeftIconComponent={MaterialIcons}
             onPress={() => router.back()}
-            color={colors.primary[600]}
-            text="Back"
+            color={colors.neutral[800]}
           />
-        </View>
-
-        <View style={styles.hero}>
-          {params.imageUrl ? (
-            <Image
-              source={{ uri: params.imageUrl }}
-              style={styles.productImage}
-              resizeMode="cover"
-            />
-          ) : iconConfig ? (
-            <View
-              style={[
-                styles.iconBox,
-                { backgroundColor: colors.secondary[200] },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name={iconConfig.name as any}
-                size={40}
-                color={colors.secondary[700]}
-              />
-            </View>
-          ) : null}
         </View>
 
         <View style={styles.infoSection}>
@@ -239,104 +346,149 @@ export default function ProductDetailScreen() {
                 </ThemedText>
               </View>
             )}
-            {safetyScore !== null && (
-              <View
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor:
-                      safetyScore <= 2
-                        ? colors.primary[100]
-                        : safetyScore <= 4
-                          ? colors.neutral[300]
-                          : safetyScore <= 6
-                            ? colors.secondary[100]
-                            : "#A10000",
-                  },
-                ]}
-              >
-                <ThemedText
-                  type="caption"
-                  weight="medium"
-                  style={{
-                    color:
-                      safetyScore <= 2
-                        ? colors.primary[700]
-                        : safetyScore <= 4
-                          ? colors.neutral[700]
-                          : safetyScore <= 6
-                            ? colors.secondary[700]
-                            : "#FFFFFF",
-                  }}
-                >
-                  {safetyScore.toFixed(1)}
-                </ThemedText>
-              </View>
+          </View>
+        </View>
+
+        <FactsLabel>
+          <View style={styles.headerBlock}>
+            <ThemedText weight="extraBold" type="h3" sansItalic>
+              Product Facts
+            </ThemedText>
+            <Divider color={colors.neutral[500]} />
+            {productTypeLabel && (
+              <FactsRow label="Product Type" value={productTypeLabel} />
+            )}
+            {categoryLabel && (
+              <FactsRow label="Category" value={categoryLabel} />
+            )}
+            {openedLabel && <FactsRow label="Opened" value={openedLabel} />}
+            {paoMonths && (
+              <FactsRow
+                label="Use Within"
+                value={`${paoMonths} month${paoMonths !== 1 ? "s" : ""}`}
+              />
+            )}
+            {expiryLabel && (
+              <FactsRow label="Estimated Expiry" value={expiryLabel} />
             )}
           </View>
 
+          {!isLoadingAnalysis &&
+            analysisResult &&
+            analysisResult.stats.total > 0 && (
+              <>
+                <FactsRule />
+                <IngredientAnalysisSection
+                  result={analysisResult}
+                  isLoading={isLoadingAnalysis}
+                  onRetry={() => fetchAndAnalyze(true)}
+                />
+              </>
+            )}
+
+          {personalized && avgScore && (
+            <>
+              <FactsRule />
+              <FactsHeading title="Personalized Check" />
+              <FactsRow
+                label={`For ${skinTypeLabel(skinType).toLowerCase()} skin`}
+                value={personalized.verdict.label}
+              />
+              <View style={styles.bulletList}>
+                {personalized.bullets.map((b, i) => (
+                  <View key={i} style={styles.bulletRow}>
+                    <ThemedText
+                      weight="bold"
+                      style={[styles.bulletIcon, { color: b.color }]}
+                    >
+                      {b.icon}
+                    </ThemedText>
+                    <ThemedText
+                      style={[styles.bulletText, { color: colors.text }]}
+                    >
+                      {b.text}
+                    </ThemedText>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+
+          <FactsRule />
+
+          <FactsHeading title="Warnings" />
+          <View style={styles.bulletList}>
+            {warnings.map((w, i) => (
+              <View key={i} style={styles.bulletRow}>
+                <ThemedText
+                  weight="bold"
+                  style={[styles.bulletIcon, { color: "#B45309" }]}
+                >
+                  ⚠
+                </ThemedText>
+                <ThemedText style={[styles.bulletText, { color: colors.text }]}>
+                  {w}
+                </ThemedText>
+              </View>
+            ))}
+          </View>
+
+          <FactsRule />
+
+          <FactsHeading title="Use & Storage" />
+          {openedLabel && <FactsRow label="Opened" value={openedLabel} />}
           {paoMonths && (
-            <View style={styles.detailRow}>
-              <MaterialCommunityIcons
-                name="clock-outline"
-                size={16}
-                color={colors.neutral[600]}
-              />
-              <ThemedText
-                type="bodySmall"
-                style={{ color: colors.neutral[700] }}
-              >
-                PAO: {paoMonths} month{paoMonths !== 1 ? "s" : ""}
-              </ThemedText>
-            </View>
+            <FactsRow
+              label="Period After Opening"
+              value={`${paoMonths} months`}
+            />
           )}
-
-          {params.openedDate && (
-            <View style={styles.detailRow}>
-              <MaterialCommunityIcons
-                name="package-variant-closed"
-                size={16}
-                color={colors.neutral[600]}
-              />
-              <ThemedText
-                type="bodySmall"
-                style={{ color: colors.neutral[700] }}
-              >
-                Opened: {params.openedDate}
-              </ThemedText>
-            </View>
-          )}
-
           {expiryLabel && (
-            <View style={styles.detailRow}>
-              <MaterialCommunityIcons
-                name="calendar-outline"
-                size={16}
-                color={colors.neutral[600]}
-              />
-              <ThemedText
-                type="bodySmall"
-                style={{ color: expiryColor }}
-              >
-                Expires: {expiryLabel}
+            <FactsRow label="Estimated Expiry" value={expiryLabel} />
+          )}
+          {statusBanner && (
+            <View style={[styles.statusBanner, { borderColor: statusColor }]}>
+              <ThemedText type="overline" weight="extraBold">
+                {statusBanner.title}
               </ThemedText>
+              {statusBanner.sub && (
+                <ThemedText type="caption">{statusBanner.sub}</ThemedText>
+              )}
             </View>
           )}
-        </View>
 
-        <Divider style={{ marginBottom: 24 }} />
+          <FactsRule />
 
-        <View style={styles.section}>
-          <ThemedText type="h3" weight="semiBold">
-            Ingredient Analysis
-          </ThemedText>
-          <IngredientAnalysisSection
-            ingredients={allIngredients}
-            flaggedIngredients={flaggedIngredients}
-            isLoading={isLoadingAnalysis}
-            onRetry={() => fetchAndAnalyze(true)}
+          <FactsHeading title="Scan Information" />
+          <FactsRow label="Source" value="Product label scan" />
+          <FactsRow
+            label="Latest scan"
+            value={formatDate(scanDate) ?? formatDate(params.createdAt) ?? "—"}
           />
-        </View>
+          {scanText ? (
+            <>
+              <TouchableOpacity
+                style={styles.expandRow}
+                onPress={() => setScanExpanded((prev) => !prev)}
+                hitSlop={{ top: 8, bottom: 8 }}
+              >
+                <ThemedText weight="medium">
+                  {scanExpanded ? "Hide detected text" : "View detected text"}
+                </ThemedText>
+                <MaterialCommunityIcons
+                  name={scanExpanded ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={colors.text}
+                />
+              </TouchableOpacity>
+              {scanExpanded && <ThemedText>{scanText}</ThemedText>}
+            </>
+          ) : (
+            <ThemedText weight="medium">
+              No scanned text available for this product.
+            </ThemedText>
+          )}
+        </FactsLabel>
       </ScrollView>
     </SafeAreaView>
   );
@@ -345,27 +497,6 @@ export default function ProductDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { padding: 24, paddingTop: 8 },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  hero: {
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  productImage: {
-    width: 160,
-    height: 160,
-    borderRadius: 12,
-  },
-  iconBox: {
-    width: 160,
-    height: 160,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   infoSection: {
     gap: 8,
     marginBottom: 24,
@@ -381,12 +512,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 12,
   },
-  detailRow: {
+  topBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    marginBottom: 16,
   },
-  section: {
-    gap: 16,
+  headerBlock: {
+    gap: 10,
+  },
+  bulletList: {
+    gap: 6,
+    flex: 1,
+  },
+  bulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    flex: 1,
+  },
+  bulletIcon: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  bulletText: {
+    fontSize: 13,
+    lineHeight: 18,
+    flexShrink: 1,
+  },
+  statusBanner: {
+    borderWidth: 1.5,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+    gap: 2,
+  },
+  expandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 4,
   },
 });

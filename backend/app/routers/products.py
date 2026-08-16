@@ -133,6 +133,7 @@ def delete_product(
 
 class ProductScanTextResponse(BaseModel):
     raw_ocr_text: str | None = None
+    scan_date: str | None = None
 
 
 @router.get("/{product_id}/scan-text", response_model=ProductScanTextResponse)
@@ -160,6 +161,7 @@ def get_product_scan_text(
 
     return ProductScanTextResponse(
         raw_ocr_text=scan.raw_ocr_text if scan else None,
+        scan_date=scan.scan_date.isoformat() if scan and scan.scan_date else None,
     )
 
 

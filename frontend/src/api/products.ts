@@ -110,7 +110,7 @@ export async function analyzeIngredients(
 
 export async function getProductScanText(
   productId: number,
-): Promise<{ raw_ocr_text: string | null }> {
+): Promise<{ raw_ocr_text: string | null; scan_date?: string | null }> {
   const response = await apiClient.get(`/products/${productId}/scan-text`);
   return response.data;
 }
