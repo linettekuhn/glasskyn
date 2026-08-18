@@ -59,7 +59,7 @@ _INCI_SUFFIX_RE = re.compile(
     r"|tocopherol|retinol|niacinamide|panthenol|allantoin|adenosine"
     r"|hyaluronate|phenoxyethanol|carbomer|xanthan)"
     r"|[- ](?:acid|alcohol|extract|oil|peroxide|oxide|dioxide|starch|gum|silica)"
-    r"|(?:ate|ide|yl|ol|in|ane|ose|one|ene|ase)\b"
+    r"|[A-Za-z]{3,}(?:ate|ide|yl|ol|in|ane|ose|one|ene|ase)\b"
     r")",
     re.IGNORECASE,
 )
@@ -189,7 +189,19 @@ def _extract_inci_section(raw_text: str, ingredient_index: set[str]) -> str | No
 
     marker_match = _INCI_MARKER_RE.search(normalized)
     if marker_match:
-        return normalized[marker_match.end():]
+        remainder = normalized[marker_match.end():]
+        candidates = _SPLIT_RE.split(remainder)
+        candidates = [c.strip() for c in candidates if c.strip()]
+
+        end_idx = 0
+        for i, token in enumerate(candidates):
+            cleaned = _clean_token(token)
+            if not cleaned or not _is_valid_ingredient_token(cleaned, ingredient_index):
+                break
+            end_idx = i + 1
+
+        if end_idx >= _MIN_INCI_TOKENS:
+            return ", ".join(candidates[:end_idx])
 
     normalized = _OCR_DOTS_RE.sub(" ", normalized)
 
