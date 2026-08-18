@@ -51,8 +51,16 @@ _DRUG_FACTS_HEADER_RE = re.compile(
     re.IGNORECASE,
 )
 
-_NON_INGREDIENT_START_RE = re.compile(
-    r"^(?:helps?|prevent|if|for|get|see|use|warnings?|purpose|center|exp|plastic|bottle|here|open|outer|package|full|drug|facts|swallow|medical|right|away|only|external|rinse|stop|ask|doctor)\b",
+_INCI_SUFFIX_RE = re.compile(
+    r"(?:"
+    r"(?:acrylate|crosspolymer|polymer)"
+    r"|(?:sulfate|betaine|glucoside|stearate|benzoate|salicylate"
+    r"|octinoxate|octisalate|octocrylene|homosalate|oxybenzone|avobenzone"
+    r"|tocopherol|retinol|niacinamide|panthenol|allantoin|adenosine"
+    r"|hyaluronate|phenoxyethanol|carbomer|xanthan)"
+    r"|[- ](?:acid|alcohol|extract|oil|peroxide|oxide|dioxide|starch|gum|silica)"
+    r"|(?:ate|ide|yl|ol|in|ane|ose|one|ene|ase)\b"
+    r")",
     re.IGNORECASE,
 )
 
@@ -93,6 +101,28 @@ def _get_alias_map() -> dict[str, dict]:
     return _ALIAS_MAP
 
 
+def _build_ingredient_index(dataset_path: Path | None = None) -> set[str]:
+    path = dataset_path or DATASET_PATH
+    with open(path, encoding="utf-8") as f:
+        dataset = json.load(f)
+    names: set[str] = set()
+    for record in dataset:
+        names.add(record["ingredient_name"].lower())
+        for alias in record.get("aliases", []):
+            names.add(alias.lower())
+    return names
+
+
+_INGREDIENT_INDEX: set[str] | None = None
+
+
+def _get_ingredient_index() -> set[str]:
+    global _INGREDIENT_INDEX
+    if _INGREDIENT_INDEX is None:
+        _INGREDIENT_INDEX = _build_ingredient_index()
+    return _INGREDIENT_INDEX
+
+
 def _normalize_unicode(text: str) -> str:
     text = unicodedata.normalize("NFC", text)
     for pattern, replacement in _NORMALIZATIONS:
@@ -126,26 +156,35 @@ def _is_color_index(token: str) -> bool:
     return bool(_COLOR_INDEX_RE.match(token)) or bool(_NON_INGREDIENT_RE.match(token))
 
 
-def _is_valid_ingredient_token(cleaned: str) -> bool:
-    if len(cleaned) > _MAX_TOKEN_LENGTH:
-        return False
-    if len(cleaned) < 2:
+def _is_valid_ingredient_token(cleaned: str, ingredient_index: set[str]) -> bool:
+    if len(cleaned) > _MAX_TOKEN_LENGTH or len(cleaned) < 2:
         return False
     if re.fullmatch(r"[\d\s.,/%\-:]+", cleaned):
         return False
-    if "." in cleaned:
-        return False
-    if ":" in cleaned:
-        return False
-    if _NON_INGREDIENT_START_RE.match(cleaned):
+    if "." in cleaned or ":" in cleaned:
         return False
     word_count = len(cleaned.split())
     if word_count > 5:
         return False
-    return True
+
+    lower = cleaned.lower()
+
+    if lower in ingredient_index:
+        return True
+
+    for name in ingredient_index:
+        if len(name) > 3 and name in lower:
+            return True
+        if len(lower) > 3 and lower in name:
+            return True
+
+    if _INCI_SUFFIX_RE.search(lower):
+        return True
+
+    return False
 
 
-def _extract_inci_section(raw_text: str) -> str | None:
+def _extract_inci_section(raw_text: str, ingredient_index: set[str]) -> str | None:
     normalized = _normalize_unicode(raw_text)
 
     marker_match = _INCI_MARKER_RE.search(normalized)
@@ -168,11 +207,15 @@ def _extract_inci_section(raw_text: str) -> str | None:
     best_count = 0
 
     for i, token in enumerate(candidates):
-        if not _is_valid_ingredient_token(token):
+        cleaned = _clean_token(token)
+        if not cleaned or not _is_valid_ingredient_token(cleaned, ingredient_index):
             continue
         count = 0
         j = i
-        while j < len(candidates) and _is_valid_ingredient_token(candidates[j]):
+        while j < len(candidates):
+            cleaned_j = _clean_token(candidates[j])
+            if not cleaned_j or not _is_valid_ingredient_token(cleaned_j, ingredient_index):
+                break
             count += 1
             j += 1
         if count >= best_count:
@@ -186,7 +229,7 @@ def _extract_inci_section(raw_text: str) -> str | None:
 
 
 def _match_token(
-    token: str, alias_map: dict[str, dict]
+    token: str, alias_map: dict[str, dict], ingredient_index: set[str]
 ) -> dict:
     if _is_color_index(token):
         return {"canonical_name": None, "id": None, "raw_text": token, "match_type": "skipped", "confidence": 0}
@@ -195,7 +238,7 @@ def _match_token(
     if not cleaned:
         return {"canonical_name": None, "id": None, "raw_text": token, "match_type": "skipped", "confidence": 0}
 
-    if not _is_valid_ingredient_token(cleaned):
+    if not _is_valid_ingredient_token(cleaned, ingredient_index):
         return {"canonical_name": None, "id": None, "raw_text": token, "match_type": "skipped", "confidence": 0}
 
     lower = cleaned.lower()
@@ -227,7 +270,9 @@ def normalize_ingredients(raw_text: str | None) -> list[dict]:
     if not raw_text or not raw_text.strip():
         return []
 
-    inci_text = _extract_inci_section(raw_text)
+    ingredient_index = _get_ingredient_index()
+
+    inci_text = _extract_inci_section(raw_text, ingredient_index)
     if inci_text is None:
         return []
 
@@ -238,7 +283,7 @@ def normalize_ingredients(raw_text: str | None) -> list[dict]:
     results: list[dict] = []
 
     for token in tokens:
-        result = _match_token(token, alias_map)
+        result = _match_token(token, alias_map, ingredient_index)
 
         if result["match_type"] == "skipped":
             continue
@@ -256,6 +301,7 @@ def normalize_ingredients(raw_text: str | None) -> list[dict]:
 
 
 def reload_dataset(dataset_path: Path) -> dict[str, dict]:
-    global _ALIAS_MAP
+    global _ALIAS_MAP, _INGREDIENT_INDEX
     _ALIAS_MAP = _build_alias_map(dataset_path)
+    _INGREDIENT_INDEX = _build_ingredient_index(dataset_path)
     return _ALIAS_MAP
