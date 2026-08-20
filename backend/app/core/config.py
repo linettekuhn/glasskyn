@@ -61,3 +61,14 @@ EXPIRY_CHECK_MINUTE: int = int(os.environ.get("EXPIRY_CHECK_MINUTE", "0"))
 REMINDER_AM_TIME: str = os.environ.get("REMINDER_AM_TIME", "08:00")
 REMINDER_PM_TIME: str = os.environ.get("REMINDER_PM_TIME", "20:00")
 WATER_REMINDER_TIME: str = os.environ.get("WATER_REMINDER_TIME", "12:00")
+
+APP_VERSION: str = os.environ.get("APP_VERSION", "1.0.0")
+APP_MIN_VERSION: str = os.environ.get("APP_MIN_VERSION", "1.0.0")
+APP_STORE_URL: str = os.environ.get(
+    "APP_STORE_URL",
+    "https://apps.apple.com/app/glasskyn/id6752230698",
+)
+PLAY_STORE_URL: str = os.environ.get(
+    "PLAY_STORE_URL",
+    "https://play.google.com/store/apps/details?id=com.linettekuhn.glasskyn",
+)

@@ -3,9 +3,37 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "../src/contexts/AuthContext";
 import { ChatSessionProvider } from "../src/contexts/ChatSessionContext";
+import { VersionCheckProvider, useVersionCheck } from "../src/contexts/VersionCheckContext";
 import { useFonts } from "expo-font";
 import Toast from "react-native-toast-message";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import LoadingSpinner from "../src/components/ui/loading-spinner";
+import ForceUpdateModal from "../src/components/ui/force-update-modal";
+
+function AppContent() {
+  const { isLoading, needsUpdate, storeUrl } = useVersionCheck();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (needsUpdate && storeUrl) {
+    return <ForceUpdateModal storeUrl={storeUrl} />;
+  }
+
+  return (
+    <>
+      <StatusBar style="auto" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(onboarding)" />
+        <Stack.Screen name="(main)" />
+      </Stack>
+      <Toast />
+    </>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -40,14 +68,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <AuthProvider>
           <ChatSessionProvider>
-            <StatusBar style="auto" />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(onboarding)" />
-              <Stack.Screen name="(main)" />
-            </Stack>
-            <Toast />
+            <VersionCheckProvider>
+              <AppContent />
+            </VersionCheckProvider>
           </ChatSessionProvider>
         </AuthProvider>
       </SafeAreaProvider>
