@@ -7,6 +7,18 @@
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon-light.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#CDFFF8",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "backgroundColor": "#031D1D"
+          }
+        }
+      ],
       "expo-router",
       "expo-secure-store",
       "expo-font",
@@ -15,14 +27,13 @@
     ],
     "scheme": "cosmetic-expiry",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.linettekuhn.glasskyn",
+      "icon": {
+        "light": "./assets/icon-light.png",
+        "dark": "./assets/icon-dark.png"
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
