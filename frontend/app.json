@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "glasskyn",
+    "name": "Glasskyn",
     "slug": "glasskyn",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -44,7 +44,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.linettekuhn.glasskyn"
     },
     "web": {
       "favicon": "./assets/favicon.png"

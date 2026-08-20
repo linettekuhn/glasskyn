@@ -20,7 +20,6 @@ from app.services import vision as vision_service
 from app.services.openbeautyfacts import lookup_product
 from app.services.extraction import extract_all, extract_pao
 from app.services.llm import extract_name_brand
-from app.classifier.model import classify_image as raw_ml_classify
 from app.services.classifier import CLASSIFIER_CONFIDENCE_THRESHOLD
 
 
@@ -118,6 +117,8 @@ async def process_multi_images(
         if not url:
             return None, None
         try:
+            from app.classifier.model import classify_image as raw_ml_classify
+
             cat, conf = await asyncio.to_thread(raw_ml_classify, url)
             logger.info(
                 "ML classifier result: category=%s confidence=%.3f url=%s",
