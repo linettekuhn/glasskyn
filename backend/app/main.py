@@ -19,6 +19,7 @@ from app.routers import preferences as preferences_router
 from app.routers import water as water_router
 from app.routers import version as version_router
 from app.services.scheduler import scheduler
+from app.core.config import CORS_ORIGINS
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -34,10 +35,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# TODO: change cors rules in prod
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

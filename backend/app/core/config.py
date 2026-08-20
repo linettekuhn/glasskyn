@@ -72,3 +72,12 @@ PLAY_STORE_URL: str = os.environ.get(
     "PLAY_STORE_URL",
     "https://play.google.com/store/apps/details?id=com.linettekuhn.glasskyn",
 )
+
+CORS_ORIGINS: list[str] = [
+    o.strip()
+    for o in os.environ.get(
+        "CORS_ORIGINS",
+        "http://localhost:8081,http://localhost:19006,https://glasskyn.app,exp://localhost:8081",
+    ).split(",")
+    if o.strip()
+]

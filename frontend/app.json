@@ -52,6 +52,7 @@
     },
     "extra": {
       "router": {},
+      "apiUrl": "",
       "eas": {
         "projectId": "7180bd60-abb7-4256-8fc1-a7196de916e2"
       }
