@@ -57,6 +57,12 @@
         "projectId": "7180bd60-abb7-4256-8fc1-a7196de916e2"
       }
     },
-    "owner": "linettekuhn"
+    "owner": "linettekuhn",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7180bd60-abb7-4256-8fc1-a7196de916e2"
+    }
   }
 }
