@@ -39,7 +39,7 @@ export default function MainLayout() {
   const strokeColor = colors.neutral[200];
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <GradientBackground />
       <TopBar />
       <SafeAreaView style={{ flex: 1 }} edges={["bottom", "left", "right"]}>

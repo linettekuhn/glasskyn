@@ -1,17 +1,45 @@
+import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AuthProvider } from "../src/contexts/AuthContext";
+import { useColorScheme } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
+import { AuthProvider, useAuth } from "../src/contexts/AuthContext";
+import { BootProvider, useBoot } from "../src/contexts/BootContext";
 import { ChatSessionProvider } from "../src/contexts/ChatSessionContext";
 import { VersionCheckProvider, useVersionCheck } from "../src/contexts/VersionCheckContext";
+import { Colors, getTheme } from "../src/constants/theme";
 import { useFonts } from "expo-font";
 import Toast from "react-native-toast-message";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import LoadingSpinner from "../src/components/ui/loading-spinner";
 import ForceUpdateModal from "../src/components/ui/force-update-modal";
 
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+const SPLASH_FAILSAFE_MS = 10000;
+
 function AppContent() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[getTheme(colorScheme)];
   const { isLoading, needsUpdate, storeUrl } = useVersionCheck();
+  const { isLoading: authLoading } = useAuth();
+  const { checkingOnboarding } = useBoot();
+
+  const bootReady =
+    !isLoading && !authLoading && !checkingOnboarding;
+
+  useEffect(() => {
+    if (!bootReady) return;
+    SplashScreen.hideAsync().catch(() => {});
+  }, [bootReady]);
+
+  useEffect(() => {
+    const failsafe = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, SPLASH_FAILSAFE_MS);
+    return () => clearTimeout(failsafe);
+  }, []);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -24,7 +52,12 @@ function AppContent() {
   return (
     <>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(onboarding)" />
@@ -36,6 +69,8 @@ function AppContent() {
 }
 
 export default function RootLayout() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[getTheme(colorScheme)];
   const [fontsLoaded] = useFonts({
     "DM-Sans": require("../assets/fonts/DM_Sans/static/DMSans-Regular.ttf"),
     "DM-Sans-Thin": require("../assets/fonts/DM_Sans/static/DMSans-Thin.ttf"),
@@ -64,12 +99,16 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView
+      style={{ flex: 1, backgroundColor: colors.background }}
+    >
       <SafeAreaProvider>
         <AuthProvider>
           <ChatSessionProvider>
             <VersionCheckProvider>
-              <AppContent />
+              <BootProvider>
+                <AppContent />
+              </BootProvider>
             </VersionCheckProvider>
           </ChatSessionProvider>
         </AuthProvider>
