@@ -57,6 +57,7 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
       });
       if (!result?.uri) return;
       setCapturedUri(result.uri);
+      setTorch(false);
       setPhase("preview");
     } catch (err: any) {
       Toast.show({

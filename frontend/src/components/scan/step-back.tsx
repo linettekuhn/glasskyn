@@ -95,6 +95,7 @@ export default function StepBack({ onClose }: { onClose: () => void }) {
       });
       if (!result?.uri) return;
       setCapturedUri(result.uri);
+      setTorch(false);
       setPhase("preview");
     } catch (err: any) {
       Toast.show({
