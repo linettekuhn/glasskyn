@@ -26,25 +26,26 @@ import {
   type ChatMessageOut,
 } from "@/api/chat";
 import { useChatSession } from "@/contexts/ChatSessionContext";
-import { getRoutine } from "@/api/routines";
+import { getRoutine, getActiveRoutine } from "@/api/routines";
+import { getProducts } from "@/api/products";
 import GlassSurface from "@/components/ui/glass-surface";
 import ChatIcon from "@/components/icons/chat-icon";
 import ThemedButton from "@/components/ui/themed-button";
 
-const QUICK_ACTIONS = [
-  {
+const QUICK_ACTIONS = {
+  buildRoutine: {
     label: "Build Me a Routine",
     message: "Generate a skincare routine for me",
   },
-  {
+  missingFromRoutine: {
     label: "What's Missing From My Routine?",
     message: "What am I missing from my current routine?",
   },
-  {
+  vanityRisks: {
     label: "Check My Vanity for Risks",
     message: "Check my saved products for any risky or concerning ingredients",
   },
-];
+} as const;
 
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
@@ -56,6 +57,9 @@ export default function ChatScreen() {
     id: number;
     name: string;
   } | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [hasProducts, setHasProducts] = useState<boolean | null>(null);
+  const [hasRoutine, setHasRoutine] = useState<boolean | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const routineSavedRef = useRef(false);
   const sendingRef = useRef(false);
@@ -77,6 +81,7 @@ export default function ChatScreen() {
   useEffect(() => {
     setMessages([]);
     hydratedSessionRef.current = null;
+    setHydrated(false);
   }, [sessionId]);
 
   useFocusEffect(
@@ -126,14 +131,19 @@ export default function ChatScreen() {
       if (skipHydrationRef.current) {
         skipHydrationRef.current = false;
         hydratedSessionRef.current = sessionId;
+        setHydrated(true);
         return;
       }
-      if (hydratedSessionRef.current === sessionId) return;
+      if (hydratedSessionRef.current === sessionId) {
+        setHydrated(true);
+        return;
+      }
       let cancelled = false;
       getMessages(sessionId)
         .then((history) => {
           if (cancelled) return;
           hydratedSessionRef.current = sessionId;
+          setHydrated(true);
           if (history.length > 0) {
             setMessages((prev) => {
               const localOnly = prev.filter(
@@ -149,11 +159,38 @@ export default function ChatScreen() {
         .catch(() => {
           if (cancelled) return;
           hydratedSessionRef.current = sessionId;
+          setHydrated(true);
         });
       return () => {
         cancelled = true;
       };
     }, [sessionId]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      getProducts()
+        .then((products) => {
+          if (!cancelled) setHasProducts(products.length > 0);
+        })
+        .catch(() => {
+          if (!cancelled) setHasProducts(false);
+        });
+
+      getActiveRoutine()
+        .then((routine) => {
+          if (!cancelled) setHasRoutine(!!routine);
+        })
+        .catch(() => {
+          if (!cancelled) setHasRoutine(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }, []),
   );
 
   const handleSend = async (text?: string) => {
@@ -321,14 +358,29 @@ export default function ChatScreen() {
   };
 
   const renderQuickActions = () => {
-    if (messages.length > 5) return null;
+    const ready =
+      hydrated &&
+      !loading &&
+      messages.length === 0 &&
+      hasProducts !== null &&
+      hasRoutine !== null;
+    if (!ready) return null;
+
+    const actions = [
+      ...(hasRoutine
+        ? [QUICK_ACTIONS.missingFromRoutine]
+        : [QUICK_ACTIONS.buildRoutine]),
+      ...(hasProducts ? [QUICK_ACTIONS.vanityRisks] : []),
+    ];
+    if (actions.length === 0) return null;
+
     return (
       <View style={styles.quickActions}>
         <ThemedText type="captionSmall" style={{ marginBottom: 8 }}>
           Quick actions
         </ThemedText>
         <View style={styles.chipRow}>
-          {QUICK_ACTIONS.map((action) => (
+          {actions.map((action) => (
             <ThemedButton
               color={colors.secondary[500]}
               outlined
