@@ -348,7 +348,7 @@ export default function RoutineCalendar({
             viewMode === "week" && styles.loadingRowWeek,
           ]}
         >
-          <ActivityIndicator color={colors.primary[600]} />
+          <ActivityIndicator color={colors.neutral[700]} />
         </View>
       ) : viewMode === "week" ? (
         <View style={styles.weekRow}>

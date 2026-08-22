@@ -118,7 +118,7 @@ export default function NotificationsScreen() {
 
       {loading ? (
         <View style={styles.centerState}>
-          <ActivityIndicator color={colors.primary[600]} />
+          <ActivityIndicator color={colors.neutral[700]} />
         </View>
       ) : error ? (
         <View style={styles.centerState}>

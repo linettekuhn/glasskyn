@@ -152,7 +152,7 @@ export default function EditSkinProfileScreen() {
 
       {loading ? (
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color={colors.primary[500]} />
+          <ActivityIndicator size="large" color={colors.neutral[700]} />
         </View>
       ) : (
         <ScrollView

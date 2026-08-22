@@ -70,7 +70,7 @@ export default function CompleteScreen() {
       </View>
 
       {saving ? (
-        <ActivityIndicator size="large" color={colors.primary[500]} />
+        <ActivityIndicator size="large" color={colors.neutral[700]} />
       ) : (
         <View style={styles.actions}>
           <ThemedButton text="See My Routine" onPress={handleSeeRoutine} />

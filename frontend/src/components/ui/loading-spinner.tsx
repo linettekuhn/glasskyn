@@ -11,7 +11,7 @@ export default function LoadingSpinner() {
   const colors = Colors[getTheme(colorScheme)];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ActivityIndicator size="large" color={colors.neutral[700]} />
     </View>
   );

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Redirect } from "expo-router";
 import { useAuth } from "../src/contexts/AuthContext";
 import { getSkinProfile } from "../src/api/routines";
-import { ActivityIndicator, View } from "react-native";
+import LoadingSpinner from "../src/components/ui/loading-spinner";
 
 export default function Index() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -30,11 +30,7 @@ export default function Index() {
   }, [isAuthenticated, isLoading]);
 
   if (isLoading || checkingOnboarding) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <LoadingSpinner />;
   }
 
   if (isAuthenticated) {

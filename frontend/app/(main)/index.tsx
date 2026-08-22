@@ -59,7 +59,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         {loading ? (
           <View style={styles.loadingRow}>
-            <ActivityIndicator />
+            <ActivityIndicator color={colors.neutral[700]} />
           </View>
         ) : routine === null ? (
           <GlassSurface style={styles.emptyCard}>

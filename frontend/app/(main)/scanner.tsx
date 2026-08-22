@@ -47,7 +47,7 @@ export default function ScannerScreen() {
   if (!permission) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator color={colors.primary[600]} />
+        <ActivityIndicator color={colors.neutral[700]} />
       </View>
     );
   }
