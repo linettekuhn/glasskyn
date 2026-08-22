@@ -16,6 +16,7 @@ services:
         condition: service_healthy
     volumes:
       - ./credentials:/app/credentials:ro
+      - ./data/chromadb:/app/data/chromadb
     restart: unless-stopped
 
   db:

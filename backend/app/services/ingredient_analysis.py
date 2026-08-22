@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 
 import openai
 from sqlalchemy.orm import Session
@@ -34,7 +35,6 @@ def _get_client() -> openai.OpenAI:
 
 
 def _check_rate_limit() -> None:
-    import time
     now = time.time()
     cutoff = now - 60
     _rate_history[:] = [t for t in _rate_history if t > cutoff]
@@ -142,8 +142,20 @@ def _call_llm(messages: list[dict]) -> dict | None:
                 messages=messages,
                 response_format={"type": "json_object"},
                 temperature=0,
-                max_tokens=500,
+                max_tokens=1500,
             )
+
+            finish_reason = response.choices[0].finish_reason
+            if finish_reason == "length":
+                logger.warning(
+                    "LLM output truncated at max_tokens (attempt %d/%d)",
+                    attempt + 1,
+                    MAX_RETRIES + 1,
+                )
+                if attempt < MAX_RETRIES:
+                    time.sleep(0.5)
+                    continue
+                return None
 
             content = response.choices[0].message.content
             if not content:
@@ -164,6 +176,18 @@ def _call_llm(messages: list[dict]) -> dict | None:
         except (openai.APITimeoutError, openai.RateLimitError) as e:
             logger.warning("LLM call failed (attempt %d/%d): %s", attempt + 1, MAX_RETRIES + 1, e)
             if attempt < MAX_RETRIES:
+                time.sleep(1)
+                continue
+            return None
+        except json.JSONDecodeError as e:
+            logger.warning(
+                "LLM returned invalid JSON (attempt %d/%d): %s",
+                attempt + 1,
+                MAX_RETRIES + 1,
+                e,
+            )
+            if attempt < MAX_RETRIES:
+                time.sleep(0.5)
                 continue
             return None
         except Exception as e:
