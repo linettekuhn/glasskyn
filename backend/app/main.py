@@ -1,9 +1,11 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 
 from fastapi import FastAPI, Depends
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.middleware.auth import get_db
@@ -34,6 +36,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+
+
+@app.get("/privacy-policy.html", include_in_schema=False)
+def privacy_policy():
+    return FileResponse(STATIC_DIR / "privacy-policy.html", media_type="text/html")
+
 
 app.add_middleware(
     CORSMiddleware,
