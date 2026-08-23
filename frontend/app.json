@@ -28,7 +28,7 @@
     "scheme": "cosmetic-expiry",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.linettekuhn.glasskyn",
       "icon": {
         "light": "./assets/icon-light.png",
