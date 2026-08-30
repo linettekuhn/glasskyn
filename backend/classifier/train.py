@@ -19,7 +19,7 @@ from classifier.dataset import ProductDataset
 
 
 def train_model(train_ds, val_ds, device, epochs=20, batch_size=32,
-                lr=1e-4, unfreeze_layers=20, num_workers=4,
+                lr=1e-4, unfreeze_layers=20, patience=5, num_workers=4,
                 checkpoint_every=0, checkpoint_dir=None):
     """Train a ResNet-50 classifier. Returns (model, history, best_acc)."""
 
@@ -62,7 +62,7 @@ def train_model(train_ds, val_ds, device, epochs=20, batch_size=32,
     best_state = None
     history = {"train_loss": [], "val_loss": [], "val_acc": []}
     patience_counter = 0
-    max_patience = 5
+    max_patience = patience
 
     for epoch in range(epochs):
         model.train()
@@ -136,7 +136,7 @@ def train(args):
         train_ds, val_ds, DEVICE,
         epochs=args.epochs, batch_size=args.batch_size,
         lr=args.lr, unfreeze_layers=args.unfreeze_layers,
-        num_workers=args.num_workers,
+        patience=args.patience, num_workers=args.num_workers,
     )
 
     models_dir = Path(args.models_dir)
@@ -165,5 +165,7 @@ if __name__ == "__main__":
     parser.add_argument("--unfreeze-layers", type=int, default=20,
                         help="Number of final layers to unfreeze (negative = freeze all)")
     parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument("--patience", type=int, default=5,
+                        help="Early stopping patience (epochs without improvement)")
     args = parser.parse_args()
     train(args)
