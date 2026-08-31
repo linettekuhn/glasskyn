@@ -7,7 +7,7 @@ CATEGORY_MAP = {
         "en:body-lotions", "en:hand-creams", "en:eye-creams",
         "en:acne", "en:anti-aging",
         # --- round 1 expansion ---
-        "en:hygiene", "en:showers-and-baths", "en:shower-gels",
+        "en:showers-and-baths", "en:shower-gels",
         "en:deodorants", "en:soaps", "en:body",
         "en:facial-creams", "en:body-creams", "en:body-milks",
         "en:shaving", "en:roll-on-deodorants", "en:anti-perspirants",

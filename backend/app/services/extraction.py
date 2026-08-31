@@ -43,7 +43,7 @@ CATEGORY_KEYWORDS = {
         "cleanser", "face wash", "micellar", "cleansing oil", "cleansing balm",
         "exfoliant", "exfoliator", "scrub",
         # toning & misting
-        "toner", "toning", "mist", "facial mist", "setting spray",
+        "toner", "toning", "mist", "facial mist",
         # eye & lip treatments (non-makeup)
         "eye cream", "eye gel", "dark circles", "under eye", "lip balm",
         "lip treatment", "lip mask",
@@ -57,9 +57,26 @@ CATEGORY_KEYWORDS = {
         # body skincare
         "body lotion", "body cream", "body oil", "body butter",
         "hand cream", "hand lotion", "foot cream",
+        # shower / body wash
+        "shower gel", "body wash", "shower cream", "shower milk",
+        "hand soap", "liquid soap", "bar soap", "hygiene",
+        # shaving
+        "shaving", "shave", "razor", "aftershave", "shaving foam",
+        "shaving gel", "shaving cream",
+        # deodorant
+        "deodorant", "antiperspirant", "anti-perspirant",
         # ingredients that signal skincare
         "ceramide", "collagen", "elastin", "squalane", "rosehip",
         "aloe vera", "centella", "snail", "propolis",
+        # French vocabulary
+        "hydratant", "hydratante", "creme", "crème", "soin visage",
+        "visage", "nettoyant", "gommage", "masque visage",
+        "anti-age", "anti-âge", "anti-rides",
+        "gel douche", "douche", "savon", "mousse à raser", "mousse a raser",
+        "rasage", "epilation", "épilation",
+        "deodorant", "déodorant", "anti-transpirant",
+        "creme mains", "crème pour les mains", "soin corps",
+        "lait corps", "lotion corporelle",
     ],
 
     "haircare": [
@@ -71,7 +88,8 @@ CATEGORY_KEYWORDS = {
         "hair oil", "argan oil", "keratin", "protein treatment",
         "bond repair", "olaplex",
         # styling
-        "hair spray", "hairspray", "mousse", "hair gel", "pomade",
+        "hair spray", "hairspray", "hair mousse", "styling mousse",
+        "hair gel", "pomade",
         "hair wax", "hair paste", "hair cream", "leave-in",
         "heat protectant", "heat protection", "blow dry",
         # scalp
@@ -87,6 +105,18 @@ CATEGORY_KEYWORDS = {
         "blonde", "brunette", "silver hair",
         # ingredients that signal haircare
         "biotin", "panthenol", "dimethicone", "silicone",
+        # French vocabulary
+        "shampooing", "après-shampooing", "apres-shampoing",
+        "soin cheveux", "soins cheveux", "cheveux",
+        "masque cheveux", "huile cheveux", "sérum cheveux",
+        "coiffure", "laque", "gel coiffant",
+        "lissage", "défrisage", "defrisage",
+        "cure soyeuse", "soin capillaire",
+        # French crème compounds (hair-specific)
+        "crème colorante", "creme colorante",
+        "crème décolorante", "creme decolorante", "creme décolorante",
+        "crème de coiffage", "creme de coiffage",
+        "crème fixante", "creme fixante",
     ],
 
     "makeup": [
@@ -95,6 +125,8 @@ CATEGORY_KEYWORDS = {
         "highlighter", "bronzer", "blush", "primer", "bb cream",
         "cc cream", "tinted moisturizer", "powder", "setting powder",
         "pressed powder", "loose powder",
+        # setting spray
+        "setting spray",
         # eyes
         "mascara", "eyeliner", "eye liner", "eyeshadow", "eye shadow",
         "eyebrow", "eye brow", "brow gel", "brow pencil",
@@ -102,12 +134,19 @@ CATEGORY_KEYWORDS = {
         # lips
         "lipstick", "lip gloss", "lip liner", "lip stain",
         "lip plumper", "lip color", "lip colour",
+        # nails
+        "nail polish", "nail varnish", "top coat", "base coat",
         # finish / coverage descriptors that signal makeup
         "full coverage", "buildable coverage", "long-wearing", "long lasting",
         "transfer-proof", "waterproof makeup", "matte finish",
         "dewy finish", "satin finish", "luminous",
         # removal
         "makeup remover", "micellar water", "cleansing wipe",
+        # French vocabulary
+        "maquillage", "fond de teint", "rouge à lèvres", "rouge a levres",
+        "vernis à ongles", "vernis a ongles", "mascara",
+        "fard à paupières", "fard a paupieres", "poudre",
+        "anticernes", "correcteur", "gloss",
     ],
 }
 
@@ -173,6 +212,32 @@ def classify_category(raw_text: str | None) -> tuple[str | None, str | None]:
         return None, None
 
     lower = raw_text.lower()
+
+    # Pass 1: haircare-specific crème compounds — must run before
+    # skincare's bare "creme"/"crème" to prevent false skincare matches
+    HAIRCARE_CREME = {
+        "creme colorante", "crème colorante",
+        "creme decolorante", "crème décolorante", "creme décolorante",
+        "creme de coiffage", "crème de coiffage",
+        "creme fixante", "crème fixante",
+    }
+    for term in HAIRCARE_CREME:
+        if term in lower:
+            return "haircare", "keyword_match"
+
+    # Pass 2: unambiguous makeup terms win — prevents generic adjectives
+    # (volumizing, hydrating, lifting) from shadowing mascara/lipstick etc.
+    MAKEUP_UNAMBIGUOUS = {
+        "mascara", "eyeliner", "eye liner", "eyeshadow", "eye shadow",
+        "lipstick", "lip gloss", "lip liner", "concealer", "foundation",
+        "blush", "bronzer", "nail polish", "vernis à ongles", "vernis a ongles",
+        "fond de teint",
+    }
+    for term in MAKEUP_UNAMBIGUOUS:
+        if term in lower:
+            return "makeup", "keyword_match"
+
+    # Pass 3: standard category iteration (skincare → haircare → makeup)
     for category, keywords in CATEGORY_KEYWORDS.items():
         for kw in keywords:
             if kw in lower:
