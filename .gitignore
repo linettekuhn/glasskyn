@@ -19,6 +19,7 @@ dist/
 *.log
 
 credentials/
+**/data/raw*/
 **/data/raw/
 **/data/unlabeled/
 **/data/processed/
