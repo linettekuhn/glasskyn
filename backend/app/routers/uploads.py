@@ -18,7 +18,7 @@ from app.schemas.upload import (
 from app.services import storage
 from app.services import vision as vision_service
 from app.services.openbeautyfacts import lookup_product
-from app.services.extraction import extract_all, extract_pao
+from app.services.extraction import extract_all, extract_pao, match_detail
 from app.services.llm import extract_name_brand
 from app.services.classifier import CLASSIFIER_CONFIDENCE_THRESHOLD
 
@@ -163,9 +163,24 @@ async def process_multi_images(
             best_ml_category = cat
             best_ml_confidence = conf
 
-    if best_ml_category is not None and best_ml_confidence >= CLASSIFIER_CONFIDENCE_THRESHOLD:
+    # OCR + image fusion: a keyword match from the merged OCR text always wins
+    # over the image model. This is the "loose match, always override" strategy
+    # that beat the image-only baseline in ocr_fusion_eval (28.33% -> 16.50%
+    # train-dev error). The image model is kept as a fallback when OCR finds no
+    # keyword match.
+    ocr_fusion_matched = False
+    ocr_category, ocr_keyword, ocr_strong = match_detail(merged_text)
+    if ocr_category is not None:
         logger.info(
-            "ML classifier overrides category: %s (confidence=%.3f)",
+            "OCR fusion overrides category: %s (keyword=%r strong=%s)",
+            ocr_category, ocr_keyword, ocr_strong,
+        )
+        extraction["category"] = ocr_category
+        extraction["category_method"] = "ocr_fusion"
+        ocr_fusion_matched = True
+    elif best_ml_category is not None and best_ml_confidence >= CLASSIFIER_CONFIDENCE_THRESHOLD:
+        logger.info(
+            "ML classifier overrides category (no OCR keyword match): %s (confidence=%.3f)",
             best_ml_category, best_ml_confidence,
         )
         extraction["category"] = best_ml_category
@@ -246,6 +261,7 @@ async def process_multi_images(
         expiry_date=_expiry,
         extraction_method=_ext_method,
         raw_ocr_text=merged_text,
+        ocr_fusion_matched=ocr_fusion_matched,
     )
 
 

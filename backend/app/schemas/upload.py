@@ -34,6 +34,7 @@ class ProcessMultiResponse(BaseModel):
     expiry_date: str | None = None
     extraction_method: str | None = None
     raw_ocr_text: str | None = None
+    ocr_fusion_matched: bool | None = None
 
 
 class ProcessPaoRequest(BaseModel):

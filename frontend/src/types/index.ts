@@ -49,6 +49,7 @@ export interface ProcessMultiResult {
   expiry_date: string | null;
   extraction_method: string | null;
   raw_ocr_text: string | null;
+  ocr_fusion_matched: boolean | null;
 }
 
 export interface ProcessPaoResult {

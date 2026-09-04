@@ -151,6 +151,89 @@ CATEGORY_KEYWORDS = {
 }
 
 
+# Curated high-precision keywords per category, used by match_detail() to
+# signal unambiguous product-type hits (mirrors the ocr_fusion_eval notebook).
+STRONG_TERMS = {
+    "skincare": {
+        "serum", "essence", "ampoule", "booster", "sunscreen", "sunblock",
+        "cleanser", "face wash", "micellar", "cleansing oil", "cleansing balm",
+        "toner", "toning", "facial mist", "eye cream", "lip balm", "face mask",
+        "sheet mask", "clay mask", "body lotion", "body cream", "body oil",
+        "body butter", "hand cream", "shower gel", "body wash", "hand soap",
+        "liquid soap", "bar soap", "shaving", "shaving foam", "shaving gel",
+        "deodorant", "antiperspirant", "gel douche", "masque visage", "savon",
+        "lotion corporelle", "creme mains", "soin corps", "lait corps",
+        "nettoyant", "mousse à raser", "mousse a raser",
+    },
+    "haircare": {
+        "shampoo", "conditioner", "co-wash", "cleansing conditioner",
+        "hair mask", "hair treatment", "hair serum", "hair oil", "hair spray",
+        "hairspray", "hair mousse", "styling mousse", "hair gel", "pomade",
+        "hair cream", "leave-in", "hair wax", "hair paste", "scalp serum",
+        "dandruff", "shampooing", "après-shampooing", "apres-shampoing",
+        "masque cheveux", "huile cheveux", "gel coiffant", "sérum cheveux",
+        "laque", "soin cheveux", "soins cheveux", "crème colorante",
+    },
+    "makeup": {
+        "mascara", "eyeliner", "eye liner", "eyeshadow", "eye shadow",
+        "lipstick", "lip gloss", "lip liner", "concealer", "foundation",
+        "blush", "bronzer", "nail polish", "vernis à ongles", "vernis a ongles",
+        "fond de teint", "bb cream", "cc cream", "primer", "highlighter",
+        "setting spray", "setting powder", "pressed powder", "loose powder",
+        "eyebrow", "brow gel", "brow pencil", "lip plumper", "lip stain",
+        "false lashes", "maquillage", "rouge à lèvres", "rouge a levres",
+        "fard à paupières", "fard a paupieres", "anticernes", "correcteur",
+        "gloss", "micellar water", "makeup remover", "cleansing wipe",
+    },
+}
+
+
+def match_detail(raw_text: str | None) -> tuple[str | None, str | None, bool]:
+    """Return (category, keyword, is_strong) mirroring classify_category's pass order.
+
+    Runs the same three passes as classify_category() but additionally reports
+    whether the winning keyword is a curated STRONG_TERMS hit. This drives the
+    OCR+image fusion override in the scan pipeline.
+    """
+    if not raw_text:
+        return None, None, False
+    lower = raw_text.lower()
+
+    HAIRCARE_CREME = {
+        "creme colorante", "crème colorante",
+        "creme decolorante", "crème décolorante", "creme décolorante",
+        "creme de coiffage", "crème de coiffage",
+        "creme fixante", "crème fixante",
+    }
+    for term in HAIRCARE_CREME:
+        if term in lower:
+            return "haircare", term, True
+
+    MAKEUP_UNAMBIGUOUS = {
+        "mascara", "eyeliner", "eye liner", "eyeshadow", "eye shadow",
+        "lipstick", "lip gloss", "lip liner", "concealer", "foundation",
+        "blush", "bronzer", "nail polish", "vernis à ongles", "vernis a ongles",
+        "fond de teint",
+    }
+    for term in MAKEUP_UNAMBIGUOUS:
+        if term in lower:
+            return "makeup", term, True
+
+    best = (None, None, False)
+    first_hit = None
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        for kw in keywords:
+            if kw in lower:
+                is_strong = kw in STRONG_TERMS.get(category, set())
+                if first_hit is None:
+                    first_hit = (category, kw, is_strong)
+                if is_strong and best[0] is None:
+                    best = (category, kw, True)
+    if best[0] is not None:
+        return best
+    return first_hit if first_hit is not None else (None, None, False)
+
+
 def extract_pao(raw_text: str | None) -> dict:
     if not raw_text:
         return {"pao_months": None, "extraction_method": "not_found"}
