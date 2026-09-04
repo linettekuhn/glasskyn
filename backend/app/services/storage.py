@@ -46,6 +46,8 @@ def validate_content_type(content_type: str) -> bool:
 def generate_presigned_upload_url(
     file_name: str,
     content_type: str,
+    folder: str = "products",
+    user_id: int | None = None,
     expiration: int = DEFAULT_UPLOAD_EXPIRATION,
 ) -> dict:
     if not validate_content_type(content_type):
@@ -54,7 +56,10 @@ def generate_presigned_upload_url(
         )
 
     ext = file_name.split(".")[-1] if "." in file_name else "jpg"
-    file_key = f"products/{uuid.uuid4()}.{ext}"
+    if user_id is not None:
+        file_key = f"{folder}/{user_id}/{uuid.uuid4()}.{ext}"
+    else:
+        file_key = f"{folder}/{uuid.uuid4()}.{ext}"
 
     client = _get_s3_client()
     
@@ -66,6 +71,7 @@ def generate_presigned_upload_url(
             "Bucket": S3_BUCKET_NAME,
             "Key": file_key,
             "ContentType": content_type,
+            "ServerSideEncryption": "AES256",
         },
         ExpiresIn=expiration,
         HttpMethod="PUT",

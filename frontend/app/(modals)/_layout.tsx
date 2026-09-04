@@ -32,6 +32,7 @@ export default function ModalLayout() {
             }}
           >
             <Stack.Screen name="add-product" />
+            <Stack.Screen name="skin-face-test" />
             <Stack.Screen
               name="scan"
               options={{

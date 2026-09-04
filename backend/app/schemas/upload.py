@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class PresignedUploadRequest(BaseModel):
     file_name: str
     content_type: str
+    folder: str = "products"
 
 
 class PresignedUploadResponse(BaseModel):

@@ -35,7 +35,8 @@
         "dark": "./assets/icon-dark.png"
       },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Glasskyn uses the camera to scan product labels and to capture skin check-in photos for progress tracking."
       }
     },
     "android": {

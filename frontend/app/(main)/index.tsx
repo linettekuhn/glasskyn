@@ -84,6 +84,14 @@ export default function HomeScreen() {
         ) : null}
         <WaterIntakeCard />
         <EntryCards />
+        {__DEV__ && (
+          <ThemedButton
+            outlined
+            text="Dev: Skin face-detection test"
+            onPress={() => router.navigate("/(modals)/skin-face-test")}
+            alignment="flex-start"
+          />
+        )}
       </ScrollView>
     </View>
   );

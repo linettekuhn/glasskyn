@@ -10,3 +10,4 @@ from .routine_step_completion import RoutineStepCompletion
 from .user_preference import UserPreference
 from .water_intake import WaterIntake
 from .chat import ChatMessage, ChatSession
+from .skin import SkinSession, SkinConcern

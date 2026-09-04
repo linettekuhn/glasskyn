@@ -53,6 +53,8 @@ def generate_upload_url(
         result = storage.generate_presigned_upload_url(
             file_name=body.file_name,
             content_type=body.content_type,
+            folder=body.folder,
+            user_id=current_user.id,
         )
         return result
     except ValueError as e:
@@ -67,6 +69,13 @@ def generate_download_url(
     file_key: str,
     current_user: User = Depends(get_current_user),
 ):
+    if file_key.startswith("skin/"):
+        expected = f"skin/{current_user.id}/"
+        if not file_key.startswith(expected):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied",
+            )
     result = storage.generate_presigned_download_url(file_key=file_key)
     return result
 
