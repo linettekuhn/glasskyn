@@ -16,7 +16,7 @@
         "EXPO_PUBLIC_API_URL": "https://dev-api.glasskyn.app/"
       },
       "ios": {
-        "image": "macos-sequoia-15.6-xcode-16.4"
+        "image": "macos-sequoia-15.6-xcode-26.2"
       }
     },
     "production": {
