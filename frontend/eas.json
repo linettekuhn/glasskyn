@@ -11,7 +11,10 @@
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview"
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://dev-api.glasskyn.app/"
+      }
     },
     "production": {
       "autoIncrement": true,
