@@ -84,6 +84,11 @@ export default function HomeScreen() {
         ) : null}
         <WaterIntakeCard />
         <EntryCards />
+        <ThemedButton
+          text="Skin check-in (12B)"
+          onPress={() => router.navigate("/(modals)/skin-capture")}
+          alignment="flex-start"
+        />
         {__DEV__ && (
           <ThemedButton
             outlined
