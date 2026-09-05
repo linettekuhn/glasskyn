@@ -24,3 +24,4 @@ credentials/
 **/data/unlabeled/
 **/data/processed/
 **/data/chromadb/
+backend/data/models/**/checkpoints/
