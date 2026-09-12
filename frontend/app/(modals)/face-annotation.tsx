@@ -447,6 +447,7 @@ export default function FaceAnnotationScreen() {
             <Chip
               key={t.id}
               label={t.label}
+              image={t.circleImageUrl}
               active={activeCircle?.concernId === t.id}
               onPress={() => labelActive(t.id)}
             />

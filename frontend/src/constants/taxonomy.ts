@@ -7,6 +7,7 @@ const ACNE: Concern[] = [
     label: "Closed comedone (whitehead)",
     category: "acne",
     imageUrl: require("../../assets/concerns/whitehead.png"),
+    circleImageUrl: require("../../assets/concerns/whitehead_circle.png"),
     description:
       "A small skin-colored or slightly white bump where a pore is fully clogged and sealed. Unlike a blackhead, the pore stays closed, so it looks pale.",
   },
@@ -15,6 +16,7 @@ const ACNE: Concern[] = [
     label: "Open comedone (blackhead)",
     category: "acne",
     imageUrl: require("../../assets/concerns/blackhead.png"),
+    circleImageUrl: require("../../assets/concerns/blackhead_circle.png"),
     description:
       "A small bump with a dark tip from pigment reacting with air inside an open pore. Unlike a whitehead, the pore stays open.",
   },
@@ -23,6 +25,7 @@ const ACNE: Concern[] = [
     label: "Papule",
     category: "acne",
     imageUrl: require("../../assets/concerns/papule.png"),
+    circleImageUrl: require("../../assets/concerns/papule_circle.png"),
     description:
       "A small, firm, red bump with no visible pus center. Clusters can make skin feel rough like sandpaper.",
   },
@@ -31,6 +34,7 @@ const ACNE: Concern[] = [
     label: "Pustule",
     category: "acne",
     imageUrl: require("../../assets/concerns/pustule.png"),
+    circleImageUrl: require("../../assets/concerns/pustule_circle.png"),
     description:
       "An inflamed bump like a papule, but with a visible yellow or white pus-filled center.",
   },
@@ -39,6 +43,7 @@ const ACNE: Concern[] = [
     label: "Nodule",
     category: "acne",
     imageUrl: require("../../assets/concerns/nodule.png"),
+    circleImageUrl: require("../../assets/concerns/nodule_circle.png"),
     description:
       "A solid, firm lump over about a centimeter across that sits deep in the skin. Unlike a cyst, it is solid throughout.",
   },
@@ -47,6 +52,7 @@ const ACNE: Concern[] = [
     label: "Cyst",
     category: "acne",
     imageUrl: require("../../assets/concerns/cyst.png"),
+    circleImageUrl: require("../../assets/concerns/cyst_circle.png"),
     description:
       "A deep, large lump like a nodule, but filled with fluid or semi-fluid material, making it feel soft or squishy.",
   },
@@ -55,6 +61,7 @@ const ACNE: Concern[] = [
     label: "Milia",
     category: "acne",
     imageUrl: require("../../assets/concerns/millia.png"),
+    circleImageUrl: require("../../assets/concerns/millia_circle.png"),
     description:
       "Tiny, firm, pearly-white bumps under intact skin, most common around the eyelids and cheeks. They are keratin-filled cysts, not clogged acne pores.",
   },
@@ -63,6 +70,7 @@ const ACNE: Concern[] = [
     label: "Fungal acne",
     category: "acne",
     imageUrl: require("../../assets/concerns/fungal.png"),
+    circleImageUrl: require("../../assets/concerns/fungal_circle.png"),
     description:
       "Small, uniform, inflamed bumps caused by yeast overgrowth in hair follicles. Distinctly itchy, with bumps that are similar in size.",
   },
@@ -73,6 +81,7 @@ const PIGMENTATION: Concern[] = [
     label: "Post-inflammatory hyperpigmentation (PIH)",
     category: "pigmentation",
     imageUrl: require("../../assets/concerns/pih.png"),
+    circleImageUrl: require("../../assets/concerns/pih_circle.png"),
     description:
       "Flat tan, brown, or black spots left where skin was inflamed or injured. The color is brown, tan, or black rather than red, which separates it from PIE.",
   },
@@ -81,6 +90,7 @@ const PIGMENTATION: Concern[] = [
     label: "Post-inflammatory erythema (PIE)",
     category: "pigmentation",
     imageUrl: require("../../assets/concerns/pie.png"),
+    circleImageUrl: require("../../assets/concerns/pie_circle.png"),
     description:
       "Flat red or pink marks left after a spot heals. The color is red or pink rather than brown, which separates it from PIH.",
   },
@@ -89,6 +99,7 @@ const PIGMENTATION: Concern[] = [
     label: "Melasma",
     category: "pigmentation",
     imageUrl: require("../../assets/concerns/melasma.png"),
+    circleImageUrl: require("../../assets/concerns/melasma_circle.png"),
     description:
       "Blotchy, darker patches, often brown, mainly on the cheeks, forehead, chin, and above the upper lip. Usually larger and more symmetrical than sunspots or freckles.",
   },
@@ -97,6 +108,7 @@ const PIGMENTATION: Concern[] = [
     label: "Sunspots (solar lentigines)",
     category: "pigmentation",
     imageUrl: require("../../assets/concerns/sunspot.png"),
+    circleImageUrl: require("../../assets/concerns/sunspots_circle.png"),
     description:
       "Flat, clearly defined brown spots, usually on the face and hands, caused by sun exposure.",
   },
@@ -107,6 +119,7 @@ const TEXTURE: Concern[] = [
     label: "Atrophic acne scarring",
     category: "texture",
     imageUrl: require("../../assets/concerns/scarring.png"),
+    circleImageUrl: require("../../assets/concerns/scarring_circle.png"),
     description:
       "A depression or pit left when too little collagen forms while healing from acne. Types include ice pick, boxcar, and rolling scars.",
   },
@@ -115,6 +128,7 @@ const TEXTURE: Concern[] = [
     label: "Raised (hypertrophic/keloid) scarring",
     category: "texture",
     imageUrl: require("../../assets/concerns/keloid.png"),
+    circleImageUrl: require("../../assets/concerns/keloid_circle.png"),
     description:
       "A firm, raised scar formed when skin makes too much collagen while healing. Keloids grow larger than the original blemish.",
   },
@@ -123,6 +137,7 @@ const TEXTURE: Concern[] = [
     label: "Enlarged pores / uneven texture",
     category: "texture",
     imageUrl: require("../../assets/concerns/pores.png"),
+    circleImageUrl: require("../../assets/concerns/pores_circle.png"),
     description:
       "Visible pores that are larger than typical across an area of skin. Often associated with acne and can happen at any age or skin tone.",
   },
@@ -131,6 +146,7 @@ const TEXTURE: Concern[] = [
     label: "Fine lines / wrinkles",
     category: "texture",
     imageUrl: require("../../assets/concerns/wrinkles.png"),
+    circleImageUrl: require("../../assets/concerns/wrinkles_circle.png"),
     description:
       "Creases, folds, or furrows that develop gradually with age, often along natural expression lines like the forehead, eye corners, and mouth.",
   },

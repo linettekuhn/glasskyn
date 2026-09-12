@@ -217,6 +217,7 @@ export interface Concern {
   category: ConcernCategory;
   description: string;
   imageUrl: number;
+  circleImageUrl: number;
 }
 
 export type CircleStatus = "unlabeled" | "labeled" | "skipped";

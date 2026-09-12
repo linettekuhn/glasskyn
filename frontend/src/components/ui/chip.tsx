@@ -1,4 +1,10 @@
-import { StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
+import {
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+} from "react-native";
 import { ThemedText } from "./themed-text";
 import { Colors, getTheme } from "@/constants/theme";
 import tinyColor from "tinycolor2";
@@ -10,6 +16,7 @@ type ChipProps = {
   activeColor?: string;
   muted?: boolean;
   disabled?: boolean;
+  image?: number;
 };
 
 export default function Chip({
@@ -19,6 +26,7 @@ export default function Chip({
   activeColor,
   muted = false,
   disabled = false,
+  image,
 }: ChipProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -45,14 +53,19 @@ export default function Chip({
         },
       ]}
     >
-      <ThemedText
-        type="bodySmall"
-        weight="medium"
-        style={{ color: txtColor }}
-        numberOfLines={1}
-      >
-        {label}
-      </ThemedText>
+      <View style={styles.content}>
+        {image != null && (
+          <Image source={image} style={styles.icon} resizeMode="cover" />
+        )}
+        <ThemedText
+          type="bodySmall"
+          weight="medium"
+          style={{ color: txtColor }}
+          numberOfLines={1}
+        >
+          {label}
+        </ThemedText>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -64,5 +77,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderWidth: 1,
     alignItems: "center",
+  },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  icon: {
+    width: 32,
+    height: 32,
+    borderRadius: 9999,
   },
 });
