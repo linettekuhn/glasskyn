@@ -11,7 +11,10 @@ export default function ModalLayout() {
   const colors = Colors[getTheme(colorScheme)];
   const segments = useSegments();
   const lastSegment = segments[segments.length - 1];
-  const isEdgeToEdgeRoute = lastSegment === "scan" || lastSegment === "skin-capture";
+  const isEdgeToEdgeRoute =
+    lastSegment === "scan" ||
+    lastSegment === "skin-capture" ||
+    lastSegment === "face-annotation";
 
   return (
     <SafeAreaView
@@ -40,6 +43,13 @@ export default function ModalLayout() {
                 name="skin-capture"
                 options={{
                   presentation: "fullScreenModal",
+                }}
+              />
+              <Stack.Screen
+                name="face-annotation"
+                options={{
+                  presentation: "fullScreenModal",
+                  gestureDirection: "vertical",
                 }}
               />
               <Stack.Screen

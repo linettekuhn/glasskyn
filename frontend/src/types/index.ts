@@ -208,3 +208,46 @@ export interface IngredientAnalysisResponse {
   flags: string[];
   source_attribution: string[];
 }
+
+export type ConcernCategory = "acne" | "pigmentation" | "texture";
+
+export interface Concern {
+  id: string;
+  label: string;
+  category: ConcernCategory;
+  description: string;
+  imageUrl: number;
+}
+
+export type CircleStatus = "unlabeled" | "labeled" | "skipped";
+
+export interface CircleAnnotation {
+  uuid: string;
+  number: number;
+  x: number;
+  y: number;
+  concernId: string | null;
+  status: CircleStatus;
+  createdOrder: number;
+}
+
+export type AnnotationAction =
+  | { type: "place"; circle: CircleAnnotation }
+  | { type: "delete"; circle: CircleAnnotation }
+  | { type: "move"; uuid: string; prev: { x: number; y: number } };
+
+export interface SkinCheckInConcernPayload {
+  uuid: string;
+  number: number;
+  x: number;
+  y: number;
+  concern_id: string | null;
+  status: CircleStatus;
+}
+
+export interface SkinCheckInPayload {
+  photo_uri: string | null;
+  captured_at: string | null;
+  face_landmarks: Record<string, { x: number; y: number } | undefined> | null;
+  concerns: SkinCheckInConcernPayload[];
+}

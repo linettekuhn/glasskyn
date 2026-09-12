@@ -434,7 +434,7 @@ export default function SkinCaptureScreen() {
       variance: quality?.variance ?? null,
     });
     if (__DEV__) console.log("[skin-capture] draft saved to context");
-    router.back();
+    router.replace("/(modals)/face-annotation");
   };
 
   const mode: OvalMode = !primaryGateFace
