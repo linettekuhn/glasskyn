@@ -536,7 +536,7 @@ export default function FaceAnnotationScreen() {
                 <ThemedText
                   type="caption"
                   style={{ color: colors.neutral[600] }}
-                  numberOfLines={3}
+                  numberOfLines={4}
                 >
                   {item.description}
                 </ThemedText>

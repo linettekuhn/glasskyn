@@ -1,8 +1,6 @@
 import type { Concern, ConcernCategory } from "@/types";
-
 export const TAXONOMY_DISCLAIMER =
-  "For tracking your own skin over time. Not a diagnosis — see a dermatologist for anything you're concerned about.";
-
+  "For tracking your own skin over time. Not a diagnosis. See a dermatologist for anything you're concerned about.";
 const ACNE: Concern[] = [
   {
     id: "closed_comedone",
@@ -10,7 +8,7 @@ const ACNE: Concern[] = [
     category: "acne",
     imageUrl: require("../../assets/concerns/whitehead.png"),
     description:
-      "A small bump the same color as your skin or slightly white, where a pore is fully clogged and sealed shut — nothing inside is exposed to air, so it's not inflamed or tender. Unlike a blackhead, the pore stays closed, which is why it looks pale instead of dark.",
+      "A small skin-colored or slightly white bump where a pore is fully clogged and sealed. Unlike a blackhead, the pore stays closed, so it looks pale.",
   },
   {
     id: "open_comedone",
@@ -18,7 +16,7 @@ const ACNE: Concern[] = [
     category: "acne",
     imageUrl: require("../../assets/concerns/blackhead.png"),
     description:
-      "A small bump with a dark tip visible at the surface. The dark color comes from pigment reacting with air inside an open pore — not trapped dirt. Unlike a whitehead, the pore opening stays visible and open rather than sealed shut.",
+      "A small bump with a dark tip from pigment reacting with air inside an open pore. Unlike a whitehead, the pore stays open.",
   },
   {
     id: "papule",
@@ -26,7 +24,7 @@ const ACNE: Concern[] = [
     category: "acne",
     imageUrl: require("../../assets/concerns/papule.png"),
     description:
-      "A small, firm, red bump; a cluster can make skin feel rough like sandpaper. Solid all the way through, with no visible pus center — that's what separates it from a pustule.",
+      "A small, firm, red bump with no visible pus center. Clusters can make skin feel rough like sandpaper.",
   },
   {
     id: "pustule",
@@ -34,7 +32,7 @@ const ACNE: Concern[] = [
     category: "acne",
     imageUrl: require("../../assets/concerns/pustule.png"),
     description:
-      "Looks like a papule, but with a yellow or white pus-filled center visible at the surface. Same inflamed-bump stage as a papule, just further along.",
+      "An inflamed bump like a papule, but with a visible yellow or white pus-filled center.",
   },
   {
     id: "nodule",
@@ -42,7 +40,7 @@ const ACNE: Concern[] = [
     category: "acne",
     imageUrl: require("../../assets/concerns/nodule.png"),
     description:
-      "A solid, firm lump over about a centimeter across, sitting deep in the skin. Penetrates deep enough that it often leaves a permanent scar. Unlike a cyst, it's solid throughout — nothing fluid-filled underneath.",
+      "A solid, firm lump over about a centimeter across that sits deep in the skin. Unlike a cyst, it is solid throughout.",
   },
   {
     id: "cyst",
@@ -50,7 +48,7 @@ const ACNE: Concern[] = [
     category: "acne",
     imageUrl: require("../../assets/concerns/cyst.png"),
     description:
-      "A deep, large lump like a nodule, but filled with fluid or semi-fluid material, so it feels soft or squishy rather than solid. Like nodules, cysts often leave a permanent scar.",
+      "A deep, large lump like a nodule, but filled with fluid or semi-fluid material, making it feel soft or squishy.",
   },
   {
     id: "milia",
@@ -58,7 +56,7 @@ const ACNE: Concern[] = [
     category: "acne",
     imageUrl: require("../../assets/concerns/millia.png"),
     description:
-      "Tiny, firm, pearly-white bumps just under the surface of the skin, most common around the eyelids and cheeks. Harmless keratin-filled cysts, unrelated to clogged acne pores — they sit under intact skin rather than at a pore opening.",
+      "Tiny, firm, pearly-white bumps under intact skin, most common around the eyelids and cheeks. They are keratin-filled cysts, not clogged acne pores.",
   },
   {
     id: "fungal_acne",
@@ -66,10 +64,9 @@ const ACNE: Concern[] = [
     category: "acne",
     imageUrl: require("../../assets/concerns/fungal.png"),
     description:
-      "Looks acne-like — small, uniform, inflamed bumps — but is caused by yeast overgrowth in hair follicles. Distinctly itchy, which ordinary acne generally isn't; that itch plus bumps that all look similar in size is the main tell.",
+      "Small, uniform, inflamed bumps caused by yeast overgrowth in hair follicles. Distinctly itchy, with bumps that are similar in size.",
   },
 ];
-
 const PIGMENTATION: Concern[] = [
   {
     id: "pih",
@@ -77,7 +74,7 @@ const PIGMENTATION: Concern[] = [
     category: "pigmentation",
     imageUrl: require("../../assets/concerns/pih.png"),
     description:
-      "Flat, dark spots — tan, brown, or black — left behind where skin was inflamed or injured. Temporary but can take a long time to fade, and shows up more in darker skin tones. The color is brown/tan/black, not red — that's the difference from PIE.",
+      "Flat tan, brown, or black spots left where skin was inflamed or injured. The color is brown, tan, or black rather than red, which separates it from PIE.",
   },
   {
     id: "pie",
@@ -85,7 +82,7 @@ const PIGMENTATION: Concern[] = [
     category: "pigmentation",
     imageUrl: require("../../assets/concerns/pie.png"),
     description:
-      "Flat, red or pink marks left behind after a spot heals, most visible in lighter skin tones. The color is red or pink rather than brown — a leftover redness, not a pigment change, which is what separates it from PIH.",
+      "Flat red or pink marks left after a spot heals. The color is red or pink rather than brown, which separates it from PIH.",
   },
   {
     id: "melasma",
@@ -93,7 +90,7 @@ const PIGMENTATION: Concern[] = [
     category: "pigmentation",
     imageUrl: require("../../assets/concerns/melasma.png"),
     description:
-      "Blotchy, darker patches or spots — often freckle-like — mainly on the cheeks, forehead, chin, and above the upper lip. Usually brown, can look bluish-gray in darker skin tones. Tends to appear as larger, symmetrical patches rather than small distinct dots, which is what separates it from sunspots or freckles.",
+      "Blotchy, darker patches, often brown, mainly on the cheeks, forehead, chin, and above the upper lip. Usually larger and more symmetrical than sunspots or freckles.",
   },
   {
     id: "sunspots",
@@ -101,10 +98,9 @@ const PIGMENTATION: Concern[] = [
     category: "pigmentation",
     imageUrl: require("../../assets/concerns/sunspot.png"),
     description:
-      "Flat, brown spots, larger and more clearly defined than freckles, usually on the face and hands. Caused by sun exposure, showing up from middle age onward. Unlike freckles, they don't fade in winter — they persist year-round.",
+      "Flat, clearly defined brown spots, usually on the face and hands, caused by sun exposure.",
   },
 ];
-
 const TEXTURE: Concern[] = [
   {
     id: "atrophic_scarring",
@@ -112,7 +108,7 @@ const TEXTURE: Concern[] = [
     category: "texture",
     imageUrl: require("../../assets/concerns/scarring.png"),
     description:
-      "A depression or pit left where too little collagen formed while healing from acne. Narrow and sharp-edged (ice pick), wide with a defined edge (boxcar), or wide with a soft sloping edge (rolling) are the three sub-types.",
+      "A depression or pit left when too little collagen forms while healing from acne. Types include ice pick, boxcar, and rolling scars.",
   },
   {
     id: "hypertrophic_scarring",
@@ -120,7 +116,7 @@ const TEXTURE: Concern[] = [
     category: "texture",
     imageUrl: require("../../assets/concerns/keloid.png"),
     description:
-      "A firm, raised scar that forms when skin makes too much collagen while healing — more common in darker skin tones. Keloids specifically grow larger than the original blemish and often show up on the jawline, chest, or back. Raised and firm to the touch, rather than a pit or depression, is the tell vs. atrophic scarring.",
+      "A firm, raised scar formed when skin makes too much collagen while healing. Keloids grow larger than the original blemish.",
   },
   {
     id: "enlarged_pores",
@@ -128,7 +124,7 @@ const TEXTURE: Concern[] = [
     category: "texture",
     imageUrl: require("../../assets/concerns/pores.png"),
     description:
-      "Visible openings in the skin larger than typical, where oil and sweat reach the surface. Can happen at any age or skin tone, though some ethnic backgrounds and older age tend toward larger pores; often associated with acne. This is about the visible size of pores across an area of skin, not a single clogged pore.",
+      "Visible pores that are larger than typical across an area of skin. Often associated with acne and can happen at any age or skin tone.",
   },
   {
     id: "fine_lines_wrinkles",
@@ -136,12 +132,10 @@ const TEXTURE: Concern[] = [
     category: "texture",
     imageUrl: require("../../assets/concerns/wrinkles.png"),
     description:
-      "Creases, folds, or furrows that develop with age, with severity shaped by genetics, skin type, and sun exposure. Follows the skin's natural expression lines (forehead, eye corners, mouth) and appears gradually with age, rather than sitting at the site of one specific healed blemish — that's the tell vs. acne scarring.",
+      "Creases, folds, or furrows that develop gradually with age, often along natural expression lines like the forehead, eye corners, and mouth.",
   },
 ];
-
 export const TAXONOMY: Concern[] = [...ACNE, ...PIGMENTATION, ...TEXTURE];
-
 export const TAXONOMY_GROUPS: {
   category: ConcernCategory;
   label: string;
