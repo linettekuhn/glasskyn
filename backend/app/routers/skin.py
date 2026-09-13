@@ -57,9 +57,11 @@ def submit_check_in(
     session_kwargs = {
         "user_id": current_user.id,
         "image_url": body.image_file_key,
-        "face_landmarks": body.face_landmarks.model_dump()
-        if body.face_landmarks is not None
-        else None,
+        "face_landmarks": (
+            {k: v.model_dump() for k, v in body.face_landmarks.items()}
+            if body.face_landmarks is not None
+            else None
+        ),
     }
     if body.captured_at is not None:
         session_kwargs["timestamp"] = body.captured_at
