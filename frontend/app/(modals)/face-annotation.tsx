@@ -38,7 +38,7 @@ import {
   TAXONOMY_DISCLAIMER,
 } from "@/constants/taxonomy";
 import { usePhotoTransform } from "@/hooks/use-photo-transform";
-import { submitSkinCheckIn } from "@/api/skin";
+import { submitSkinCheckIn, getSkinSessions } from "@/api/skin";
 import { useSkinCapture } from "@/contexts/SkinCaptureContext";
 import {
   allSettled,
@@ -388,7 +388,22 @@ export default function FaceAnnotationScreen() {
           status: c.status,
         })),
       };
-      await submitSkinCheckIn(payload);
+      const result = await submitSkinCheckIn(payload);
+      if (__DEV__) {
+        getSkinSessions()
+          .then((sessions) =>
+            console.log(
+              "[skin] round-trip: session",
+              result.session_id,
+              "returned",
+              sessions.length,
+              "session(s)",
+            ),
+          )
+          .catch((e) =>
+            console.warn("[skin] round-trip list failed", e?.message ?? e),
+          );
+      }
       Toast.show({
         type: "success",
         text1: "Check-in saved",

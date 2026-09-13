@@ -252,3 +252,35 @@ export interface SkinCheckInPayload {
   face_landmarks: Record<string, { x: number; y: number } | undefined> | null;
   concerns: SkinCheckInConcernPayload[];
 }
+
+export interface SkinConcernOut {
+  id: number;
+  uuid: string | null;
+  user_id: number;
+  label: string | null;
+  status: string | null;
+  created_session_id: number;
+  resolved_session_id: number | null;
+  anchor: Record<string, unknown> | null;
+  history: Array<{
+    session_id: number;
+    coords: { x: number; y: number };
+    size_estimate: number | null;
+  }>;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface SkinSessionOut {
+  id: number;
+  user_id: number;
+  timestamp: string;
+  image_url: string;
+  face_landmarks: Record<string, { x: number; y: number } | undefined> | null;
+  concerns: SkinConcernOut[];
+}
+
+export interface SkinCheckInResponse {
+  session_id: number;
+  concerns: SkinConcernOut[];
+}

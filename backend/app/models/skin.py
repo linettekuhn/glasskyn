@@ -16,8 +16,10 @@ class SkinSession(Base):
 class SkinConcern(Base):
     __tablename__ = "concerns"
     id = Column(Integer, primary_key=True, index=True)
+    uuid = Column(String, nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     label = Column(String, nullable=True)
+    status = Column(String, nullable=True)
     created_session_id = Column(
         Integer, ForeignKey("sessions.id"), nullable=False, index=True
     )

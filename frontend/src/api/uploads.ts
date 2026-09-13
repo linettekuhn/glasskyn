@@ -8,12 +8,14 @@ interface PresignedUrlResponse {
 
 export async function getPresignedUrl(
   fileName: string,
-  contentType: string
+  contentType: string,
+  folder: string = "products"
 ): Promise<PresignedUrlResponse> {
-  console.log("[API] getPresignedUrl called:", fileName, contentType);
+  console.log("[API] getPresignedUrl called:", fileName, contentType, folder);
   const response = await apiClient.post("/uploads/presigned-url", {
     file_name: fileName,
     content_type: contentType,
+    folder,
   });
   console.log("[API] getPresignedUrl response:", response.data);
   return response.data;

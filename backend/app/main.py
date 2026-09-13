@@ -19,6 +19,7 @@ from app.routers import chat as chat_router
 from app.routers import notifications as notifications_router
 from app.routers import preferences as preferences_router
 from app.routers import water as water_router
+from app.routers import skin as skin_router
 from app.routers import version as version_router
 from app.services.scheduler import scheduler
 from app.core.config import CORS_ORIGINS
@@ -63,6 +64,7 @@ app.include_router(chat_router.router)
 app.include_router(notifications_router.router)
 app.include_router(preferences_router.router)
 app.include_router(water_router.router)
+app.include_router(skin_router.router)
 app.include_router(version_router.router)
 
 
