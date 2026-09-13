@@ -36,6 +36,7 @@ export async function uploadToS3(
       method: "PUT",
       headers: {
         "Content-Type": contentType,
+        "x-amz-server-side-encryption": "AES256",
       },
       body: blob,
       signal: controller.signal,

@@ -474,6 +474,18 @@ export default function FaceAnnotationScreen() {
           />
           <Chip label="Not sure / skip" muted onPress={skipActive} />
         </ScrollView>
+        {isAllSettled && (
+          <ThemedButton
+            text="Save check-in"
+            onPress={handleSave}
+            loading={submitting}
+            disabled={submitting}
+            color={btnColor}
+            alignment="stretch"
+            leftIconName="check"
+            LeftIconComponent={MaterialCommunityIcons}
+          />
+        )}
       </View>
     );
 
