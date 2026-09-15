@@ -69,7 +69,8 @@ export default function ScannerScreen() {
               type="bodyLarge"
               style={{ color: colors.neutral[500], textAlign: "center" }}
             >
-              Tap to snap your product's labels and we'll take it from there.
+              We'll autofill the details and flag any ingredients that may
+              irritate your skin.
             </ThemedText>
           </View>
         </View>
@@ -86,27 +87,24 @@ export default function ScannerScreen() {
 
   if (permission.status === PermissionStatus.UNDETERMINED) {
     return (
-      <TouchableOpacity
-        style={styles.container}
-        onPress={handleRequest}
-        activeOpacity={0.7}
-      >
+      <View style={styles.container}>
         <View
           style={[styles.placeholder, { borderColor: colors.primary[400] }]}
         >
           <TapCameraIcon color={colors.primary[500]} />
           <View style={{ alignItems: "center", gap: 4 }}>
-            <ThemedText type="h2">Camera Access Needed</ThemedText>
+            <ThemedText type="h2">Scan Your Products</ThemedText>
             <ThemedText
               type="bodyLarge"
               style={{ color: colors.neutral[500], textAlign: "center" }}
             >
-              Allow camera access to scan your product labels.
+              Glasskyn reads your product's label to autofill its details and
+              flag any ingredients that may irritate your skin.
             </ThemedText>
           </View>
         </View>
         <ThemedButton
-          text="Allow Camera Access"
+          text="Continue"
           onPress={handleRequest}
           alignment="center"
         />
@@ -117,7 +115,7 @@ export default function ScannerScreen() {
           color={colors.secondary[700]}
           text={"Enter details manually instead"}
         />
-      </TouchableOpacity>
+      </View>
     );
   }
 
