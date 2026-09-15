@@ -48,6 +48,7 @@ export default function ModalLayout() {
             <Stack.Screen name="edit-routine" />
             <Stack.Screen name="edit-account" />
             <Stack.Screen name="change-password" />
+            <Stack.Screen name="delete-account" />
             <Stack.Screen name="edit-skin-profile" />
             <Stack.Screen name="product-detail" />
             <Stack.Screen name="expiring-products" />

@@ -49,6 +49,8 @@ export async function resetPassword(code: string, newPassword: string) {
   });
 }
 
-export async function deleteAccount() {
-  await apiClient.delete('/auth/me');
+export async function deleteAccount(currentPassword: string) {
+  await apiClient.delete('/auth/me', {
+    data: { current_password: currentPassword },
+  });
 }

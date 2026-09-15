@@ -30,7 +30,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
-  deleteAccount: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -120,8 +120,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(updated);
   };
 
-  const deleteAccount = async () => {
-    await auth.deleteAccount();
+  const deleteAccount = async (password: string) => {
+    await auth.deleteAccount(password);
     await unregisterPushNotificationsFromBackend();
     await removeToken();
     await removeRefreshToken();

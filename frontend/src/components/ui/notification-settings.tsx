@@ -7,7 +7,10 @@ import {
   useColorScheme,
   Platform,
   Modal,
+  AppState,
+  Linking,
 } from "react-native";
+import * as Notifications from "expo-notifications";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
@@ -28,8 +31,25 @@ export default function NotificationSettings() {
   const [prefs, setPrefs] = useState<UserPreference | null>(null);
   const [timeTarget, setTimeTarget] = useState<TimeTarget | null>(null);
   const [saving, setSaving] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+
+  const checkNotificationPermission = useCallback(() => {
+    Notifications.getPermissionsAsync()
+      .then(({ status }) => setPermissionStatus(status))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    checkNotificationPermission();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        checkNotificationPermission();
+      }
+    });
+    return () => sub.remove();
+  }, [checkNotificationPermission]);
 
   useEffect(() => {
     getPreferences()
@@ -103,6 +123,22 @@ export default function NotificationSettings() {
 
   return (
     <GlassSurface style={styles.card}>
+      {permissionStatus === "denied" && (
+        <View style={[styles.banner, { backgroundColor: colors.neutral[100] }]}>
+          <ThemedText
+            type="bodySmall"
+            style={{ flex: 1, color: colors.neutral[700] }}
+          >
+            Notifications are turned off for Glasskyn. Reminders won't be
+            delivered until you enable them in Settings.
+          </ThemedText>
+          <TouchableOpacity onPress={() => Linking.openSettings()}>
+            <ThemedText type="bodySmall" style={{ color: colors.primary[600] }}>
+              Open Settings
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      )}
       <ThemedText type="captionSmall" style={{ color: colors.neutral[500] }}>
         {saving ? "Saving…" : "Reminders are delivered as push notifications."}
       </ThemedText>
@@ -247,6 +283,13 @@ const styles = StyleSheet.create({
   card: {
     padding: 16,
     gap: 12,
+  },
+  banner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
   },
   row: {
     flexDirection: "row",
