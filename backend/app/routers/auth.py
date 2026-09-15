@@ -26,6 +26,7 @@ from app.models.routine import SkinProfile, Routine, RoutineStep
 from app.models.routine_step_completion import RoutineStepCompletion
 from app.models.scan import ScanResult
 from app.models.user_preference import UserPreference
+from app.models.water_intake import WaterIntake
 from app.core.security import (
     hash_password,
     verify_password,
@@ -425,6 +426,9 @@ async def delete_me(
     db.query(UserPreference).filter(UserPreference.user_id == user_id).delete(
         synchronize_session=False
     )
+    db.query(WaterIntake).filter(WaterIntake.user_id == user_id).delete(
+        synchronize_session=False
+    )
     # Device tokens are Expo push tokens. Expo's push service needs no
     # server-side unregister/invalidation call - once these rows are gone the
     # tokens are simply never sent to again. Deletion here is the only step
@@ -435,6 +439,9 @@ async def delete_me(
     db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete(
         synchronize_session=False
     )
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user_id
+    ).delete(synchronize_session=False)
     db.query(Product).filter(Product.user_id == user_id).delete(
         synchronize_session=False
     )
