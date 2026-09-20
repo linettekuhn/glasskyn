@@ -1,0 +1,37 @@
+name: Build and Push
+
+on:
+  push:
+    branches: [main, hotfix/app-review]
+    tags: ["*"]
+
+jobs:
+  build-branch:
+    if: github.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build image
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/glasskyn-api:${{ github.sha }} .
+
+      - name: Push image
+        run: docker push ghcr.io/${{ github.repository_owner }}/glasskyn-api:${{ github.sha }}
+
+  build-tag:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build image
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/glasskyn-api:${{ github.ref_name }} .
+
+      - name: Push image
+        run: docker push ghcr.io/${{ github.repository_owner }}/glasskyn-api:${{ github.ref_name }}
