@@ -16,7 +16,7 @@ jobs:
         run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/glasskyn-api:${{ github.sha }} .
+        run: docker build -f backend/Dockerfile.prod -t ghcr.io/${{ github.repository_owner }}/glasskyn-api:${{ github.sha }} backend
 
       - name: Push image
         run: docker push ghcr.io/${{ github.repository_owner }}/glasskyn-api:${{ github.sha }}
@@ -31,7 +31,7 @@ jobs:
         run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/glasskyn-api:${{ github.ref_name }} .
+        run: docker build -f backend/Dockerfile.prod -t ghcr.io/${{ github.repository_owner }}/glasskyn-api:${{ github.ref_name }} backend
 
       - name: Push image
         run: docker push ghcr.io/${{ github.repository_owner }}/glasskyn-api:${{ github.ref_name }}
