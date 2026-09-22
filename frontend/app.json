@@ -35,7 +35,8 @@
         "dark": "./assets/icon-dark.png"
       },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Glasskyn uses your camera to photograph your skincare products. For example, scanning a moisturizer's label lets Glasskyn autofill its name and ingredients, and flag any that may irritate your skin."
       }
     },
     "android": {

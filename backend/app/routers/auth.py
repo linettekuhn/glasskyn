@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+import logging
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Cookie, Header
 from app.schemas.auth import (
@@ -10,6 +11,7 @@ from app.schemas.auth import (
     RefreshResponse,
     UserUpdate,
     ChangePasswordRequest,
+    DeleteAccountRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
 )
@@ -24,6 +26,7 @@ from app.models.routine import SkinProfile, Routine, RoutineStep
 from app.models.routine_step_completion import RoutineStepCompletion
 from app.models.scan import ScanResult
 from app.models.user_preference import UserPreference
+from app.models.water_intake import WaterIntake
 from app.core.security import (
     hash_password,
     verify_password,
@@ -38,9 +41,12 @@ from app.core import config
 from app.models.refresh_token import RefreshToken
 from app.models.password_reset_token import PasswordResetToken
 from app.services.email import send_password_reset_code
+from app.services.storage import delete_files
 from jose import JWTError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+logger = logging.getLogger(__name__)
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
@@ -344,9 +350,15 @@ async def change_password(
 
 @router.delete("/me", status_code=204)
 async def delete_me(
+    body: DeleteAccountRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not verify_password(body.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password"
+        )
+
     user_id = current_user.id
 
     routine_ids = [
@@ -368,6 +380,34 @@ async def delete_me(
         synchronize_session=False
     )
 
+    # collect S3 keys for this user's images before their rows are deleted
+    scan_image_keys = [
+        key
+        for (key,) in db.query(ScanResult.image_s3_key)
+        .filter(ScanResult.user_id == user_id)
+        .all()
+        if key
+    ]
+    scan_back_image_keys = [
+        key
+        for (key,) in db.query(ScanResult.back_image_s3_key)
+        .filter(ScanResult.user_id == user_id)
+        .all()
+        if key
+    ]
+    product_image_keys = [
+        key
+        for (key,) in db.query(Product.image_s3_key)
+        .filter(Product.user_id == user_id)
+        .all()
+        if key
+    ]
+    photo_keys = list(
+        dict.fromkeys(
+            scan_image_keys + scan_back_image_keys + product_image_keys
+        )
+    )
+
     db.query(ScanResult).filter(ScanResult.user_id == user_id).delete(
         synchronize_session=False
     )
@@ -386,16 +426,45 @@ async def delete_me(
     db.query(UserPreference).filter(UserPreference.user_id == user_id).delete(
         synchronize_session=False
     )
+    db.query(WaterIntake).filter(WaterIntake.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    # Device tokens are Expo push tokens. Expo's push service needs no
+    # server-side unregister/invalidation call - once these rows are gone the
+    # tokens are simply never sent to again. Deletion here is the only step
+    # required to stop future pushes to this user's devices.
     db.query(DeviceToken).filter(DeviceToken.user_id == user_id).delete(
         synchronize_session=False
     )
     db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete(
         synchronize_session=False
     )
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user_id
+    ).delete(synchronize_session=False)
     db.query(Product).filter(Product.user_id == user_id).delete(
         synchronize_session=False
     )
 
     db.delete(current_user)
     db.commit()
+
+    # Best-effort S3 cleanup after the DB transaction commits.
+    # Failures must not turn a successful account deletion into a 500.
+    if photo_keys:
+        try:
+            failed = delete_files(photo_keys)
+            if failed:
+                logger.warning(
+                    "Failed to delete %d S3 object(s) for deleted user %s: %s",
+                    len(failed),
+                    user_id,
+                    failed,
+                )
+        except Exception:
+            logger.exception(
+                "Unexpected error deleting S3 objects for deleted user %s",
+                user_id,
+            )
+
     return None

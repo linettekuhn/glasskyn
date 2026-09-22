@@ -21,6 +21,11 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+# expected body on DELETE /auth/me
+class DeleteAccountRequest(BaseModel):
+    current_password: str
+
+
 # expected body on POST /auth/login
 class LoginRequest(BaseModel):
     email: EmailStr

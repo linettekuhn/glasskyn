@@ -1,3 +1,4 @@
+import logging
 import uuid
 import boto3
 from botocore.config import Config
@@ -20,6 +21,7 @@ DEFAULT_UPLOAD_EXPIRATION = 900
 DEFAULT_DOWNLOAD_EXPIRATION = 3600
 
 s3_client = None
+logger = logging.getLogger(__name__)
 
 
 def _get_s3_client():
@@ -104,3 +106,38 @@ def delete_file(file_key: str) -> bool:
         return True
     except ClientError:
         return False
+
+
+# S3 delete_objects accepts at most 1000 objects per request.
+_MAX_DELETE_OBJECTS_PER_REQUEST = 1000
+
+
+def delete_files(file_keys: list[str]) -> list[str]:
+    """Batch-delete objects from S3.
+
+    Reuses the module-level S3 client. Returns the list of keys that failed
+    to delete (empty on complete success). Never raises.
+    """
+    if not file_keys:
+        return []
+
+    client = _get_s3_client()
+    unique_keys = list(dict.fromkeys(file_keys))
+    failed: list[str] = []
+
+    for i in range(0, len(unique_keys), _MAX_DELETE_OBJECTS_PER_REQUEST):
+        batch = unique_keys[i : i + _MAX_DELETE_OBJECTS_PER_REQUEST]
+        try:
+            response = client.delete_objects(
+                Bucket=S3_BUCKET_NAME,
+                Delete={"Objects": [{"Key": key} for key in batch]},
+            )
+            for error in response.get("Errors", []):
+                key = error.get("Key")
+                if key:
+                    failed.append(key)
+        except ClientError as exc:
+            logger.warning("Batch S3 delete failed for %d key(s): %s", len(batch), exc)
+            failed.extend(batch)
+
+    return failed

@@ -7,9 +7,6 @@ until pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER"; do
 done
 echo "Postgres ready!"
 
-echo "Running Alembic migrations..."
-alembic upgrade head
-
 echo "Seeding templates..."
 python -c "
 from app.services.seed import seed_templates

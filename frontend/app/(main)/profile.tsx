@@ -84,7 +84,7 @@ function SettingsRow({
 }
 
 export default function ProfileScreen() {
-  const { user, logout, deleteAccount } = useAuth();
+  const { user, logout } = useAuth();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const [skinProfile, setSkinProfile] = useState<SkinProfile | null>(null);
@@ -120,25 +120,7 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      "Delete Account",
-      "This permanently deletes your account and all of your data. This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteAccount();
-              router.replace("/(auth)/login");
-            } catch {
-              // interceptor shows toast
-            }
-          },
-        },
-      ],
-    );
+    router.push("/(modals)/delete-account");
   };
 
   const hasSkinProfile =
