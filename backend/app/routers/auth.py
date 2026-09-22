@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+import logging
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Cookie, Header
 from app.schemas.auth import (
@@ -8,10 +9,24 @@ from app.schemas.auth import (
     LoginRequest,
     UserOut,
     RefreshResponse,
+    UserUpdate,
+    ChangePasswordRequest,
+    DeleteAccountRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
 )
 from sqlalchemy.orm import Session
-from app.middleware.auth import get_db
+from app.middleware.auth import get_db, get_current_user
 from app.models.user import User
+from app.models.alert import Alert
+from app.models.chat import ChatMessage, ChatSession
+from app.models.device_token import DeviceToken
+from app.models.product import Product
+from app.models.routine import SkinProfile, Routine, RoutineStep
+from app.models.routine_step_completion import RoutineStepCompletion
+from app.models.scan import ScanResult
+from app.models.user_preference import UserPreference
+from app.models.water_intake import WaterIntake
 from app.core.security import (
     hash_password,
     verify_password,
@@ -19,12 +34,19 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
     hash_refresh_token,
+    generate_reset_code,
+    hash_reset_code,
 )
 from app.core import config
 from app.models.refresh_token import RefreshToken
+from app.models.password_reset_token import PasswordResetToken
+from app.services.email import send_password_reset_code
+from app.services.storage import delete_files
 from jose import JWTError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+logger = logging.getLogger(__name__)
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
@@ -92,6 +114,84 @@ async def login(body: LoginRequest, response: Response, db: Session = Depends(ge
         token_type="bearer",
         user=UserOut.model_validate(user),
     )
+
+
+@router.post("/forgot-password", status_code=202)
+async def forgot_password(
+    body: ForgotPasswordRequest, db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.email == body.email).first()
+
+    # always return 202 regardless of whether the email exists (no enumeration)
+    if not user:
+        return None
+
+    # invalidate any prior unused codes for this user
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.is_used == False,
+    ).update({"is_used": True})
+    db.commit()
+
+    code = generate_reset_code()
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=config.PASSWORD_RESET_CODE_EXPIRE_MINUTES
+    )
+    db_token = PasswordResetToken(
+        user_id=user.id,
+        token_hash=hash_reset_code(code),
+        expires_at=expires_at,
+    )
+    db.add(db_token)
+    db.commit()
+
+    send_password_reset_code(user.email, code)
+
+    return None
+
+
+@router.post("/reset-password", status_code=204)
+async def reset_password(
+    body: ResetPasswordRequest, db: Session = Depends(get_db)
+):
+    code_hash = hash_reset_code(body.code.strip())
+    db_token = (
+        db.query(PasswordResetToken)
+        .filter(
+            PasswordResetToken.token_hash == code_hash,
+            PasswordResetToken.is_used == False,
+        )
+        .first()
+    )
+
+    if not db_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset code"
+        )
+
+    if db_token.expires_at < datetime.now(timezone.utc):
+        db_token.is_used = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset code has expired",
+        )
+
+    user = db.get(User, db_token.user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User not found"
+        )
+
+    user.hashed_password = hash_password(body.new_password)
+    db_token.is_used = True
+    # revoke all refresh tokens so other sessions are signed out
+    db.query(RefreshToken).filter(
+        RefreshToken.user_id == user.id,
+        RefreshToken.is_revoked == False,
+    ).update({"is_revoked": True})
+    db.commit()
+    return None
 
 
 @router.post("/refresh", response_model=RefreshResponse)
@@ -197,5 +297,174 @@ async def logout(
         db.commit()
 
     response.delete_cookie(key="refreshToken", httponly=True, samesite="strict")
+
+    return None
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_me(
+    body: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    updates = body.model_dump(exclude_unset=True)
+
+    new_email = updates.get("email")
+    if new_email and new_email != current_user.email:
+        existing = db.query(User).filter(User.email == new_email).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
+
+    for field, value in updates.items():
+        setattr(current_user, field, value)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/change-password", status_code=204)
+async def change_password(
+    body: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not verify_password(body.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    current_user.hashed_password = hash_password(body.new_password)
+    # revoke all refresh tokens so other sessions are signed out
+    db.query(RefreshToken).filter(
+        RefreshToken.user_id == current_user.id,
+        RefreshToken.is_revoked == False,
+    ).update({"is_revoked": True})
+    db.commit()
+    return None
+
+
+@router.delete("/me", status_code=204)
+async def delete_me(
+    body: DeleteAccountRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not verify_password(body.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password"
+        )
+
+    user_id = current_user.id
+
+    routine_ids = [
+        row[0]
+        for row in db.query(Routine.id).filter(Routine.user_id == user_id).all()
+    ]
+
+    if routine_ids:
+        db.query(RoutineStepCompletion).filter(
+            RoutineStepCompletion.routine_id.in_(routine_ids)
+        ).delete(synchronize_session=False)
+        db.query(RoutineStep).filter(
+            RoutineStep.routine_id.in_(routine_ids)
+        ).delete(synchronize_session=False)
+    db.query(RoutineStepCompletion).filter(
+        RoutineStepCompletion.user_id == user_id
+    ).delete(synchronize_session=False)
+    db.query(Routine).filter(Routine.user_id == user_id).delete(
+        synchronize_session=False
+    )
+
+    # collect S3 keys for this user's images before their rows are deleted
+    scan_image_keys = [
+        key
+        for (key,) in db.query(ScanResult.image_s3_key)
+        .filter(ScanResult.user_id == user_id)
+        .all()
+        if key
+    ]
+    scan_back_image_keys = [
+        key
+        for (key,) in db.query(ScanResult.back_image_s3_key)
+        .filter(ScanResult.user_id == user_id)
+        .all()
+        if key
+    ]
+    product_image_keys = [
+        key
+        for (key,) in db.query(Product.image_s3_key)
+        .filter(Product.user_id == user_id)
+        .all()
+        if key
+    ]
+    photo_keys = list(
+        dict.fromkeys(
+            scan_image_keys + scan_back_image_keys + product_image_keys
+        )
+    )
+
+    db.query(ScanResult).filter(ScanResult.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(Alert).filter(Alert.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(ChatMessage).filter(ChatMessage.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(ChatSession).filter(ChatSession.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(SkinProfile).filter(SkinProfile.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(UserPreference).filter(UserPreference.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(WaterIntake).filter(WaterIntake.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    # Device tokens are Expo push tokens. Expo's push service needs no
+    # server-side unregister/invalidation call - once these rows are gone the
+    # tokens are simply never sent to again. Deletion here is the only step
+    # required to stop future pushes to this user's devices.
+    db.query(DeviceToken).filter(DeviceToken.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user_id
+    ).delete(synchronize_session=False)
+    db.query(Product).filter(Product.user_id == user_id).delete(
+        synchronize_session=False
+    )
+
+    db.delete(current_user)
+    db.commit()
+
+    # Best-effort S3 cleanup after the DB transaction commits.
+    # Failures must not turn a successful account deletion into a 500.
+    if photo_keys:
+        try:
+            failed = delete_files(photo_keys)
+            if failed:
+                logger.warning(
+                    "Failed to delete %d S3 object(s) for deleted user %s: %s",
+                    len(failed),
+                    user_id,
+                    failed,
+                )
+        except Exception:
+            logger.exception(
+                "Unexpected error deleting S3 objects for deleted user %s",
+                user_id,
+            )
 
     return None

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto-Label Review</title>
+<style>
+  :root {
+    --skincare: #4c9f70; --haircare: #4a7fb5; --makeup: #b5508a;
+    --bg: #f6f7f9; --card: #ffffff; --line: #e2e6ec; --text: #1c2430; --muted: #697586;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--text); }
+  header { background: var(--card); border-bottom: 1px solid var(--line);
+           padding: 12px 20px; position: sticky; top: 0; z-index: 10; }
+  .row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .grow { flex: 1; }
+  h1 { font-size: 16px; margin: 0; }
+  .muted { color: var(--muted); font-size: 13px; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card);
+           padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+  button:hover { background: #eef1f6; }
+  button.primary { background: #1c6fd8; border-color: #1c6fd8; color: #fff; }
+  button.primary:hover { background: #155cb4; }
+  .kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px;
+         padding: 1px 6px; background: #f0f3f8; font-size: 12px; font-family: ui-monospace, monospace; }
+  #batchsel { font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px;
+              background: var(--card); color: var(--text); }
+  #batchsel label { font-size: 13px; }
+  #progressbar { height: 8px; background: #e4e8ee; border-radius: 4px; overflow: hidden;
+                 margin: 10px 0 0; }
+  #progressfill { height: 100%; width: 0%; background: #1c6fd8; transition: width .15s; }
+  main { max-width: 900px; margin: 24px auto; padding: 0 20px; display: grid;
+         grid-template-columns: 340px 1fr; gap: 20px; }
+  #stage { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+           padding: 20px; }
+  #imgwrap { height: 320px; display: flex; align-items: center; justify-content: center;
+             background: repeating-linear-gradient(45deg,#f2f4f8,#f2f4f8 10px,#ececf2 10px,#ececf2 20px);
+             border-radius: 10px; overflow: hidden; }
+  #imgwrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  #imgwrap.nophoto::before { content: "no photo"; color: var(--muted); }
+  #desc { margin-top: 14px; }
+  #name { font-size: 17px; font-weight: 600; margin: 0 0 4px; line-height: 1.3; }
+  #generic { color: var(--muted); font-size: 14px; margin: 0 0 10px; }
+  #meta { font-size: 13px; }
+  .badge { display: inline-block; border-radius: 20px; padding: 3px 12px; font-weight: 600;
+           font-size: 12px; color: #fff; text-transform: uppercase; }
+  .badge.skincare { background: var(--skincare); }
+  .badge.haircare { background: var(--haircare); }
+  .badge.makeup { background: var(--makeup); }
+  .badge.sk-, .badge.hair-, .badge.makeup- { }
+  #labels { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  #labels button { flex: 1; min-width: 140px; padding: 14px; font-size: 15px; font-weight: 600; }
+  #labels button.selected.skincare { background: var(--skincare); color: #fff; border-color: var(--skincare); }
+  #labels button.selected.haircare { background: var(--haircare); color: #fff; border-color: var(--haircare); }
+  #labels button.selected.makeup { background: var(--makeup); color: #fff; border-color: var(--makeup); }
+  #nav { display: flex; gap: 10px; margin-top: 16px; }
+  #nav button { flex: 1; }
+  #status { margin-top: 12px; text-align: center; }
+  #status.ok { color: #166534; } #status.err { color: #b91c1c; }
+  aside { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  #thumbgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px;
+               max-height: 520px; overflow: auto; margin-top: 10px; }
+  .tile { aspect-ratio: 1; border-radius: 6px; border: 1px solid var(--line); cursor: pointer;
+          background: #eef1f6; position: relative; }
+  .tile img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+  .tile.skincare { border-color: var(--skincare); }
+  .tile.haircare { border-color: var(--haircare); }
+  .tile.makeup { border-color: var(--makeup); }
+  .tile.current { outline: 3px solid #1c6fd8; }
+  #empty { color: var(--muted); font-size: 13px; }
+  @media (max-width: 720px) { main { grid-template-columns: 1fr; } #imgwrap { height: 220px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <h1>Auto-Label Review</h1>
+    <span class="muted" id="batchinfo"></span>
+    <label class="muted">batch:
+      <select id="batchsel">
+        <option value="loose">loose</option>
+        <option value="conservative">conservative</option>
+      </select>
+    </label>
+    <div class="grow"></div>
+    <span class="muted"><span class="kbd">1</span>/<span class="kbd">2</span>/<span class="kbd">3</span> label ·
+      <span class="kbd">0</span>/<span class="kbd">Space</span> clear · <span class="kbd">←</span><span class="kbd">→</span> move</span>
+    <button id="savebtn" class="primary">Save to CSV</button>
+  </div>
+  <div id="progressbar"><div id="progressfill"></div></div>
+</header>
+
+<main>
+  <section id="stage">
+    <div id="imgwrap"></div>
+    <div id="desc">
+      <p id="name">–</p>
+      <p id="generic"></p>
+      <p id="meta"></p>
+    </div>
+    <div id="labels">
+      <button data-label="skincare" class="skincare">1 · Skincare</button>
+      <button data-label="haircare" class="haircare">2 · Haircare</button>
+      <button data-label="makeup" class="makeup">3 · Makeup</button>
+      <button id="clearbtn">0 · Clear</button>
+    </div>
+    <div id="nav">
+      <button id="prev">← Prev (<span class="kbd">←</span>)</button>
+      <button id="next">Next (<span class="kbd">→</span>) →</button>
+    </div>
+    <div id="status"></div>
+  </section>
+
+  <aside>
+    <div><b>Progress</b> <span class="muted" id="stattext"></span></div>
+    <div id="thumbgrid"></div>
+    <div id="empty" style="display:none">No rows loaded.</div>
+  </aside>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var params = new URLSearchParams(window.location.search);
+  var batch = (params.get("batch") || "loose");
+  if (["loose", "conservative"].indexOf(batch) < 0) batch = "loose";
+
+  var CLASSES = ["skincare", "haircare", "makeup"];
+  var rows = [];
+  var labels = {};   // code -> label
+  var idx = 0;
+  var STORAGE_KEY = "autolabel_review_" + batch;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = {
+    batchinfo: $("batchinfo"), progressfill: $("progressfill"),
+    imgwrap: $("imgwrap"), name: $("name"), generic: $("generic"), meta: $("meta"),
+    labelsBtn: Array.prototype.slice.call(document.querySelectorAll("#labels button")),
+    clearbtn: $("clearbtn"), prev: $("prev"), next: $("next"),
+    status: $("status"), stattext: $("stattext"), thumbgrid: $("thumbgrid"), empty: $("empty"),
+    savebtn: $("savebtn"), batchsel: $("batchsel")
+  };
+
+  function loadLabels() {
+    try { labels = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") || {}; }
+    catch (e) { labels = {}; }
+  }
+  function saveLabels() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
+    render();
+  }
+
+  function setStatus(text, cls) {
+    el.status.textContent = text;
+    el.status.className = (cls || "") + (text ? "" : "");
+  }
+
+  function badge(label) {
+    if (!label) return '<span class="badge">unlabeled</span>';
+    return '<span class="badge ' + label + '">' + label + '</span>';
+  }
+
+  function render() {
+    var n = rows.length;
+    var labeled = 0;
+    for (var i = 0; i < n; i++) if (labels[rows[i].code]) labeled++;
+
+    el.batchinfo.textContent = "batch: " + batch + "  (" + n + " rows)";
+    el.stattext.textContent = labeled + "/" + n + " labeled · " + (n - labeled) + " left";
+    el.progressfill.style.width = n ? (labeled / n * 100) + "%" : "0%";
+
+    renderThumbs();
+
+    if (n === 0) { el.empty.style.display = "block"; return; }
+    el.empty.style.display = "none";
+    if (idx >= n) idx = n - 1;
+    if (idx < 0) idx = 0;
+
+    var r = rows[idx];
+    el.name.textContent = r.name || "(no product name)";
+    el.generic.textContent = r.generic || "";
+    el.meta.innerHTML = "code: <code>" + r.code + "</code> &nbsp;·&nbsp; matcher: " +
+      badge(r.pred) + (r.keyword ? ' &nbsp;·&nbsp; kw: <code>' + r.keyword + "</code>" : "") +
+      ' &nbsp;·&nbsp; your label: ' + badge(labels[r.code] || null);
+
+    // image
+    el.imgwrap.classList.remove("nophoto");
+    el.imgwrap.innerHTML = "";
+    if (r.image) {
+      var img = document.createElement("img");
+      img.alt = "product";
+      img.onerror = function () { el.imgwrap.classList.add("nophoto"); el.imgwrap.innerHTML = ""; };
+      img.src = r.image;
+      el.imgwrap.appendChild(img);
+    } else {
+      el.imgwrap.classList.add("nophoto");
+    }
+
+    // label buttons
+    el.labelsBtn.forEach(function (b) {
+      var lab = b.getAttribute("data-label");
+      b.classList.toggle("selected", lab != null && labels[r.code] === lab);
+    });
+
+    setStatus("");
+  }
+
+  function renderThumbs() {
+    var frag = document.createDocumentFragment();
+    rows.forEach(function (r, i) {
+      var t = document.createElement("div");
+      t.className = "tile";
+      if (labels[r.code]) t.classList.add(labels[r.code]);
+      if (i === idx) t.classList.add("current");
+      t.title = (labels[r.code] || "unlabeled") + " — " + (r.name || r.code);
+      t.onclick = function () { idx = i; render(); };
+      if (r.image) {
+        var img = document.createElement("img");
+        img.onerror = function () { img.remove(); };
+        img.src = r.image;
+        t.appendChild(img);
+      }
+      var dot = document.createElement("i");
+      if (!labels[r.code]) {
+        dot.style.cssText = "position:absolute;right:1px;bottom:1px;width:8px;height:8px;" +
+          "border-radius:50%;background:#c0392b;display:block;";
+        t.appendChild(dot);
+      }
+      frag.appendChild(t);
+    });
+    el.thumbgrid.innerHTML = "";
+    el.thumbgrid.appendChild(frag);
+  }
+
+  function apply(label) {
+    if (!rows[idx]) return;
+    if (label === null) delete labels[rows[idx].code];
+    else labels[rows[idx].code] = label;
+    saveLabels();
+    if (label !== null && idx < rows.length - 1) { idx++; }
+    render();
+  }
+
+  function move(delta) {
+    var target = idx + delta;
+    if (target >= 0 && target < rows.length) { idx = target; render(); }
+  }
+
+  el.labelsBtn.forEach(function (b) {
+    var lab = b.getAttribute("data-label");
+    if (lab) b.onclick = function () { apply(lab); };
+  });
+  el.clearbtn.onclick = function () { apply(null); };
+  el.prev.onclick = function () { move(-1); };
+  el.next.onclick = function () { move(1); };
+
+  document.addEventListener("keydown", function (e) {
+    if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
+    switch (e.key) {
+      case "1": apply("skincare"); break;
+      case "2": apply("haircare"); break;
+      case "3": apply("makeup"); break;
+      case "0": case "Delete": case " ": case "Spacebar": apply(null); break;
+      case "ArrowLeft": move(-1); break;
+      case "ArrowRight": move(1); break;
+    }
+    // avoid page scroll on space
+    if (e.key === " " || e.key === "Spacebar") e.preventDefault();
+  });
+
+  el.savebtn.onclick = function () {
+    var payload = { batch: batch, rows: rows.map(function (r) {
+        return { code: r.code, manual_label: labels[r.code] || "" };
+      })};
+    fetch("/save-review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).then(function (resp) { return resp.json().then(function (j) { return { ok: resp.ok, j: j }; }); })
+      .then(function (r) {
+        if (r.ok && r.j.ok) {
+          setStatus("Saved: " + r.j.n_labeled + "/" + r.j.total + " labeled -> " + r.j.saved_to, "ok");
+        } else {
+          setStatus("Save failed: " + (r.j && r.j.error || "unknown"), "err");
+        }
+      })
+      .catch(function (err) { setStatus("Save failed: " + err, "err"); });
+  };
+
+  function loadBatch(b) {
+    if (["loose", "conservative"].indexOf(b) < 0) b = "loose";
+    batch = b;
+    STORAGE_KEY = "autolabel_review_" + batch;
+    rows = [];
+    labels = {};
+    idx = 0;
+    el.batchsel.value = batch;
+    history.replaceState(null, "", "?batch=" + batch);
+    fetch("/data/manifests/manual_review_" + batch + ".json")
+      .then(function (resp) {
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        return resp.json();
+      })
+      .then(function (data) {
+        rows = data.rows || [];
+        loadLabels();
+        render();
+      })
+      .catch(function (err) {
+        el.empty.style.display = "block";
+        el.empty.textContent = "Failed to load data/manifests/manual_review_" + batch +
+          ".json (" + err.message + "). Run the notebook export cell first.";
+      });
+  }
+
+  el.batchsel.onchange = function () { loadBatch(el.batchsel.value); };
+  loadBatch(batch);
+})();
+</script>
+</body>
+</html>

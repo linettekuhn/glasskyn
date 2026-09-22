@@ -15,6 +15,9 @@ export interface Product {
   image_url: string | null;
   icon: string | null;
   pao_months: number | null;
+  opened_date: string | null;
+  expiry_date: string | null;
+  days_until_expiry: number | null;
   product_type: ProductType | null;
   created_at: string;
   user_id: number;
@@ -46,6 +49,7 @@ export interface ProcessMultiResult {
   expiry_date: string | null;
   extraction_method: string | null;
   raw_ocr_text: string | null;
+  ocr_fusion_matched: boolean | null;
 }
 
 export interface ProcessPaoResult {
@@ -100,6 +104,7 @@ export interface RoutineStep {
   step_type: StepType;
   time_of_day: TimeOfDay;
   frequency: Frequency;
+  completed_today: boolean;
   created_at: string;
 }
 
@@ -109,7 +114,7 @@ export interface Routine {
   name: string;
   source: RoutineSource;
   routine_type: RoutineType;
-  is_active: boolean;
+  is_main_routine: boolean;
   steps: RoutineStep[];
   created_at: string;
   updated_at: string;
@@ -124,6 +129,31 @@ export interface RoutineTemplateStep {
   frequency: Frequency;
   suggested_product_category: string | null;
   created_at: string;
+}
+
+export interface CalendarDay {
+  date: string;
+  completed: boolean;
+}
+
+export type Units = "imperial" | "metric";
+
+export interface UserPreference {
+  water_reminder_enabled: boolean;
+  water_reminder_time: string;
+  timezone: string | null;
+  units: Units;
+  water_goal_ml: number | null;
+  water_weight_lb: number | null;
+  water_activity_level: string | null;
+  water_climate: string | null;
+  routine_digest_am_time: string | null;
+  routine_digest_pm_time: string | null;
+}
+
+export interface WaterIntake {
+  date: string;
+  ml: number;
 }
 
 export interface RoutineTemplate {

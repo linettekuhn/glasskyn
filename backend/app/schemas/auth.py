@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, EmailStr
 
 
@@ -8,10 +9,38 @@ class RegisterRequest(BaseModel):
     password: str
 
 
+# expected body on PATCH /auth/me
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+
+# expected body on POST /auth/change-password
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+# expected body on DELETE /auth/me
+class DeleteAccountRequest(BaseModel):
+    current_password: str
+
+
 # expected body on POST /auth/login
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+# expected body on POST /auth/forgot-password
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+# expected body on POST /auth/reset-password
+class ResetPasswordRequest(BaseModel):
+    code: str
+    new_password: str
 
 
 # user schema

@@ -3,11 +3,18 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.schemas.product import ProductOut, ProductCreate, ProductUpdate
 from app.schemas.openbeautyfacts import BarcodeLookupResult
+from app.schemas.ingredient_analysis import IngredientAnalysisResponse
 from app.middleware.auth import get_db, get_current_user
 from app.models.user import User
 from app.models.product import Product
 from app.models.scan import ScanResult
 from app.services.openbeautyfacts import lookup_product, RateLimitError
+from app.services.expiry import compute_expiry_date
+from app.services.ingredient_analysis import (
+    analyze_ingredient_text,
+    get_user_skin_type,
+)
+from sqlalchemy.sql import func
 from typing import List
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -27,6 +34,9 @@ def create_product(
         icon=body.icon,
         pao_months=body.pao_months,
         product_type=body.product_type,
+        opened_date=body.opened_date,
+        expiry_date=body.expiry_date
+        or compute_expiry_date(body.opened_date, body.pao_months),
         user_id=current_user.id,
     )
 
@@ -74,12 +84,23 @@ def update_product(
             status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
         )
 
-    # returns fiels client actually sent
+    # returns fields client actually sent
     updates = body.model_dump(exclude_unset=True)
+    explicit_expiry = "expiry_date" in updates
 
     # dynamically set each updated attribute
     for field, value in updates.items():
         setattr(product, field, value)
+
+    # Expiry precedence:
+    # - explicit non-null expiry_date wins (literal mode) — never recompute
+    # - otherwise recompute from PAO/opened only when those changed, so a
+    #   brand-only edit doesn't clobber a literal expiry
+    if not (explicit_expiry and updates["expiry_date"] is not None):
+        if "opened_date" in updates or "pao_months" in updates:
+            product.expiry_date = compute_expiry_date(
+                product.opened_date, product.pao_months
+            )
 
     db.commit()
     db.refresh(product)
@@ -112,6 +133,7 @@ def delete_product(
 
 class ProductScanTextResponse(BaseModel):
     raw_ocr_text: str | None = None
+    scan_date: str | None = None
 
 
 @router.get("/{product_id}/scan-text", response_model=ProductScanTextResponse)
@@ -139,7 +161,67 @@ def get_product_scan_text(
 
     return ProductScanTextResponse(
         raw_ocr_text=scan.raw_ocr_text if scan else None,
+        scan_date=scan.scan_date.isoformat() if scan and scan.scan_date else None,
     )
+
+
+@router.get("/{product_id}/analysis", response_model=IngredientAnalysisResponse)
+def get_product_analysis(
+    product_id: int,
+    refresh: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = (
+        db.query(Product)
+        .filter(Product.id == product_id, Product.user_id == current_user.id)
+        .first()
+    )
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
+        )
+
+    scan = (
+        db.query(ScanResult)
+        .filter(ScanResult.product_id == product_id)
+        .order_by(ScanResult.scan_date.desc())
+        .first()
+    )
+
+    skin_type = get_user_skin_type(current_user.id, db)
+
+    if (
+        scan
+        and not refresh
+        and scan.ingredient_analysis is not None
+        and scan.ingredient_analysis_skin_type == skin_type
+    ):
+        return IngredientAnalysisResponse(**scan.ingredient_analysis)
+
+    raw_ocr_text = scan.raw_ocr_text if scan else None
+    if not raw_ocr_text or not raw_ocr_text.strip():
+        return IngredientAnalysisResponse(
+            analysis="No ingredient list provided. Please scan the back label of your product.",
+            stats={
+                "total": 0,
+                "matched": 0,
+                "not_found": 0,
+                "avg_safety_score": 0,
+                "total_known_risks": 0,
+            },
+            flags=[],
+        )
+
+    result = analyze_ingredient_text(raw_ocr_text, skin_type, db)
+
+    if scan:
+        scan.ingredient_analysis = result.model_dump(mode="json")
+        scan.ingredient_analysis_skin_type = skin_type
+        scan.ingredient_analysis_updated_at = func.now()
+        db.commit()
+
+    return result
 
 
 @router.get("/lookup/{barcode}", response_model=BarcodeLookupResult)

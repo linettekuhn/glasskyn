@@ -16,15 +16,13 @@ import { STEP_TO_PRODUCT_TYPES } from "@/constants/routine";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import GlassSurface, { withAlpha } from "@/components/ui/glass-surface";
 import { MaterialIcons } from "@expo/vector-icons";
 
 export default function ProductPickerScreen() {
-  const { routineId, stepId, stepType, returnTo, templateId } = useLocalSearchParams<{
-    routineId: string;
+  const { stepId, stepType } = useLocalSearchParams<{
     stepId: string;
     stepType: string;
-    returnTo: string;
-    templateId: string;
   }>();
   const { setPendingProduct } = useTemplateSelection();
   const colorScheme = useColorScheme();
@@ -53,14 +51,11 @@ export default function ProductPickerScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <ThemedText type="h2">Choose a Product</ThemedText>
         <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
-          Compatible products from your shelf
+          Compatible products from your vanity
         </ThemedText>
       </View>
 
@@ -71,21 +66,11 @@ export default function ProductPickerScreen() {
             No compatible products found
           </ThemedText>
           <ThemedText type="bodySmall" style={{ color: colors.neutral[500] }}>
-            Add a product to your shelf first
+            Add a product to your vanity first
           </ThemedText>
           <ThemedButton
             text="Scan a Product"
-            onPress={() =>
-              router.push({
-                pathname: "/(modals)/scan",
-                params: {
-                  returnTo: returnTo || "/(modals)/product-picker",
-                  templateId,
-                  stepId,
-                  stepType,
-                },
-              })
-            }
+            onPress={() => router.push("/(modals)/scan")}
             leftIconName="camera"
             LeftIconComponent={MaterialIcons}
           />
@@ -98,7 +83,10 @@ export default function ProductPickerScreen() {
             <TouchableOpacity
               style={[
                 styles.productRow,
-                { borderColor: colors.neutral[300], backgroundColor: colors.background },
+                {
+                  borderColor: colors.neutral[300],
+                  backgroundColor: withAlpha(colors.background, 0.4),
+                },
               ]}
               onPress={() => handleSelect(item)}
               activeOpacity={0.7}
@@ -108,7 +96,10 @@ export default function ProductPickerScreen() {
                   {item.name}
                 </ThemedText>
                 {item.brand && (
-                  <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
+                  <ThemedText
+                    type="bodySmall"
+                    style={{ color: colors.neutral[600] }}
+                  >
                     {item.brand}
                   </ThemedText>
                 )}
@@ -120,16 +111,20 @@ export default function ProductPickerScreen() {
               />
             </TouchableOpacity>
           )}
+          ListFooterComponent={
+            <ThemedButton
+              text="Scan a Product"
+              onPress={() => router.push("/(modals)/scan")}
+              leftIconName="camera"
+              LeftIconComponent={MaterialIcons}
+            />
+          }
           contentContainerStyle={styles.listContent}
         />
       )}
 
-      <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.neutral[300] }]}>
-        <ThemedButton
-          text="Cancel"
-          outlined
-          onPress={() => router.back()}
-        />
+      <View style={[styles.bottomBar, { borderTopColor: colors.neutral[300] }]}>
+        <ThemedButton text="Cancel" outlined onPress={() => router.back()} />
       </View>
     </SafeAreaView>
   );
@@ -138,9 +133,9 @@ export default function ProductPickerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 24,
   },
   header: {
-    paddingHorizontal: 24,
     paddingTop: 16,
     gap: 4,
   },
@@ -151,7 +146,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   listContent: {
-    paddingHorizontal: 24,
     paddingBottom: 40,
     gap: 8,
     paddingTop: 16,
@@ -168,7 +162,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   bottomBar: {
-    paddingHorizontal: 24,
     paddingVertical: 16,
     borderTopWidth: 1,
   },

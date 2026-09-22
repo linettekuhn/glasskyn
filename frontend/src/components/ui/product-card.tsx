@@ -18,6 +18,8 @@ import { Colors, getTheme } from "@/constants/theme";
 import { fromValue } from "./icon-selector";
 import { ThemedText } from "./themed-text";
 import { useEffect, useState } from "react";
+import GlassSurface from "./glass-surface";
+import ExpiryBadge from "./expiry-badge";
 
 interface ProductCardProps {
   product: Product;
@@ -37,15 +39,36 @@ export default function ProductCard({
   const [expiryLabel, setExpiryLabel] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!product.pao_months) {
-      setExpiryLabel(null);
+    const expiry = product.expiry_date
+      ? new Date(`${product.expiry_date}T00:00:00`)
+      : null;
+    if (!expiry) {
+      if (product.pao_months && product.created_at) {
+        const created = new Date(product.created_at);
+        const fallback = new Date(created);
+        fallback.setMonth(fallback.getMonth() + product.pao_months);
+        const months = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        setExpiryLabel(
+          `${months[fallback.getMonth()]} ${fallback.getDate()} ${fallback.getFullYear()}`,
+        );
+      } else {
+        setExpiryLabel(null);
+      }
       return;
     }
-    const created = product.created_at
-      ? new Date(product.created_at)
-      : new Date();
-    const expiry = new Date(created);
-    expiry.setMonth(expiry.getMonth() + product.pao_months);
     const months = [
       "Jan",
       "Feb",
@@ -63,7 +86,23 @@ export default function ProductCard({
     setExpiryLabel(
       `${months[expiry.getMonth()]} ${expiry.getDate()} ${expiry.getFullYear()}`,
     );
-  }, [product.pao_months, product.created_at]);
+  }, [product.expiry_date, product.pao_months, product.created_at]);
+
+  const expiryStatus =
+    product.days_until_expiry === null ||
+    product.days_until_expiry === undefined
+      ? null
+      : product.days_until_expiry < 0
+        ? "expired"
+        : product.days_until_expiry <= 30
+          ? "expiring"
+          : "ok";
+
+  const expiryColor = (() => {
+    if (expiryStatus === "expired") return "#A10000";
+    if (expiryStatus === "expiring") return colors.secondary[500];
+    return colors.neutral[700];
+  })();
 
   const handleEdit = () => {
     router.push({
@@ -73,8 +112,11 @@ export default function ProductCard({
         name: product.name,
         brand: product.brand || "",
         category: product.category || "",
+        product_type: product.product_type || "",
         icon: product.icon || "",
         pao_months: product.pao_months ? String(product.pao_months) : "",
+        opened_date: product.opened_date || "",
+        expiry_date: product.expiry_date || "",
         imageUrl: product.image_url || "",
         imageS3Key: product.image_s3_key || "",
       },
@@ -92,6 +134,11 @@ export default function ProductCard({
         productType: product.product_type || "",
         icon: product.icon || "",
         paoMonths: product.pao_months ? String(product.pao_months) : "",
+        openedDate: product.opened_date || "",
+        expiryDate: product.expiry_date || "",
+        daysUntilExpiry: product.days_until_expiry
+          ? String(product.days_until_expiry)
+          : "",
         imageUrl: product.image_url || "",
         createdAt: product.created_at,
       },
@@ -127,37 +174,66 @@ export default function ProductCard({
           ? FontAwesome6
           : MaterialCommunityIcons;
     return (
-      <View
-        style={[styles.iconBox, { backgroundColor: colors.secondary[200] }]}
-      >
+      <View style={[styles.iconBox, { backgroundColor: colors.tertiary[200] }]}>
         <IconComponent
           name={iconConfig.name as any}
           size={24}
-          color={colors.secondary[700]}
+          color={colors.tertiary[700]}
         />
       </View>
     );
   };
 
   return (
-    <View style={[styles.card, { borderColor: colors.secondary[300] }]}>
-      {renderIcon()}
+    <GlassSurface style={styles.card} clipsContent={false}>
+      {expiryStatus && (
+        <View style={styles.badge}>
+          <ExpiryBadge status={expiryStatus} />
+        </View>
+      )}
+      <View style={{ gap: 4 }}>
+        {renderIcon()}
+        {!isPreview && (
+          <View style={styles.actions}>
+            <TouchableOpacity
+              onPress={handleEdit}
+              style={[
+                styles.actionButton,
+                { borderColor: colors.neutral[300] },
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <MaterialCommunityIcons
+                name="pencil-outline"
+                size={18}
+                color={colors.neutral[700]}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDelete}
+              style={[
+                styles.actionButton,
+                { borderColor: colors.neutral[300] },
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <MaterialCommunityIcons
+                name="trash-can-outline"
+                size={18}
+                color={colors.neutral[700]}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
       <View style={styles.cardBody}>
-        <ThemedText type="bodyLarge" weight="semiBold">
+        <ThemedText type="bodyLarge" weight="semiBold" numberOfLines={1}>
           {product.name ? product.name : "Product Name"}
         </ThemedText>
         <ThemedText type="bodySmall" style={{ color: colors.neutral[700] }}>
           {product.brand ? product.brand : "Brand"}
         </ThemedText>
-        {expiryLabel && (
-          <ThemedText
-            type="captionSmall"
-            weight="extraLight"
-            style={{ color: colors.neutral[700] }}
-          >
-            Expires {expiryLabel}
-          </ThemedText>
-        )}
+
         {!isPreview && (
           <TouchableOpacity
             onPress={handleSeeMore}
@@ -167,7 +243,7 @@ export default function ProductCard({
             <ThemedText
               type="captionSmall"
               weight="medium"
-              style={{ color: colors.primary[600] }}
+              style={{ color: colors.secondary[600] }}
             >
               See more
             </ThemedText>
@@ -179,56 +255,27 @@ export default function ProductCard({
           </TouchableOpacity>
         )}
       </View>
-      {!isPreview && (
-        <View style={styles.actions}>
-          <TouchableOpacity
-            onPress={handleEdit}
-            style={[
-              styles.actionButton,
-              { borderColor: colors.secondary[300] },
-            ]}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <MaterialCommunityIcons
-              name="pencil-outline"
-              size={18}
-              color={colors.secondary[700]}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleDelete}
-            style={[
-              styles.actionButton,
-              { borderColor: colors.secondary[300] },
-            ]}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <MaterialCommunityIcons
-              name="trash-can-outline"
-              size={18}
-              color={colors.secondary[700]}
-            />
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "transparent",
     gap: 16,
   },
+  badge: {
+    position: "absolute",
+    top: -10,
+    right: -8,
+    zIndex: 1,
+  },
   iconBox: {
-    width: 64,
-    height: 64,
     borderRadius: 8,
+    paddingVertical: 12,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -236,6 +283,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actions: {
+    flexDirection: "row",
     justifyContent: "center",
     gap: 4,
     paddingVertical: 2,

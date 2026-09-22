@@ -1,4 +1,4 @@
-import { Colors, Fonts, getTheme } from "@/constants/theme";
+import { Colors, getTheme } from "@/constants/theme";
 import { ComponentType, useState } from "react";
 import {
   FlatList,
@@ -6,16 +6,18 @@ import {
   Pressable,
   StyleProp,
   StyleSheet,
-  Text,
   useColorScheme,
   View,
   ViewStyle,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import GlassSurface, { withAlpha } from "./glass-surface";
+import { ThemedText } from "./themed-text";
 
 export interface DropdownOption {
   label: string;
   value: string;
+  displayText?: string;
 }
 
 interface ThemedDropdownProps {
@@ -27,6 +29,22 @@ interface ThemedDropdownProps {
   iconName?: string;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  textType?:
+    | "displayLarge"
+    | "displayMedium"
+    | "h1"
+    | "h2"
+    | "h3"
+    | "h4"
+    | "h5"
+    | "h6"
+    | "body"
+    | "bodyLarge"
+    | "bodySmall"
+    | "caption"
+    | "captionLarge"
+    | "captionSmall"
+    | "overline";
 }
 
 export default function ThemedDropdown({
@@ -38,10 +56,11 @@ export default function ThemedDropdown({
   iconName,
   disabled,
   style,
+  textType = "body",
 }: ThemedDropdownProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const bgDefault = colors.background;
+  const bgDefault = withAlpha(colors.background, 0.4);
   const defaultColor = colors.neutral[700];
   const focusColor = colors.secondary[500];
   const color = colors.text;
@@ -49,7 +68,9 @@ export default function ThemedDropdown({
   const [open, setOpen] = useState(false);
 
   const selected = options.find((o) => o.value === value);
-  const displayText = selected ? selected.label : placeholder;
+  const displayText = selected
+    ? (selected.displayText ?? selected.label)
+    : placeholder;
   const hasValue = !!selected;
 
   return (
@@ -76,17 +97,18 @@ export default function ThemedDropdown({
           {IconComponent && iconName && (
             <IconComponent name={iconName} size={17} color={color + "88"} />
           )}
-          <Text
+          <ThemedText
+            type={textType}
+            numberOfLines={1}
             style={[
               styles.text,
               {
                 color: hasValue ? color : color + "88",
               },
             ]}
-            numberOfLines={1}
           >
             {displayText}
-          </Text>
+          </ThemedText>
           <MaterialCommunityIcons
             name="chevron-down"
             size={20}
@@ -101,18 +123,11 @@ export default function ThemedDropdown({
         animationType="fade"
         onRequestClose={() => setOpen(false)}
       >
-        <Pressable
-          style={styles.backdrop}
-          onPress={() => setOpen(false)}
-        >
-          <Pressable
-            style={[
-              styles.dropdownCard,
-              {
-                backgroundColor: bgDefault,
-                borderColor: defaultColor,
-              },
-            ]}
+        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
+          <GlassSurface
+            style={styles.dropdownCard}
+            radius={12}
+            border={false}
             onPress={() => {}}
           >
             <FlatList
@@ -135,22 +150,19 @@ export default function ThemedDropdown({
                       setOpen(false);
                     }}
                   >
-                    <Text
+                    <ThemedText
+                      type={textType}
+                      weight={isSelected ? "semiBold" : "regular"}
+                      numberOfLines={1}
                       style={[
                         styles.optionText,
                         {
-                          color: isSelected
-                            ? colors.secondary[600]
-                            : color,
-                          fontFamily: isSelected
-                            ? Fonts.sansSemiBold
-                            : Fonts.sans,
+                          color: isSelected ? colors.secondary[600] : color,
                         },
                       ]}
-                      numberOfLines={1}
                     >
                       {item.label}
-                    </Text>
+                    </ThemedText>
                     {isSelected && (
                       <MaterialCommunityIcons
                         name="check"
@@ -162,7 +174,7 @@ export default function ThemedDropdown({
                 );
               }}
             />
-          </Pressable>
+          </GlassSurface>
         </Pressable>
       </Modal>
     </>
@@ -174,15 +186,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 10,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderWidth: 1,
     gap: 10,
   },
   text: {
     flex: 1,
-    fontSize: 16,
-    fontFamily: Fonts.sans,
   },
   backdrop: {
     flex: 1,
@@ -195,7 +205,6 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 340,
     borderRadius: 10,
-    borderWidth: 1,
     maxHeight: "60%",
     overflow: "hidden",
   },
@@ -207,6 +216,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   optionText: {
-    fontSize: 16,
+    flex: 1,
   },
 });

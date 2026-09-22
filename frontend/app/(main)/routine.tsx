@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useFocusEffect, router } from "expo-router";
-import { listRoutines } from "@/api/routines";
+import { listRoutines, localToday } from "@/api/routines";
 import { useProducts } from "@/hooks/use-products";
 import type { Routine } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
@@ -15,6 +15,7 @@ import { ThemedText } from "@/components/ui/themed-text";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import RoutinePager from "@/components/ui/routine-pager";
+import RoutineCalendar from "@/components/ui/routine-calendar";
 import CreateRoutineSheet from "@/components/ui/create-routine-sheet";
 import CreateRoutineOptionRow from "@/components/ui/create-routine-option";
 import IconButton from "@/components/ui/icon-button";
@@ -23,6 +24,8 @@ export default function RoutineScreen() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
+  const [currentRoutineIndex, setCurrentRoutineIndex] = useState(0);
+  const [completionVersion, setCompletionVersion] = useState(0);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const { products } = useProducts();
@@ -35,8 +38,9 @@ export default function RoutineScreen() {
   const fetchRoutines = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await listRoutines("skincare");
+      const data = await listRoutines("skincare", localToday());
       setRoutines(data);
+      setCurrentRoutineIndex(0);
     } catch {
       setRoutines([]);
     } finally {
@@ -58,33 +62,50 @@ export default function RoutineScreen() {
   const hasMultipleRoutines = routines.length > 1;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.neutral[100] }]}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <ThemedText type="h1">{`My Routine${hasMultipleRoutines ? "s" : ""}`}</ThemedText>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 8,
+            }}
+          >
+            <ThemedText type="h1">{`My Routine${hasMultipleRoutines ? "s" : ""}`}</ThemedText>
+            {hasRoutine && (
+              <IconButton
+                iconSize={20}
+                onPress={() => setShowCreateSheet(true)}
+                IconComponent={MaterialCommunityIcons}
+                iconName="plus"
+                backgroundColor={colors.secondary[500]}
+              />
+            )}
+          </View>
           {hasRoutine && (
-            <ThemedText
-              type="bodyLarge"
-              style={{ color: colors.secondary[600] }}
-            >
+            <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
               {hasMultipleRoutines
                 ? "Swipe to switch between your routines"
                 : "Track your steps and stay consistent"}
             </ThemedText>
           )}
         </View>
-        {hasRoutine && (
-          <IconButton
-            onPress={() => setShowCreateSheet(true)}
-            IconComponent={MaterialCommunityIcons}
-            iconName="plus"
-            backgroundColor={colors.primary[600]}
-          />
-        )}
       </View>
 
       {hasRoutine ? (
-        <RoutinePager routines={routines} productMap={productMap} />
+        <View style={styles.routineDashboard}>
+          <RoutineCalendar
+            routineId={routines[currentRoutineIndex]?.id ?? null}
+            refreshKey={completionVersion}
+          />
+          <RoutinePager
+            routines={routines}
+            productMap={productMap}
+            currentIndex={currentRoutineIndex}
+            onIndexChange={setCurrentRoutineIndex}
+            onCompletionChange={() => setCompletionVersion((v) => v + 1)}
+          />
+        </View>
       ) : (
         <View style={styles.emptyState}>
           <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
@@ -99,7 +120,6 @@ export default function RoutineScreen() {
                 onPress={() => option.route && router.push(option.route as any)}
                 iconSize={28}
                 chevronSize={24}
-                style={{ backgroundColor: colors.background }}
               />
             ))}
           </View>
@@ -121,7 +141,6 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "flex-start",
     paddingHorizontal: 32,
     paddingTop: 16,
@@ -130,12 +149,17 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   emptyState: {
-    justifyContent: "center",
+    justifyContent: "flex-start",
     gap: 8,
     paddingHorizontal: 32,
   },
   landingCards: {
     gap: 12,
     width: "100%",
+  },
+
+  routineDashboard: {
+    flex: 1,
+    gap: 4,
   },
 });

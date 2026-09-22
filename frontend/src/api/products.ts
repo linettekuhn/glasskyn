@@ -1,18 +1,6 @@
 import apiClient from './client';
 import type { ProcessMultiResult, ProcessPaoResult, IngredientAnalysisResponse } from '../types';
 
-export interface ProcessImageResult {
-  name: string | null;
-  brand: string | null;
-  category: string | null;
-  barcode: string | null;
-  scan_id: number | null;
-  pao_months: number | null;
-  expiry_date: string | null;
-  category_method: string | null;
-  extraction_method: string | null;
-}
-
 export async function getProducts() {
   const response = await apiClient.get('/products');
   return response.data;
@@ -25,7 +13,9 @@ export async function createProduct(data: {
   product_type?: string;
   image_s3_key?: string;
   icon?: string;
-  pao_months?: number;
+  pao_months?: number | null;
+  opened_date?: string;
+  expiry_date?: string;
   scan_id?: number | null;
 }) {
   const response = await apiClient.post('/products', data);
@@ -44,7 +34,9 @@ export async function updateProduct(id: number, data: {
   product_type?: string;
   image_s3_key?: string;
   icon?: string;
-  pao_months?: number;
+  pao_months?: number | null;
+  opened_date?: string;
+  expiry_date?: string;
 }) {
   const response = await apiClient.patch(`/products/${id}`, data);
   return response.data;
@@ -54,14 +46,15 @@ export async function deleteProduct(id: number) {
   await apiClient.delete(`/products/${id}`);
 }
 
-export async function processImage(fileKey: string, barcode?: string | null): Promise<ProcessImageResult> {
-  console.log("[API] processImage called, fileKey:", fileKey, "barcode:", barcode);
-  const response = await apiClient.post('/uploads/process', {
-    file_key: fileKey,
-    barcode: barcode || null,
-  });
-  console.log("[API] processImage response:", response.data);
-  return response.data;
+export async function markProductReplaced(id: number, expiryDate?: string) {
+  const now = new Date();
+  const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return updateProduct(
+    id,
+    expiryDate
+      ? { opened_date: iso, expiry_date: expiryDate }
+      : { opened_date: iso },
+  );
 }
 
 export async function processMultiImages(
@@ -117,7 +110,18 @@ export async function analyzeIngredients(
 
 export async function getProductScanText(
   productId: number,
-): Promise<{ raw_ocr_text: string | null }> {
+): Promise<{ raw_ocr_text: string | null; scan_date?: string | null }> {
   const response = await apiClient.get(`/products/${productId}/scan-text`);
+  return response.data;
+}
+
+export async function getProductAnalysis(
+  productId: number,
+  refresh = false,
+): Promise<IngredientAnalysisResponse> {
+  const response = await apiClient.get(`/products/${productId}/analysis`, {
+    params: refresh ? { refresh: "1" } : {},
+    timeout: 60000,
+  });
   return response.data;
 }

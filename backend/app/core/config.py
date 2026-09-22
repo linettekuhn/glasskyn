@@ -17,6 +17,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
 REFRESH_TOKEN_EXPIRE_MINUTES: int = 7 * 24 * 60
 
+PASSWORD_RESET_CODE_EXPIRE_MINUTES: int = int(
+    os.environ.get("PASSWORD_RESET_CODE_EXPIRE_MINUTES", "15")
+)
+
+EMAIL_FROM: str = os.environ.get("EMAIL_FROM", "")
+SES_REGION: str = os.environ.get("SES_REGION", os.environ.get("AWS_REGION", "us-east-1"))
+
 OBF_API_BASE_URL: str = os.environ.get(
     "OBF_API_BASE_URL", "https://world.openbeautyfacts.org"
 )
@@ -47,3 +54,30 @@ CHAT_SUMMARY_INTERVAL: int = int(os.environ.get("CHAT_SUMMARY_INTERVAL", "5"))
 
 CHROMADB_PATH: str = str(BACKEND_DIR / "data" / "chromadb")
 EMBEDDING_MODEL: str = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
+
+EXPIRY_ALERT_WINDOW_DAYS: int = int(os.environ.get("EXPIRY_ALERT_WINDOW_DAYS", "30"))
+EXPIRY_CHECK_HOUR: int = int(os.environ.get("EXPIRY_CHECK_HOUR", "9"))
+EXPIRY_CHECK_MINUTE: int = int(os.environ.get("EXPIRY_CHECK_MINUTE", "0"))
+REMINDER_AM_TIME: str = os.environ.get("REMINDER_AM_TIME", "08:00")
+REMINDER_PM_TIME: str = os.environ.get("REMINDER_PM_TIME", "20:00")
+WATER_REMINDER_TIME: str = os.environ.get("WATER_REMINDER_TIME", "12:00")
+
+APP_VERSION: str = os.environ.get("APP_VERSION", "1.0.0")
+APP_MIN_VERSION: str = os.environ.get("APP_MIN_VERSION", "1.0.0")
+APP_STORE_URL: str = os.environ.get(
+    "APP_STORE_URL",
+    "https://apps.apple.com/app/glasskyn/id6752230698",
+)
+PLAY_STORE_URL: str = os.environ.get(
+    "PLAY_STORE_URL",
+    "https://play.google.com/store/apps/details?id=com.linettekuhn.glasskyn",
+)
+
+CORS_ORIGINS: list[str] = [
+    o.strip()
+    for o in os.environ.get(
+        "CORS_ORIGINS",
+        "http://localhost:8081,http://localhost:19006,https://glasskyn.app,exp://localhost:8081",
+    ).split(",")
+    if o.strip()
+]

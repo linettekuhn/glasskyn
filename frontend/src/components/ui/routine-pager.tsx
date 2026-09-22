@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import {
   FlatList,
   View,
@@ -17,20 +17,25 @@ const CARD_GAP = 16;
 interface RoutinePagerProps {
   routines: Routine[];
   productMap: Map<number, Product>;
+  currentIndex: number;
+  onIndexChange: (index: number) => void;
+  onCompletionChange?: () => void;
 }
 
 export default function RoutinePager({
   routines,
   productMap,
+  currentIndex,
+  onIndexChange,
+  onCompletionChange,
 }: RoutinePagerProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const flatListRef = useRef<FlatList>(null);
 
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
-      setCurrentIndex(viewableItems[0].index ?? 0);
+      onIndexChange(viewableItems[0].index ?? 0);
     }
   }).current;
 
@@ -43,7 +48,7 @@ export default function RoutinePager({
       <FlatList
         ref={flatListRef}
         data={routines}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item: Routine) => item.id.toString()}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -53,9 +58,13 @@ export default function RoutinePager({
         contentContainerStyle={styles.listContent}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        renderItem={({ item }) => (
+        renderItem={({ item }: { item: Routine }) => (
           <View style={[styles.page, { width: CARD_WIDTH }]}>
-            <RoutineCard routine={item} productMap={productMap} />
+            <RoutineCard
+              routine={item}
+              productMap={productMap}
+              onCompletionChange={onCompletionChange}
+            />
           </View>
         )}
       />
@@ -69,7 +78,7 @@ export default function RoutinePager({
                 {
                   backgroundColor:
                     index === currentIndex
-                      ? colors.primary[600]
+                      ? colors.secondary[600]
                       : colors.neutral[400],
                 },
               ]}

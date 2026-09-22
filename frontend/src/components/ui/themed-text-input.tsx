@@ -1,5 +1,12 @@
 import { Colors, Fonts, getTheme } from "@/constants/theme";
-import { ComponentType, ReactNode, useEffect, useRef, useState } from "react";
+import {
+  ComponentType,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Pressable,
   StyleProp,
@@ -10,6 +17,8 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { applyAutoCapitalize, AutoCapitalize } from "@/utils/capitalize";
+import { withAlpha } from "./glass-surface";
 
 type Props = TextInputProps & {
   value: string;
@@ -31,17 +40,24 @@ export default function ThemedTextInput({
   iconName,
   children,
   style,
+  autoCapitalize = "none",
   ...rest
 }: Props) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const bgDefault = colors.background;
+  const bgDefault = withAlpha(colors.background, 0.4);
   const defaultColor = colors.neutral[700];
-  const focusColor = colors.secondary[500];
+  const focusColor = colors.primary[500];
   const color = colors.text;
   const inputRef = useRef<TextInput>(null);
 
   const [focused, setFocused] = useState(false);
+
+  const handleChangeText = useCallback(
+    (text: string) =>
+      onChangeText(applyAutoCapitalize(text, autoCapitalize as AutoCapitalize)),
+    [onChangeText, autoCapitalize],
+  );
 
   return (
     <Pressable style={style} onPress={() => inputRef.current?.focus()}>
@@ -63,9 +79,10 @@ export default function ThemedTextInput({
           onBlur={() => setFocused(false)}
           style={[styles.textInput, { color: textColor ?? color }]}
           value={value}
-          onChangeText={onChangeText}
+          onChangeText={handleChangeText}
           placeholder={placeholder}
           placeholderTextColor={color + "88"}
+          autoCapitalize={autoCapitalize}
           {...rest}
         />
         {children}

@@ -32,6 +32,7 @@ export type ThemedTextProps = TextProps & {
     | "extraBold"
     | "black";
   italic?: boolean;
+  sansItalic?: boolean;
 };
 
 const weightToFamily: Record<NonNullable<ThemedTextProps["weight"]>, string> = {
@@ -46,6 +47,20 @@ const weightToFamily: Record<NonNullable<ThemedTextProps["weight"]>, string> = {
   black: Fonts.sansBlack,
 };
 
+const italicWeightToFamily: Partial<
+  Record<NonNullable<ThemedTextProps["weight"]>, string>
+> = {
+  thin: Fonts.sansThinItalic,
+  extraLight: Fonts.sansExtraLightItalic,
+  light: Fonts.sansLightItalic,
+  regular: Fonts.sansItalic,
+  medium: Fonts.sansMediumItalic,
+  semiBold: Fonts.sansSemiBoldItalic,
+  bold: Fonts.sansBoldItalic,
+  extraBold: Fonts.sansExtraBoldItalic,
+  black: Fonts.sansBlackItalic,
+};
+
 export function ThemedText({
   style,
   lightColor,
@@ -53,23 +68,33 @@ export function ThemedText({
   type = "body",
   weight,
   italic = false,
+  sansItalic = false,
   ...rest
 }: ThemedTextProps) {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, "text");
 
   const baseStyle = typeStyles[type] || typeStyles.body;
-  const weightStyle =
-    weight && !italic ? { fontFamily: weightToFamily[weight] } : undefined;
+
+  const fontStyle = (() => {
+    if (sansItalic) {
+      return {
+        fontFamily: weight
+          ? italicWeightToFamily[weight] ?? Fonts.sansItalic
+          : Fonts.sansItalic,
+      };
+    }
+    if (italic) {
+      return styles.italic;
+    }
+    if (weight) {
+      return { fontFamily: weightToFamily[weight] };
+    }
+    return undefined;
+  })();
 
   return (
     <Text
-      style={[
-        { color },
-        baseStyle,
-        weightStyle,
-        italic && styles.italic,
-        style,
-      ]}
+      style={[{ color }, baseStyle, fontStyle, style]}
       {...rest}
     />
   );

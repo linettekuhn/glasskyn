@@ -1,10 +1,12 @@
+import { useEffect } from "react";
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   useColorScheme,
   Linking,
+  AppState,
+  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { useCameraPermissions, PermissionStatus } from "expo-camera";
@@ -15,39 +17,60 @@ import NoCameraIcon from "@/components/icons/no-camera-icon";
 import ThemedButton from "@/components/ui/themed-button";
 
 export default function ScannerScreen() {
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
 
-  const handleTap = () => {
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        getPermission();
+      }
+    });
+    return () => sub.remove();
+  }, [getPermission]);
+
+  const handleTap = async () => {
     if (!permission?.granted) {
-      requestPermission().then(() => {
-        router.push("/(modals)/scan");
-      });
+      const res = await requestPermission();
+      if (res?.granted) router.push("/(modals)/scan");
       return;
     }
 
     router.push("/(modals)/scan");
   };
 
-  if (permission && permission.status === PermissionStatus.GRANTED) {
+  const handleRequest = async () => {
+    await requestPermission();
+  };
+
+  if (!permission) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator color={colors.neutral[700]} />
+      </View>
+    );
+  }
+
+  if (permission.status === PermissionStatus.GRANTED) {
     return (
       <TouchableOpacity
-        style={[styles.container, { backgroundColor: colors.background }]}
+        style={styles.container}
         onPress={handleTap}
         activeOpacity={0.7}
       >
         <View
-          style={[styles.placeholder, { borderColor: colors.primary[300] }]}
+          style={[styles.placeholder, { borderColor: colors.primary[400] }]}
         >
-          <TapCameraIcon color={colors.primary[300]} />
+          <TapCameraIcon color={colors.primary[500]} />
           <View style={{ alignItems: "center", gap: 4 }}>
             <ThemedText type="h2">Skip the Typing</ThemedText>
             <ThemedText
               type="bodyLarge"
-              style={{ color: colors.primary[600], textAlign: "center" }}
+              style={{ color: colors.neutral[500], textAlign: "center" }}
             >
-              Tap to snap your product's labels and we'll take it from there.
+              We'll autofill the details and flag any ingredients that may
+              irritate your skin.
             </ThemedText>
           </View>
         </View>
@@ -62,33 +85,27 @@ export default function ScannerScreen() {
     );
   }
 
-  if (
-    !permission ||
-    (permission && permission.status !== PermissionStatus.GRANTED)
-  ) {
+  if (permission.status === PermissionStatus.UNDETERMINED) {
     return (
-      <TouchableOpacity
-        style={[styles.container, { backgroundColor: colors.background }]}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.placeholder, { borderColor: colors.error }]}>
-          <NoCameraIcon color={colors.error} />
+      <View style={styles.container}>
+        <View
+          style={[styles.placeholder, { borderColor: colors.primary[400] }]}
+        >
+          <TapCameraIcon color={colors.primary[500]} />
           <View style={{ alignItems: "center", gap: 4 }}>
-            <ThemedText type="h2">Camera Access Blocked</ThemedText>
+            <ThemedText type="h2">Scan Your Products</ThemedText>
             <ThemedText
               type="bodyLarge"
-              style={{ color: colors.primary[600], textAlign: "center" }}
+              style={{ color: colors.neutral[500], textAlign: "center" }}
             >
-              To scan your labels, enable camera access in your phone's
-              Settings.{" "}
+              Glasskyn reads your product's label to autofill its details and
+              flag any ingredients that may irritate your skin.
             </ThemedText>
           </View>
         </View>
         <ThemedButton
-          text="Open Settings"
-          onPress={() => {
-            Linking.openSettings();
-          }}
+          text="Continue"
+          onPress={handleRequest}
           alignment="center"
         />
         <ThemedButton
@@ -98,9 +115,41 @@ export default function ScannerScreen() {
           color={colors.secondary[700]}
           text={"Enter details manually instead"}
         />
-      </TouchableOpacity>
+      </View>
     );
   }
+
+  return (
+    <TouchableOpacity style={styles.container} activeOpacity={0.7}>
+      <View style={[styles.placeholder, { borderColor: colors.error }]}>
+        <NoCameraIcon color={colors.error} />
+        <View style={{ alignItems: "center", gap: 4 }}>
+          <ThemedText type="h2">Camera Access Blocked</ThemedText>
+          <ThemedText
+            type="bodyLarge"
+            style={{ color: colors.neutral[500], textAlign: "center" }}
+          >
+            To scan your labels, enable camera access in your phone's
+            Settings.{" "}
+          </ThemedText>
+        </View>
+      </View>
+      <ThemedButton
+        text="Open Settings"
+        onPress={() => {
+          Linking.openSettings();
+        }}
+        alignment="center"
+      />
+      <ThemedButton
+        link
+        textType="captionSmall"
+        onPress={() => router.push("/(modals)/add-product")}
+        color={colors.secondary[700]}
+        text={"Enter details manually instead"}
+      />
+    </TouchableOpacity>
+  );
 }
 
 const styles = StyleSheet.create({

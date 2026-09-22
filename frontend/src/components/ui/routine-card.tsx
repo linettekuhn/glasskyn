@@ -1,20 +1,27 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   View,
   FlatList,
   StyleSheet,
   useColorScheme,
   TouchableOpacity,
+  type LayoutChangeEvent,
 } from "react-native";
 import { router } from "expo-router";
-import type { Routine, Product } from "@/types";
+import type { Routine, Product, RoutineStep } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { FREQUENCY_LABELS } from "@/constants/routine";
+import { markStepComplete } from "@/api/routines";
 import { ThemedText } from "./themed-text";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import DayNightToggle from "./day-night-toggle";
 import ThemedButton from "./themed-button";
 import IconButton from "./icon-button";
+import GlassSurface from "./glass-surface";
+import { LinearGradient } from "expo-linear-gradient";
+
+const LINE_GAP = 16 * 1.6;
+const LINE_THICKNESS = 1;
 
 const STEP_TYPE_LABELS: Record<string, string> = {
   cleanse: "Cleanse",
@@ -28,13 +35,25 @@ const STEP_TYPE_LABELS: Record<string, string> = {
 interface RoutineCardProps {
   routine: Routine;
   productMap: Map<number, Product>;
+  onCompletionChange?: () => void;
 }
 
-export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
+export default function RoutineCard({
+  routine,
+  productMap,
+  onCompletionChange,
+}: RoutineCardProps) {
   const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<"AM" | "PM">("AM");
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [linesHeight, setLinesHeight] = useState(0);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+
+  useEffect(() => {
+    setCompletedSteps(
+      new Set(routine.steps.filter((s) => s.completed_today).map((s) => s.id)),
+    );
+  }, [routine.steps]);
 
   const filteredSteps = useMemo(() => {
     return routine.steps
@@ -42,22 +61,80 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
       .sort((a, b) => a.step_order - b.step_order);
   }, [routine.steps, selectedTimeOfDay]);
 
-  const toggleStep = useCallback((id: number) => {
-    setCompletedSteps((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const onLinesLayout = useCallback((e: LayoutChangeEvent) => {
+    setLinesHeight(e.nativeEvent.layout.height);
   }, []);
 
+  const lineColor = colors.neutral[300];
+
+  const { ruleColors, ruleLocations } = useMemo(() => {
+    if (linesHeight <= 0) return { ruleColors: [], ruleLocations: [] };
+    const ruleColors: string[] = [];
+    const ruleLocations: number[] = [];
+    const count = Math.ceil(linesHeight / LINE_GAP);
+    for (let i = 0; i < count; i++) {
+      const lineStart = i * LINE_GAP;
+      if (lineStart >= linesHeight) break;
+      const lineEnd = Math.min(lineStart + LINE_THICKNESS, linesHeight);
+      ruleColors.push("transparent", lineColor, lineColor, "transparent");
+      ruleLocations.push(
+        lineStart / linesHeight,
+        lineStart / linesHeight,
+        lineEnd / linesHeight,
+        lineEnd / linesHeight,
+      );
+    }
+    return { ruleColors, ruleLocations };
+  }, [linesHeight, lineColor]);
+
+  const toggleStep = useCallback(
+    (id: number) => {
+      const nowCompleted = !completedSteps.has(id);
+      setCompletedSteps((prev) => {
+        const next = new Set(prev);
+        if (nowCompleted) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+      markStepComplete(routine.id, id, nowCompleted)
+        .catch(() => {
+          setCompletedSteps((prev) => {
+            const next = new Set(prev);
+            if (nowCompleted) next.delete(id);
+            else next.add(id);
+            return next;
+          });
+        })
+        .finally(() => onCompletionChange?.());
+    },
+    [completedSteps, routine.id, onCompletionChange],
+  );
+
   const toggleAll = useCallback(() => {
+    const allChecked =
+      filteredSteps.length > 0 &&
+      filteredSteps.every((s) => completedSteps.has(s.id));
+    const desired = !allChecked;
     setCompletedSteps((prev) => {
-      const allChecked = filteredSteps.every((s) => prev.has(s.id));
-      if (allChecked) return new Set();
-      return new Set(filteredSteps.map((s) => s.id));
+      const next = new Set(prev);
+      for (const s of filteredSteps) {
+        if (desired) next.add(s.id);
+        else next.delete(s.id);
+      }
+      return next;
     });
-  }, [filteredSteps]);
+    const ops = filteredSteps.map((s) =>
+      markStepComplete(routine.id, s.id, desired).catch(() => {
+        setCompletedSteps((prev) => {
+          const next = new Set(prev);
+          if (desired) next.delete(s.id);
+          else next.add(s.id);
+          return next;
+        });
+      }),
+    );
+    Promise.allSettled(ops).finally(() => onCompletionChange?.());
+  }, [completedSteps, filteredSteps, routine.id, onCompletionChange]);
 
   const allChecked =
     filteredSteps.length > 0 &&
@@ -74,9 +151,9 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.neutral[200] }]}>
+    <GlassSurface style={styles.card}>
       <View style={styles.cardHeader}>
-        <ThemedText type="h2" italic>
+        <ThemedText type="h3" italic numberOfLines={1}>
           {routine.name}
         </ThemedText>
         <View style={styles.cardHeaderControls}>
@@ -99,8 +176,8 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
                   : "checkbox-multiple-marked-circle"
               }
               iconSize={24}
-              iconColor={colors.primary[600]}
-              backgroundColor="rgba(0,0,0,0.2)"
+              iconColor={colors.neutral[600]}
+              backgroundColor={colors.neutral[300]}
             />
             <IconButton
               onPress={() =>
@@ -112,16 +189,28 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
               IconComponent={MaterialIcons}
               iconName="edit"
               iconSize={24}
-              iconColor={colors.primary[600]}
-              backgroundColor="rgba(0,0,0,0.2)"
+              iconColor={colors.neutral[600]}
+              backgroundColor={colors.neutral[300]}
             />
           </View>
         </View>
       </View>
       <FlatList
         data={filteredSteps}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item, index }) => {
+        keyExtractor={(item: RoutineStep) => item.id.toString()}
+        ListHeaderComponentStyle={styles.linesBackground}
+        ListHeaderComponent={
+          <LinearGradient
+            pointerEvents="none"
+            colors={ruleColors as [string, string, ...string[]]}
+            locations={ruleLocations as [number, number, ...number[]]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            onLayout={onLinesLayout}
+            style={styles.linesBackground}
+          />
+        }
+        renderItem={({ item, index }: { item: RoutineStep; index: number }) => {
           const isChecked = completedSteps.has(item.id);
           const productName = item.product_id
             ? productMap.get(item.product_id)?.name
@@ -139,32 +228,35 @@ export default function RoutineCard({ routine, productMap }: RoutineCardProps) {
                     : "checkbox-blank-circle-outline"
                 }
                 size={20}
-                color={isChecked ? colors.primary[600] : colors.neutral[500]}
+                color={isChecked ? colors.primary[600] : colors.neutral[300]}
                 style={{ marginTop: 4 }}
               />
-              <View>
-                <ThemedText type="bodyLarge" weight="semiBold">
+              <View style={styles.stepText}>
+                <ThemedText weight="bold">
                   {index + 1}.{" "}
                   {STEP_TYPE_LABELS[item.step_type] || item.step_type}
                   {item.frequency
                     ? ` ${FREQUENCY_LABELS[item.frequency] ?? item.frequency}`
                     : ""}
                 </ThemedText>
-                <ThemedText>
-                  {productName ? `with ${productName}` : ""}
-                </ThemedText>
+                {productName && (
+                  <ThemedText italic style={{ color: colors.neutral[700] }}>
+                    with {productName}
+                  </ThemedText>
+                )}
               </View>
             </TouchableOpacity>
           );
         }}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
       />
-    </View>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    flex: 1,
     padding: 12,
     borderRadius: 8,
     borderBottomRightRadius: 0,
@@ -173,6 +265,7 @@ const styles = StyleSheet.create({
   cardHeader: {
     justifyContent: "space-between",
     alignItems: "flex-start",
+    marginVertical: 8,
   },
   cardHeaderControls: {
     flexDirection: "row",
@@ -184,8 +277,14 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 8,
   },
+  stepText: {
+    flex: 1,
+  },
+  linesBackground: {
+    ...StyleSheet.absoluteFillObject,
+  },
   listContent: {
-    gap: 12,
+    gap: LINE_GAP,
     paddingBottom: 40,
   },
   emptySteps: {

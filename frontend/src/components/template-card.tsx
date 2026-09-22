@@ -1,11 +1,8 @@
 import { Colors, getTheme } from "@/constants/theme";
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  useColorScheme,
-} from "react-native";
+import { View, StyleSheet, useColorScheme } from "react-native";
 import { ThemedText } from "@/components/ui/themed-text";
+import Divider from "@/components/ui/divider";
+import GlassSurface from "@/components/ui/glass-surface";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { RoutineTemplate } from "@/types";
 
@@ -46,34 +43,34 @@ export default function TemplateCard({
   );
 
   return (
-    <TouchableOpacity
+    <GlassSurface
+      onPress={onPress}
+      radius={12}
+      border={false}
       style={[
         styles.card,
         {
           borderColor: isSelected ? colors.primary[500] : colors.neutral[400],
-          backgroundColor: colors.background,
           borderWidth: isSelected ? 2 : 1,
         },
       ]}
-      onPress={onPress}
-      activeOpacity={0.7}
     >
       <View style={styles.cardContent}>
         {isRecommended && (
           <View
             style={[
               styles.recommendedBadge,
-              { backgroundColor: colors.secondary[200] },
+              { backgroundColor: colors.tertiary[200] },
             ]}
           >
             <MaterialCommunityIcons
               name="star"
               size={12}
-              color={colors.secondary[700]}
+              color={colors.tertiary[700]}
             />
             <ThemedText
               type="captionSmall"
-              style={{ color: colors.secondary[700] }}
+              style={{ color: colors.tertiary[700] }}
               weight="semiBold"
             >
               Recommended
@@ -91,9 +88,7 @@ export default function TemplateCard({
         </View>
         {((template.concern_tags && template.concern_tags.length > 0) ||
           (template.skin_type_tags && template.skin_type_tags.length > 0)) && (
-          <View
-            style={[styles.divider, { backgroundColor: colors.neutral[300] }]}
-          />
+          <Divider style={{ marginVertical: 4 }} />
         )}
         {template.concern_tags && template.concern_tags.length > 0 && (
           <View style={{ width: "100%" }}>
@@ -108,11 +103,14 @@ export default function TemplateCard({
               {template.concern_tags.map((tag) => (
                 <View
                   key={tag}
-                  style={[styles.tag, { backgroundColor: colors.primary[100] }]}
+                  style={[
+                    styles.tag,
+                    { backgroundColor: colors.secondary[100] },
+                  ]}
                 >
                   <ThemedText
                     type="captionSmall"
-                    style={{ color: colors.primary[700] }}
+                    style={{ color: colors.secondary[700] }}
                   >
                     {SKIN_TYPE_LABELS[tag] || tag}
                   </ThemedText>
@@ -134,11 +132,14 @@ export default function TemplateCard({
               {template.skin_type_tags.map((tag) => (
                 <View
                   key={tag}
-                  style={[styles.tag, { backgroundColor: colors.primary[100] }]}
+                  style={[
+                    styles.tag,
+                    { backgroundColor: colors.secondary[100] },
+                  ]}
                 >
                   <ThemedText
                     type="captionSmall"
-                    style={{ color: colors.primary[700] }}
+                    style={{ color: colors.secondary[700] }}
                   >
                     {SKIN_TYPE_LABELS[tag] || tag}
                   </ThemedText>
@@ -154,7 +155,7 @@ export default function TemplateCard({
         color={colors.neutral[600]}
         style={styles.chevron}
       />
-    </TouchableOpacity>
+    </GlassSurface>
   );
 }
 
@@ -187,11 +188,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-  },
-  divider: {
-    width: "100%",
-    height: 1,
-    marginVertical: 4,
   },
   chevron: {
     position: "absolute",

@@ -12,6 +12,7 @@ import type { StepDisplay } from "@/types";
 import { ThemedText } from "./themed-text";
 import ThemedButton from "./themed-button";
 import LoadingSpinner from "./loading-spinner";
+import GlassSurface, { withAlpha } from "./glass-surface";
 import { MaterialIcons } from "@expo/vector-icons";
 import DraggableFlatList, {
   ScaleDecorator,
@@ -65,10 +66,7 @@ export default function RoutineStepEditor({
 
   if (notFound) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-        edges={["top", "bottom"]}
-      >
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.center}>
           <ThemedText type="bodyLarge">
             {notFoundMessage ?? "Not found"}
@@ -99,7 +97,7 @@ export default function RoutineStepEditor({
               borderColor: colors.neutral[300],
               backgroundColor: isActive
                 ? colors.primary[100]
-                : colors.background,
+                : withAlpha(colors.neutral[100], 0.4),
             },
           ]}
         >
@@ -165,7 +163,11 @@ export default function RoutineStepEditor({
     if (data.length === 0 && !onAddStep) return null;
     return (
       <View style={styles.section}>
-        <ThemedText type="overline" weight="bold">
+        <ThemedText
+          type="overline"
+          weight="bold"
+          style={{ alignSelf: "center" }}
+        >
           {icon} {label}
         </ThemedText>
         {data.length > 0 && (
@@ -183,7 +185,7 @@ export default function RoutineStepEditor({
             text="+ Add Step"
             textType="bodySmall"
             onPress={() => onAddStep(timeOfDay)}
-            alignment="flex-start"
+            color={colors.secondary[600]}
           />
         )}
       </View>
@@ -191,10 +193,7 @@ export default function RoutineStepEditor({
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -210,7 +209,7 @@ export default function RoutineStepEditor({
             alignment="flex-start"
           />
           <ThemedText type="h1">{title}</ThemedText>
-          <ThemedText type="bodyLarge" style={{ color: colors.secondary[600] }}>
+          <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
             {subtitle}
           </ThemedText>
         </View>
@@ -237,17 +236,13 @@ export default function RoutineStepEditor({
       </ScrollView>
 
       {bottomBar && (
-        <View
-          style={[
-            styles.bottomBar,
-            {
-              backgroundColor: colors.background,
-              borderTopColor: colors.neutral[300],
-            },
-          ]}
+        <GlassSurface
+          style={[styles.bottomBar, { borderTopColor: colors.neutral[300] }]}
+          radius={0}
+          border={false}
         >
           {bottomBar}
-        </View>
+        </GlassSurface>
       )}
     </SafeAreaView>
   );
@@ -279,6 +274,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     paddingVertical: 12,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
   },
   stepContent: {

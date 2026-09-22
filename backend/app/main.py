@@ -1,8 +1,11 @@
 import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 
 from fastapi import FastAPI, Depends
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.middleware.auth import get_db
@@ -13,14 +16,38 @@ from app.routers import classify as classify_router
 from app.routers import routines as routines_router
 from app.routers import ingredients as ingredients_router
 from app.routers import chat as chat_router
+from app.routers import notifications as notifications_router
+from app.routers import preferences as preferences_router
+from app.routers import water as water_router
+from app.routers import version as version_router
+from app.services.scheduler import scheduler
+from app.core.config import CORS_ORIGINS
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
 
-# TODO: change cors rules in prod
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not scheduler.running:
+        scheduler.start()
+    try:
+        yield
+    finally:
+        scheduler.shutdown(wait=False)
+
+
+app = FastAPI(lifespan=lifespan)
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+
+
+@app.get("/privacy-policy.html", include_in_schema=False)
+def privacy_policy():
+    return FileResponse(STATIC_DIR / "privacy-policy.html", media_type="text/html")
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,6 +60,10 @@ app.include_router(classify_router.router)
 app.include_router(routines_router.router)
 app.include_router(ingredients_router.router)
 app.include_router(chat_router.router)
+app.include_router(notifications_router.router)
+app.include_router(preferences_router.router)
+app.include_router(water_router.router)
+app.include_router(version_router.router)
 
 
 @app.get("/items")

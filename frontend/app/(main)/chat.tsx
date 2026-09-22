@@ -11,9 +11,12 @@ import {
   Alert,
 } from "react-native";
 import { useFocusEffect, router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { TOP_BAR_HEIGHT } from "@/components/top-bar";
 import { Colors, Fonts, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedTextInput from "@/components/ui/themed-text-input";
+import ChatMarkdown from "@/components/chat/chat-markdown";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   sendMessage,
@@ -23,23 +26,29 @@ import {
   type ChatMessageOut,
 } from "@/api/chat";
 import { useChatSession } from "@/contexts/ChatSessionContext";
+import { getRoutine, getActiveRoutine } from "@/api/routines";
+import { getProducts } from "@/api/products";
+import GlassSurface from "@/components/ui/glass-surface";
+import ChatIcon from "@/components/icons/chat-icon";
+import ThemedButton from "@/components/ui/themed-button";
 
-const QUICK_ACTIONS = [
-  {
-    label: "Generate a Skincare Routine",
+const QUICK_ACTIONS = {
+  buildRoutine: {
+    label: "Build Me a Routine",
     message: "Generate a skincare routine for me",
   },
-  {
-    label: "Audit My Shelf",
-    message: "Check my saved products for any risky or concerning ingredients",
-  },
-  {
-    label: "Find Routine Gaps",
+  missingFromRoutine: {
+    label: "What's Missing From My Routine?",
     message: "What am I missing from my current routine?",
   },
-];
+  vanityRisks: {
+    label: "Check My Vanity for Risks",
+    message: "Check my saved products for any risky or concerning ingredients",
+  },
+} as const;
 
 export default function ChatScreen() {
+  const insets = useSafeAreaInsets();
   const { sessionId, resetSession } = useChatSession();
   const [messages, setMessages] = useState<ChatMessageOut[]>([]);
   const [inputText, setInputText] = useState("");
@@ -48,6 +57,9 @@ export default function ChatScreen() {
     id: number;
     name: string;
   } | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [hasProducts, setHasProducts] = useState<boolean | null>(null);
+  const [hasRoutine, setHasRoutine] = useState<boolean | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const routineSavedRef = useRef(false);
   const sendingRef = useRef(false);
@@ -56,17 +68,20 @@ export default function ChatScreen() {
   const prevParamsRef = useRef<{
     generate?: string;
     routineDiscarded?: string;
+    routineSaved?: string;
   }>({});
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const { generate, routineDiscarded } = useLocalSearchParams<{
+  const { generate, routineDiscarded, routineSaved } = useLocalSearchParams<{
     generate?: string;
     routineDiscarded?: string;
+    routineSaved?: string;
   }>();
 
   useEffect(() => {
     setMessages([]);
     hydratedSessionRef.current = null;
+    setHydrated(false);
   }, [sessionId]);
 
   useFocusEffect(
@@ -99,7 +114,15 @@ export default function ChatScreen() {
       } else if (!routineDiscarded) {
         prev.routineDiscarded = undefined;
       }
-    }, [sessionId, generate, routineDiscarded]),
+
+      if (routineSaved === "1" && prev.routineSaved !== "1") {
+        prev.routineSaved = "1";
+        router.setParams({ routineSaved: undefined } as any);
+        setEditableRoutine(null);
+      } else if (!routineSaved) {
+        prev.routineSaved = undefined;
+      }
+    }, [sessionId, generate, routineDiscarded, routineSaved]),
   );
 
   useFocusEffect(
@@ -108,14 +131,19 @@ export default function ChatScreen() {
       if (skipHydrationRef.current) {
         skipHydrationRef.current = false;
         hydratedSessionRef.current = sessionId;
+        setHydrated(true);
         return;
       }
-      if (hydratedSessionRef.current === sessionId) return;
+      if (hydratedSessionRef.current === sessionId) {
+        setHydrated(true);
+        return;
+      }
       let cancelled = false;
       getMessages(sessionId)
         .then((history) => {
           if (cancelled) return;
           hydratedSessionRef.current = sessionId;
+          setHydrated(true);
           if (history.length > 0) {
             setMessages((prev) => {
               const localOnly = prev.filter(
@@ -131,11 +159,38 @@ export default function ChatScreen() {
         .catch(() => {
           if (cancelled) return;
           hydratedSessionRef.current = sessionId;
+          setHydrated(true);
         });
       return () => {
         cancelled = true;
       };
     }, [sessionId]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      getProducts()
+        .then((products) => {
+          if (!cancelled) setHasProducts(products.length > 0);
+        })
+        .catch(() => {
+          if (!cancelled) setHasProducts(false);
+        });
+
+      getActiveRoutine()
+        .then((routine) => {
+          if (!cancelled) setHasRoutine(!!routine);
+        })
+        .catch(() => {
+          if (!cancelled) setHasRoutine(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }, []),
   );
 
   const handleSend = async (text?: string) => {
@@ -190,7 +245,9 @@ export default function ChatScreen() {
       if (routineGenerated && !routineSavedRef.current) {
         routineSavedRef.current = true;
         try {
-          const routine = await generateRoutine();
+          const routine = response.routine_id
+            ? await getRoutine(response.routine_id)
+            : await generateRoutine();
           setEditableRoutine({ id: routine.id, name: routine.name });
           setTimeout(() => {
             router.push(
@@ -270,13 +327,17 @@ export default function ChatScreen() {
             },
           ]}
         >
-          <ThemedText
-            style={{
-              color: isUser ? colors.neutral[100] : colors.text,
-            }}
-          >
-            {item.content}
-          </ThemedText>
+          {isUser ? (
+            <ThemedText
+              style={{
+                color: colors.neutral[100],
+              }}
+            >
+              {item.content}
+            </ThemedText>
+          ) : (
+            <ChatMarkdown content={item.content ?? ""} />
+          )}
         </View>
       </View>
     );
@@ -297,23 +358,37 @@ export default function ChatScreen() {
   };
 
   const renderQuickActions = () => {
-    if (messages.length > 5) return null;
+    const ready =
+      hydrated &&
+      !loading &&
+      messages.length === 0 &&
+      hasProducts !== null &&
+      hasRoutine !== null;
+    if (!ready) return null;
+
+    const actions = [
+      ...(hasRoutine
+        ? [QUICK_ACTIONS.missingFromRoutine]
+        : [QUICK_ACTIONS.buildRoutine]),
+      ...(hasProducts ? [QUICK_ACTIONS.vanityRisks] : []),
+    ];
+    if (actions.length === 0) return null;
+
     return (
       <View style={styles.quickActions}>
         <ThemedText type="captionSmall" style={{ marginBottom: 8 }}>
           Quick actions
         </ThemedText>
         <View style={styles.chipRow}>
-          {QUICK_ACTIONS.map((action) => (
-            <TouchableOpacity
+          {actions.map((action) => (
+            <ThemedButton
+              color={colors.secondary[500]}
+              outlined
               key={action.label}
-              style={[styles.chip, { borderColor: colors.primary[300] }]}
               onPress={() => handleSend(action.message)}
-            >
-              <ThemedText type="caption" style={{ color: colors.primary[700] }}>
-                {action.label}
-              </ThemedText>
-            </TouchableOpacity>
+              text={action.label}
+              textType="caption"
+            ></ThemedButton>
           ))}
         </View>
       </View>
@@ -326,34 +401,30 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.neutral[100] }]}
+      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      keyboardVerticalOffset={
+        Platform.OS === "ios" ? insets.top + TOP_BAR_HEIGHT : 0
+      }
     >
       <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <View style={styles.headerText}>
-            <ThemedText type="h1">Chat</ThemedText>
-            <ThemedText
-              type="bodySmall"
-              style={{ color: colors.secondary[600] }}
+        {displayMessages.length > 0 && (
+          <View style={styles.headerRow}>
+            <ThemedText type="h1">Cur.ai</ThemedText>
+            <TouchableOpacity
+              onPress={handleNewChat}
+              disabled={loading}
+              style={[styles.newChatButton, loading && { opacity: 0.4 }]}
+              accessibilityLabel="Start a new chat"
             >
-              Ask about products, ingredients, or your routine
-            </ThemedText>
+              <MaterialCommunityIcons
+                name="chat-plus-outline"
+                size={24}
+                color={colors.secondary[600]}
+              />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            onPress={handleNewChat}
-            disabled={loading}
-            style={[styles.newChatButton, loading && { opacity: 0.4 }]}
-            accessibilityLabel="Start a new chat"
-          >
-            <MaterialCommunityIcons
-              name="chat-plus-outline"
-              size={24}
-              color={colors.primary[700]}
-            />
-          </TouchableOpacity>
-        </View>
+        )}
       </View>
 
       <FlatList
@@ -365,17 +436,20 @@ export default function ChatScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons
-                name="chat-outline"
-                size={48}
-                color={colors.neutral[400]}
-              />
-              <ThemedText
-                type="bodyLarge"
-                style={{ color: colors.secondary[600], textAlign: "center" }}
-              >
-                Start a conversation about your skincare
-              </ThemedText>
+              <ChatIcon color={colors.neutral[300]} />
+              <View style={{ alignItems: "center", gap: 4 }}>
+                <ThemedText type="h2">Cur.ai</ThemedText>
+                <ThemedText
+                  type="bodyLarge"
+                  style={{
+                    color: colors.neutral[500],
+                    textAlign: "center",
+                    paddingHorizontal: 60,
+                  }}
+                >
+                  Start a conversation about your skincare
+                </ThemedText>
+              </View>
             </View>
           ) : null
         }
@@ -430,43 +504,64 @@ export default function ChatScreen() {
         </TouchableOpacity>
       )}
 
-      <View
-        style={[
-          styles.inputBar,
-          {
-            backgroundColor: colors.background,
-            borderTopColor: colors.neutral[200],
-          },
-        ]}
+      <GlassSurface
+        radius={0}
+        border={false}
+        intensity={50}
+        alpha={0.65}
+        style={{
+          borderTopWidth: 1,
+          borderTopColor: colors.neutral[200],
+        }}
       >
-        <ThemedTextInput
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="Ask about your routine..."
-          onSubmitEditing={() => handleSend()}
-          style={{ flex: 1 }}
-          editable={!loading}
-        />
-        <TouchableOpacity
-          onPress={() => handleSend()}
-          disabled={loading || !inputText.trim()}
-          style={[
-            styles.sendButton,
-            {
-              backgroundColor:
-                loading || !inputText.trim()
-                  ? colors.neutral[300]
-                  : colors.primary[600],
-            },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name="send"
-            size={20}
-            color={colors.neutral[100]}
+        <View style={[styles.inputBar]}>
+          <ThemedTextInput
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="Ask about your routine..."
+            onSubmitEditing={() => handleSend()}
+            style={{ flex: 1 }}
+            editable={!loading}
           />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            onPress={() => handleSend()}
+            disabled={loading || !inputText.trim()}
+            style={[
+              styles.sendButton,
+              {
+                backgroundColor:
+                  loading || !inputText.trim()
+                    ? colors.neutral[300]
+                    : colors.primary[600],
+              },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="send"
+              size={20}
+              color={colors.neutral[100]}
+            />
+          </TouchableOpacity>
+        </View>
+        <View
+          style={{
+            paddingHorizontal: 12,
+            paddingBottom: 8,
+            alignItems: "center",
+          }}
+        >
+          <ThemedText
+            type="captionSmall"
+            style={{
+              textAlign: "center",
+              color: colors.neutral[600],
+            }}
+          >
+            Cur.ai can make mistakes. Ingredient and skin info is not medical
+            advice and doesn't replace a dermatologist.
+          </ThemedText>
+        </View>
+      </GlassSurface>
     </KeyboardAvoidingView>
   );
 }
@@ -476,14 +571,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 32,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    justifyContent: "space-between",
     gap: 12,
   },
   headerText: {
@@ -557,7 +650,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderTopWidth: 1,
   },
   sendButton: {
     borderRadius: 25,

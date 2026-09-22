@@ -29,6 +29,8 @@ export default function AddProductScreen() {
     product_type?: string;
     icon?: string;
     pao_months?: string;
+    opened_date?: string;
+    expiry_date?: string;
     imageS3Key?: string;
     scanId?: string;
   }>();
@@ -41,11 +43,12 @@ export default function AddProductScreen() {
     productType: (params.product_type as ProductType) || null,
     paoMonths: params.pao_months ?? "",
     icon: params.icon || DEFAULT_ICON,
+    openedDate: params.opened_date ?? null,
+    expiryDate: params.expiry_date ? params.expiry_date.slice(0, 7) : null,
   });
   const [submitLoading, setSubmitLoading] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const bgColor = colors.background;
 
   const isEditing = editId !== null;
 
@@ -57,6 +60,8 @@ export default function AddProductScreen() {
       productType: null,
       paoMonths: "",
       icon: DEFAULT_ICON,
+      openedDate: null,
+      expiryDate: null,
     });
   };
 
@@ -76,6 +81,11 @@ export default function AddProductScreen() {
       const paoMonths = formData.paoMonths
         ? parseInt(formData.paoMonths, 10) || undefined
         : undefined;
+      const expiryComplete =
+        !!formData.expiryDate && /^\d{4}-\d{2}$/.test(formData.expiryDate);
+      const expiryDate = expiryComplete
+        ? `${formData.expiryDate}-01`
+        : undefined;
 
       const data: Parameters<typeof createProduct>[0] = {
         name: formData.name.trim(),
@@ -83,7 +93,9 @@ export default function AddProductScreen() {
         category: formData.category || undefined,
         product_type: formData.productType || undefined,
         icon: formData.icon || undefined,
-        pao_months: paoMonths,
+        pao_months: expiryComplete ? null : paoMonths,
+        expiry_date: expiryDate,
+        opened_date: formData.openedDate || undefined,
         image_s3_key: params.imageS3Key || undefined,
       };
 
@@ -121,12 +133,9 @@ export default function AddProductScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: bgColor }}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: bgColor }]}
+        style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
@@ -137,13 +146,10 @@ export default function AddProductScreen() {
             <ThemedText type="h1">
               {isEditing ? "Edit Product Details" : "Add a New Product"}
             </ThemedText>
-            <ThemedText
-              type="bodyLarge"
-              style={{ color: colors.secondary[600] }}
-            >
+            <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
               {isEditing
                 ? "Tweak anything that needs a little fixing!"
-                : "What's the new addition to your shelf?"}
+                : "What's the new addition to your vanity?"}
             </ThemedText>
           </View>
 
@@ -152,6 +158,7 @@ export default function AddProductScreen() {
             onChange={setFormData}
             disabled={submitLoading}
             showPaoInput
+            showOpenedDate
           />
 
           <View style={styles.buttons}>
@@ -161,7 +168,7 @@ export default function AddProductScreen() {
               disabled={submitLoading}
               loading={submitLoading}
               color={colors.primary[600]}
-              text={isEditing ? "Store In My Shelf" : "Store In My Shelf"}
+              text={isEditing ? "Save to Vanity" : "Add to Vanity"}
             />
             <ThemedButton
               link

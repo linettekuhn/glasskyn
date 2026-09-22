@@ -15,6 +15,11 @@ import {
   removeRefreshToken,
 } from "../storage/token";
 import * as auth from "../api/auth";
+import {
+  registerPushNotificationsWithBackend,
+  unregisterPushNotificationsFromBackend,
+  setupNotificationListeners,
+} from "../services/notifications";
 
 interface AuthContextType {
   user: User | null;
@@ -24,6 +29,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (user: User) => void;
+  deleteAccount: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,6 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth();
   }, []);
+
+  useEffect(() => {
+    if (token) {
+      registerPushNotificationsWithBackend();
+    }
+  }, [token]);
+
+  useEffect(() => setupNotificationListeners(), []);
 
   const performLogin = async (email: string, password: string) => {
     const data = await auth.login(email, password);
@@ -94,6 +109,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // still clear local state even if server call fails
     }
+    await unregisterPushNotificationsFromBackend();
+    await removeToken();
+    await removeRefreshToken();
+    setUser(null);
+    setToken(null);
+  };
+
+  const updateUser = (updated: User) => {
+    setUser(updated);
+  };
+
+  const deleteAccount = async (password: string) => {
+    await auth.deleteAccount(password);
+    await unregisterPushNotificationsFromBackend();
     await removeToken();
     await removeRefreshToken();
     setUser(null);
@@ -110,6 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        updateUser,
+        deleteAccount,
       }}
     >
       {children}

@@ -1,24 +1,43 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Glasskyn",
+    "slug": "glasskyn",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon-light.png",
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon-light.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#CDFFF8",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "backgroundColor": "#031D1D"
+          }
+        }
+      ],
       "expo-router",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "expo-notifications",
+      "@react-native-community/datetimepicker"
     ],
     "scheme": "cosmetic-expiry",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.linettekuhn.glasskyn",
+      "icon": {
+        "light": "./assets/icon-light.png",
+        "dark": "./assets/icon-dark.png"
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Glasskyn uses your camera to photograph your skincare products. For example, scanning a moisturizer's label lets Glasskyn autofill its name and ingredients, and flag any that may irritate your skin."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,10 +45,25 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.linettekuhn.glasskyn"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "router": {},
+      "apiUrl": "",
+      "eas": {
+        "projectId": "7180bd60-abb7-4256-8fc1-a7196de916e2"
+      }
+    },
+    "owner": "linettekuhn",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7180bd60-abb7-4256-8fc1-a7196de916e2"
     }
   }
 }

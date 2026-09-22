@@ -9,14 +9,17 @@ import {
 } from "react-native";
 import { CameraView } from "expo-camera";
 import Toast from "react-native-toast-message";
+import { StatusBar } from "expo-status-bar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getPresignedUrl, uploadToS3 } from "../../api/uploads";
 import { processPaoImage } from "../../api/products";
 import { useScanContext } from "../../contexts/ScanContext";
 import { Colors, getTheme } from "@/constants/theme";
+import { withAlpha } from "../ui/glass-surface";
 import ScanOverlay from "./scan-overlay";
 import { ThemedText } from "../ui/themed-text";
-import { MaterialIcons } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Pao12 from "../../../assets/icons/pao12.svg";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import { useBlurCheck } from "../../hooks/use-blur-check";
 import ThemedButton from "../ui/themed-button";
@@ -28,6 +31,7 @@ const txtColor = Colors["light"].neutral[100];
 const scanArea = { width: 300, height: 250, top: 120 };
 
 export default function StepPao({ onClose }: { onClose: () => void }) {
+  const insets = useSafeAreaInsets();
   const { scanResult, setPaoMonths, setStep } = useScanContext();
   const [isCapturing, setIsCapturing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -53,6 +57,7 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
       });
       if (!result?.uri) return;
       setCapturedUri(result.uri);
+      setTorch(false);
       setPhase("preview");
     } catch (err: any) {
       Toast.show({
@@ -117,6 +122,7 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
   return (
     <GestureDetector gesture={pinchGesture}>
       <View style={styles.container}>
+        <StatusBar style="light" />
         {isPreview ? (
           <Image
             source={{ uri: capturedUri! }}
@@ -134,7 +140,7 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
         )}
 
         <ScanOverlay scanArea={scanArea}>
-          <View style={styles.topBar}>
+          <View style={[styles.topBar, { top: insets.top + 12 }]}>
             <IconButton
               onPress={isPreview ? handleRetake : onClose}
               IconComponent={MaterialCommunityIcons}
@@ -156,7 +162,7 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
             )}
           </View>
 
-          <View style={styles.bottomSection}>
+          <View style={[styles.bottomSection, { bottom: insets.bottom + 70 }]}>
             {isPreview ? (
               <>
                 <ScanBadge status={blurStatus} />
@@ -209,32 +215,28 @@ export default function StepPao({ onClose }: { onClose: () => void }) {
                   <View
                     style={[
                       styles.hint,
-                      { backgroundColor: colors.neutral[100] },
+                      { backgroundColor: withAlpha(colors.neutral[100], 0.5) },
                     ]}
                   >
                     <View
                       style={[
                         styles.hintIcon,
-                        { backgroundColor: colors.primary[400] },
+                        { backgroundColor: colors.neutral[400] },
                       ]}
                     >
-                      <MaterialIcons
-                        name="lightbulb-outline"
-                        size={32}
-                        color={colors.primary[700]}
+                      <Pao12
+                        width={48}
+                        height={48}
+                        color={colors.neutral[700]}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <ThemedText
-                        type="captionLarge"
-                        style={{ color: colors.primary[900] }}
-                        weight="medium"
-                      >
+                      <ThemedText type="captionLarge" weight="medium">
                         Can&apos;t find the PAO?
                       </ThemedText>
                       <ThemedText
                         type="caption"
-                        style={{ color: colors.primary[700] }}
+                        style={{ color: colors.neutral[700] }}
                       >
                         Check the bottle for a small open jar icon with a number
                         and capture it directly.

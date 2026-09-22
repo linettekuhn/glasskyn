@@ -62,7 +62,7 @@ export default function CompleteScreen() {
         </ThemedText>
         <ThemedText
           type="bodyLarge"
-          style={{ textAlign: "center", color: colors.secondary[600] }}
+          style={{ textAlign: "center", color: colors.neutral[600] }}
         >
           Based on your skin, here's where to start. Scan your own products
           anytime to personalize it further.
@@ -70,7 +70,7 @@ export default function CompleteScreen() {
       </View>
 
       {saving ? (
-        <ActivityIndicator size="large" color={colors.primary[500]} />
+        <ActivityIndicator size="large" color={colors.neutral[700]} />
       ) : (
         <View style={styles.actions}>
           <ThemedButton text="See My Routine" onPress={handleSeeRoutine} />

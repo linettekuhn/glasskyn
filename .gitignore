@@ -19,7 +19,11 @@ dist/
 *.log
 
 credentials/
+**/data/raw*/
 **/data/raw/
 **/data/unlabeled/
 **/data/processed/
 **/data/chromadb/
+
+# ML model weights / checkpoints (too large for git - download or train, keep local only)
+**/*.pt

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+import datetime as _dt
 
 
 # --- Skin Profile ---
@@ -50,6 +51,7 @@ class RoutineStepOut(BaseModel):
     step_type: str
     time_of_day: str
     frequency: str
+    completed_today: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -63,6 +65,16 @@ class RoutineStepUpdate(BaseModel):
     frequency: Optional[str] = None
 
 
+class StepCompleteIn(BaseModel):
+    completed: bool
+    date: Optional[_dt.date] = None
+
+
+class CalendarDayOut(BaseModel):
+    date: _dt.date
+    completed: bool
+
+
 class RoutineCreate(BaseModel):
     name: str
     source: str = "manual"
@@ -72,7 +84,7 @@ class RoutineCreate(BaseModel):
 
 class RoutineUpdate(BaseModel):
     name: Optional[str] = None
-    is_active: Optional[bool] = None
+    is_main_routine: Optional[bool] = None
     steps: Optional[List[RoutineStepCreate]] = None
 
 
@@ -82,7 +94,7 @@ class RoutineOut(BaseModel):
     name: str
     source: str
     routine_type: str = "skincare"
-    is_active: bool = False
+    is_main_routine: bool = False
     steps: List[RoutineStepOut] = []
     created_at: datetime
     updated_at: datetime
@@ -124,3 +136,7 @@ class RoutineTemplateOut(BaseModel):
 class TemplateCloneRequest(BaseModel):
     template_id: int
     name: Optional[str] = None
+
+
+class MainRoutineSet(BaseModel):
+    routine_id: Optional[int] = None

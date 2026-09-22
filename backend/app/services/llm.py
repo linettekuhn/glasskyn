@@ -64,6 +64,9 @@ def extract_name_brand(merged_text: str | None) -> dict:
                     "role": "system",
                     "content": (
                         "Extract the product name, brand, and product type from the OCR text. "
+                        "Shorten the product name to under 32 characters, keeping the product type recognizable. "
+                        "Do not include the brand in the product name when the brand is extracted separately. "
+                        "Drop marketing adjectives and filler words (e.g. luxurious, ultimate, super). "
                         'Return JSON with keys "product_name", "brand", and "product_type". '
                         "product_type must be one of: cleanser, toner, serum, moisturizer, "
                         "exfoliant, mask, spot_treatment, spf, oil, other. "

@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import { CameraView } from "expo-camera";
 import Toast from "react-native-toast-message";
+import { StatusBar } from "expo-status-bar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getPresignedUrl, uploadToS3 } from "../../api/uploads";
 import { processMultiImages } from "../../api/products";
 import { useScanContext } from "../../contexts/ScanContext";
@@ -26,6 +28,7 @@ const txtColor = Colors["light"].neutral[100];
 const scanArea = { width: 300, height: 450, top: 120 };
 
 export default function StepBack({ onClose }: { onClose: () => void }) {
+  const insets = useSafeAreaInsets();
   const {
     frontImageUri,
     barcode,
@@ -92,6 +95,7 @@ export default function StepBack({ onClose }: { onClose: () => void }) {
       });
       if (!result?.uri) return;
       setCapturedUri(result.uri);
+      setTorch(false);
       setPhase("preview");
     } catch (err: any) {
       Toast.show({
@@ -140,6 +144,8 @@ export default function StepBack({ onClose }: { onClose: () => void }) {
       if (resultData.pao_months !== null) {
         setPaoMonths(resultData.pao_months);
         setStep("confirm");
+      } else if (resultData.expiry_date) {
+        setStep("confirm");
       } else {
         setStep("pao");
       }
@@ -172,6 +178,7 @@ export default function StepBack({ onClose }: { onClose: () => void }) {
   return (
     <GestureDetector gesture={pinchGesture}>
       <View style={styles.container}>
+        <StatusBar style="light" />
         {isPreview ? (
           <Image
             source={{ uri: capturedUri! }}
@@ -193,7 +200,7 @@ export default function StepBack({ onClose }: { onClose: () => void }) {
         )}
 
         <ScanOverlay scanArea={scanArea}>
-          <View style={styles.topBar}>
+          <View style={[styles.topBar, { top: insets.top + 12 }]}>
             <IconButton
               onPress={isPreview ? handleRetake : onClose}
               IconComponent={MaterialCommunityIcons}
@@ -215,7 +222,7 @@ export default function StepBack({ onClose }: { onClose: () => void }) {
             )}
           </View>
 
-          <View style={styles.bottomSection}>
+          <View style={[styles.bottomSection, { bottom: insets.bottom + 30 }]}>
             {isPreview ? (
               <>
                 <ScanBadge status={blurStatus} />
