@@ -230,12 +230,19 @@ export interface CircleAnnotation {
   concernId: string | null;
   status: CircleStatus;
   createdOrder: number;
+  /** uuid of the existing backend concern this circle was carried forward from. */
+  carriedFrom: string | null;
+  /** created_at of the carried concern, for the "healed in N days" moment. */
+  carriedCreatedAt: string | null;
+  /** carried circle dropped on the trash to be marked resolved this session. */
+  isResolved: boolean;
 }
 
 export type AnnotationAction =
   | { type: "place"; circle: CircleAnnotation }
   | { type: "delete"; circle: CircleAnnotation }
-  | { type: "move"; uuid: string; prev: { x: number; y: number } };
+  | { type: "move"; uuid: string; prev: { x: number; y: number } }
+  | { type: "resolve"; uuid: string };
 
 export interface SkinCheckInConcernPayload {
   uuid: string;
@@ -244,6 +251,8 @@ export interface SkinCheckInConcernPayload {
   y: number;
   concern_id: string | null;
   status: CircleStatus;
+  carried_uuid?: string | null;
+  resolved?: boolean;
 }
 
 export interface SkinCheckInPayload {
@@ -251,6 +260,19 @@ export interface SkinCheckInPayload {
   captured_at: string | null;
   face_landmarks: Record<string, { x: number; y: number } | undefined> | null;
   concerns: SkinCheckInConcernPayload[];
+}
+
+export interface SkinAnchorRef {
+  key: string;
+  ox: number;
+  oy: number;
+  dist: number;
+}
+
+export interface SkinAnchor {
+  point: { x: number; y: number };
+  region: string;
+  refs: SkinAnchorRef[];
 }
 
 export interface SkinConcernOut {
@@ -261,7 +283,7 @@ export interface SkinConcernOut {
   status: string | null;
   created_session_id: number;
   resolved_session_id: number | null;
-  anchor: Record<string, unknown> | null;
+  anchor: SkinAnchor | null;
   history: Array<{
     session_id: number;
     coords: { x: number; y: number };

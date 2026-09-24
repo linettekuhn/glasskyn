@@ -42,5 +42,11 @@ export function reverseAction(
             : c,
         ),
       );
+    case "resolve":
+      return renumber(
+        circles.map((c) =>
+          c.uuid === action.uuid ? { ...c, isResolved: false } : c,
+        ),
+      );
   }
 }

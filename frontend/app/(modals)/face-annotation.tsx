@@ -37,26 +37,71 @@ import {
   TAXONOMY_GROUPS,
   TAXONOMY_DISCLAIMER,
 } from "@/constants/taxonomy";
-import { usePhotoTransform } from "@/hooks/use-photo-transform";
-import { submitSkinCheckIn, getSkinSessions } from "@/api/skin";
-import { useSkinCapture } from "@/contexts/SkinCaptureContext";
 import {
   allSettled,
   findNextUnlabeled,
   nextOrder,
   renumber,
+  reverseAction,
 } from "@/utils/annotation";
+import {
+  computeAnchor,
+  lastSeenCoords,
+  projectConcern,
+} from "@/utils/anchor";
+import { useSkinCapture, type SkinLandmarkRefs } from "@/contexts/SkinCaptureContext";
+import { usePhotoTransform } from "@/hooks/use-photo-transform";
+import { submitSkinCheckIn, getSkinSessions } from "@/api/skin";
 import type {
   AnnotationAction,
   Concern,
   CircleAnnotation,
   SkinCheckInPayload,
+  SkinSessionOut,
 } from "@/types";
 
 const DOT_SIZE = 24;
 const DOT_RADIUS = DOT_SIZE / 2;
 const TRASH_RADIUS = 32;
 const PEEK_HEIGHT = 178;
+
+const MS_PER_DAY = 86400000;
+
+function daysBetween(fromIso: string | null | undefined): number | null {
+  if (!fromIso) return null;
+  const start = new Date(fromIso).getTime();
+  if (!Number.isFinite(start)) return null;
+  return Math.max(1, Math.floor((Date.now() - start) / MS_PER_DAY));
+}
+
+function carryConcernsFrom(
+  prev: SkinSessionOut,
+  newLandmarks: SkinLandmarkRefs,
+): CircleAnnotation[] {
+  const carried: CircleAnnotation[] = [];
+  for (const concern of prev.concerns ?? []) {
+    if (!concern.uuid) continue;
+    if (!concern.label) continue;
+    if (concern.resolved_session_id != null) continue;
+    const coords = lastSeenCoords(concern);
+    if (!coords) continue;
+    const anchor = computeAnchor(coords, prev.face_landmarks);
+    const projected = projectConcern(anchor, newLandmarks, coords);
+    carried.push({
+      uuid: concern.uuid,
+      number: 0,
+      x: projected.x,
+      y: projected.y,
+      concernId: concern.label,
+      status: "labeled",
+      createdOrder: 0,
+      carriedFrom: concern.uuid,
+      carriedCreatedAt: concern.created_at,
+      isResolved: false,
+    });
+  }
+  return carried;
+}
 
 const btnColor = Colors["light"].primary[400];
 const txtColor = Colors["light"].neutral[100];
@@ -95,9 +140,11 @@ function CircleDot({
     transform: [{ scale: 1 + 0.45 * pulse.value }],
   }));
 
+  const carried = circle.carriedFrom != null;
   const ringColor = active ? activeRingColor : "#FFFFFF";
-  const fill =
-    circle.status === "labeled"
+  const fill = carried
+    ? "rgba(255,255,255,0.16)"
+    : circle.status === "labeled"
       ? Colors["light"].primary[400]
       : circle.status === "skipped"
         ? Colors["light"].neutral[500]
@@ -128,7 +175,14 @@ function CircleDot({
         />
       )}
       <View
-        style={[styles.dot, { borderColor: ringColor, backgroundColor: fill }]}
+        style={[
+          styles.dot,
+          {
+            borderColor: ringColor,
+            backgroundColor: fill,
+            borderStyle: carried ? "dashed" : "solid",
+          },
+        ]}
       >
         <ThemedText
           style={{ lineHeight: 14, color: "#FFFFFF", fontSize: 10 }}
@@ -179,6 +233,10 @@ export default function FaceAnnotationScreen() {
 
   const activeCircle = mode === "labeling" ? findNextUnlabeled(circles) : null;
   const isAllSettled = allSettled(circles);
+  const carriedCount = circles.filter(
+    (c) => c.carriedFrom && !c.isResolved,
+  ).length;
+  const resolvedCount = circles.filter((c) => c.isResolved).length;
 
   const counterText =
     mode === "circling"
@@ -192,19 +250,7 @@ export default function FaceAnnotationScreen() {
     const last = history[history.length - 1];
     if (!last) return;
     setHistory((h) => h.slice(0, -1));
-    setCircles((prev) =>
-      last.type === "place"
-        ? renumber(prev.filter((c) => c.uuid !== last.circle.uuid))
-        : last.type === "delete"
-          ? renumber([...prev, last.circle])
-          : renumber(
-              prev.map((c) =>
-                c.uuid === last.uuid
-                  ? { ...c, x: last.prev.x, y: last.prev.y }
-                  : c,
-              ),
-            ),
-    );
+    setCircles((prev) => reverseAction(prev, last));
   };
 
   const placeCircle = (nx: number, ny: number) => {
@@ -216,10 +262,52 @@ export default function FaceAnnotationScreen() {
       concernId: null,
       status: "unlabeled",
       createdOrder: nextOrder(circlesRef.current),
+      carriedFrom: null,
+      carriedCreatedAt: null,
+      isResolved: false,
     };
     setCircles((prev) => renumber([...prev, circle]));
     pushHistory({ type: "place", circle });
   };
+
+  const carriedLoadedRef = useRef(false);
+  useEffect(() => {
+    if (!draft || carriedLoadedRef.current) return;
+    const landmarkRefs = draft.landmarks;
+    if (!landmarkRefs) return;
+    carriedLoadedRef.current = true;
+    let cancelled = false;
+    const capturedAt = draft.capturedAt;
+    (async () => {
+      try {
+        const sessions = await getSkinSessions();
+        if (cancelled) return;
+        const prev = sessions.find(
+          (s) => new Date(s.timestamp).getTime() < new Date(capturedAt).getTime(),
+        );
+        if (!prev || !prev.face_landmarks) return;
+        const carried = carryConcernsFrom(prev, landmarkRefs);
+        if (cancelled || carried.length === 0) return;
+        setCircles((existing) =>
+          renumber([...carried, ...(existing ?? [])]),
+        );
+        if (__DEV__)
+          console.log(
+            "[face-annotation] carried over",
+            `prev_session=${prev.id}`, `n=${carried.length}`,
+          );
+      } catch (e) {
+        if (__DEV__)
+          console.warn(
+            "[face-annotation] carry-forward failed",
+            e instanceof Error ? e.message : String(e),
+          );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [draft]);
 
   const onCanvasTap = (px: number, py: number) => {
     if (modeRef.current !== "circling") return;
@@ -279,8 +367,33 @@ export default function FaceAnnotationScreen() {
     if (
       Math.hypot(scr.x - trashCenter.x, scr.y - trashCenter.y) < TRASH_RADIUS
     ) {
-      pushHistory({ type: "delete", circle });
-      setCircles((prev) => renumber(prev.filter((x) => x.uuid !== start.uuid)));
+      if (circle.carriedFrom && !circle.isResolved) {
+        pushHistory({ type: "resolve", uuid: circle.uuid });
+        setCircles((prev) =>
+          renumber(
+            prev.map((x) =>
+              x.uuid === start.uuid
+                ? { ...x, isResolved: true, status: "labeled" }
+                : x,
+            ),
+          ),
+        );
+        const days = daysBetween(circle.carriedCreatedAt);
+        Toast.show({
+          type: "success",
+          text1: "Concern resolved",
+          text2:
+            days != null
+              ? `Healed in ${days} ${days === 1 ? "day" : "days"}`
+              : "Marked as healed",
+          position: "bottom",
+        });
+      } else {
+        pushHistory({ type: "delete", circle });
+        setCircles((prev) =>
+          renumber(prev.filter((x) => x.uuid !== start.uuid)),
+        );
+      }
     } else if (start.x !== circle.x || start.y !== circle.y) {
       pushHistory({
         type: "move",
@@ -386,6 +499,8 @@ export default function FaceAnnotationScreen() {
           y: c.y,
           concern_id: c.concernId,
           status: c.status,
+          carried_uuid: c.carriedFrom,
+          resolved: c.isResolved,
         })),
       };
       const result = await submitSkinCheckIn(payload);
@@ -404,10 +519,23 @@ export default function FaceAnnotationScreen() {
             console.warn("[skin] round-trip list failed", e?.message ?? e),
           );
       }
+      const keptCarried = circles.filter(
+        (c) => c.carriedFrom && !c.isResolved,
+      ).length;
+      const healed = circles.filter((c) => c.isResolved).length;
+      const fresh = circles.filter((c) => !c.carriedFrom).length;
+      const parts = [
+        fresh > 0 ? `${fresh} new` : null,
+        keptCarried > 0 ? `${keptCarried} carried` : null,
+        healed > 0 ? `${healed} healed` : null,
+      ].filter(Boolean);
       Toast.show({
         type: "success",
         text1: "Check-in saved",
-        text2: `${circles.length} ${circles.length === 1 ? "concern" : "concerns"} recorded`,
+        text2:
+          parts.length > 0
+            ? parts.join(" · ")
+            : `${circles.length} ${circles.length === 1 ? "concern" : "concerns"} recorded`,
         position: "bottom",
       });
       setDraft(null);
@@ -430,6 +558,28 @@ export default function FaceAnnotationScreen() {
         <ThemedText type="caption" style={{ color: colors.neutral[600] }}>
           Mark the concerns you can see first, then label them all in one pass.
         </ThemedText>
+        {carriedCount > 0 && (
+          <ThemedText
+            type="caption"
+            weight="semiBold"
+            style={{ color: colors.neutral[600] }}
+          >
+            {carriedCount}{" "}
+            {carriedCount === 1 ? "concern has" : "concerns have"} been carried
+            over from your last check-in — dashed circles. Drag a carried
+            circle to the trash to mark it healed.
+          </ThemedText>
+        )}
+        {resolvedCount > 0 && (
+          <ThemedText
+            type="caption"
+            weight="semiBold"
+            style={{ color: colors.success[500] }}
+          >
+            {"\u2713"} {resolvedCount}{" "}
+            {resolvedCount === 1 ? "concern" : "concerns"} healed this session
+          </ThemedText>
+        )}
         <ThemedButton
           text={
             circles.length === 0
@@ -657,15 +807,17 @@ export default function FaceAnnotationScreen() {
               { transformOrigin: "0 0" },
             ]}
           >
-            {circles.map((circle) => (
-              <CircleDot
-                key={circle.uuid}
-                circle={circle}
-                active={activeCircle?.uuid === circle.uuid}
-                width={width}
-                height={height}
-              />
-            ))}
+            {circles
+              .filter((c) => !c.isResolved)
+              .map((circle) => (
+                <CircleDot
+                  key={circle.uuid}
+                  circle={circle}
+                  active={activeCircle?.uuid === circle.uuid}
+                  width={width}
+                  height={height}
+                />
+              ))}
           </Animated.View>
         </View>
       </GestureDetector>

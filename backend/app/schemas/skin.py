@@ -16,6 +16,8 @@ class ConcernIn(BaseModel):
     y: float
     concern_id: str | None = None
     status: str
+    carried_uuid: str | None = None
+    resolved: bool = False
 
 
 class CheckInRequest(BaseModel):

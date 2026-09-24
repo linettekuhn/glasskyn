@@ -49,10 +49,14 @@ import {
   type SkinLandmarkRefs,
   type SkinPose,
 } from "@/contexts/SkinCaptureContext";
+import { getSkinPhotoUrl, getSkinSessions } from "@/api/skin";
 import { Colors } from "@/constants/theme";
 
 const HOLD_MS = 1000;
 const SHUTTER_SIZE = 84;
+const GHOST_MIN_OPACITY = 0.15;
+const GHOST_MAX_OPACITY = 0.6;
+const GHOST_STEP = 0.1;
 const btnColor = Colors["light"].primary[400];
 const txtColor = Colors["light"].neutral[100];
 const disabledColor = Colors["light"].neutral[300];
@@ -154,6 +158,8 @@ export default function SkinCaptureScreen() {
   const [quality, setQuality] = useState<CaptureQualityResult | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [appState, setAppState] = useState(AppState.currentState);
+  const [ghostUri, setGhostUri] = useState<string | null>(null);
+  const [ghostOpacity, setGhostOpacity] = useState(0.3);
   const [captureInfo, setCaptureInfo] = useState<{
     width: number;
     height: number;
@@ -191,6 +197,36 @@ export default function SkinCaptureScreen() {
     });
     return () => sub.remove();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const sessions = await getSkinSessions();
+        if (cancelled || sessions.length === 0) return;
+        const url = await getSkinPhotoUrl(sessions[0].image_url);
+        if (cancelled) return;
+        setGhostUri(url);
+        if (__DEV__)
+          console.log("[skin-capture] ghost reference loaded from previous session");
+      } catch (e) {
+        if (__DEV__)
+          console.log("[skin-capture] ghost reference load failed:", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const incGhostOpacity = () =>
+    setGhostOpacity((o) =>
+      Math.min(GHOST_MAX_OPACITY, +(o + GHOST_STEP).toFixed(2)),
+    );
+  const decGhostOpacity = () =>
+    setGhostOpacity((o) =>
+      Math.max(GHOST_MIN_OPACITY, +(o - GHOST_STEP).toFixed(2)),
+    );
 
   const onFacesDetected = useCallback(
     (detected: Face[]) => {
@@ -482,6 +518,14 @@ export default function SkinCaptureScreen() {
 
           {phase === "camera" ? (
             <>
+              {ghostUri && (
+                <Image
+                  source={{ uri: ghostUri }}
+                  style={[StyleSheet.absoluteFill, { opacity: ghostOpacity }]}
+                  resizeMode="cover"
+                  pointerEvents="none"
+                />
+              )}
               <GuideOval
                 geometry={geometry}
                 gates={gates}
@@ -514,6 +558,31 @@ export default function SkinCaptureScreen() {
                 <View style={{ flex: 1 }} />
                 {sampling && (
                   <ActivityIndicator size="small" color={txtColor} />
+                )}
+                {ghostUri && (
+                  <>
+                    <IconButton
+                      iconColor={txtColor}
+                      activeColor={btnColor}
+                      onPress={decGhostOpacity}
+                      IconComponent={MaterialCommunityIcons}
+                      iconName="minus"
+                    />
+                    <ThemedText
+                      style={{ color: txtColor, minWidth: 40, textAlign: "center" }}
+                      type="caption"
+                      weight="semiBold"
+                    >
+                      {Math.round(ghostOpacity * 100)}%
+                    </ThemedText>
+                    <IconButton
+                      iconColor={txtColor}
+                      activeColor={btnColor}
+                      onPress={incGhostOpacity}
+                      IconComponent={MaterialCommunityIcons}
+                      iconName="plus"
+                    />
+                  </>
                 )}
                 <IconButton
                   active={ringLight}

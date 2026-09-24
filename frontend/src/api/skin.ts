@@ -1,5 +1,5 @@
 import apiClient from "./client";
-import { getPresignedUrl, uploadToS3 } from "./uploads";
+import { getPresignedDownloadUrl, getPresignedUrl, uploadToS3 } from "./uploads";
 import type {
   SkinCheckInPayload,
   SkinCheckInResponse,
@@ -37,6 +37,10 @@ export async function submitSkinCheckIn(
 export async function getSkinSessions(): Promise<SkinSessionOut[]> {
   const response = await apiClient.get("/skin/sessions");
   return response.data;
+}
+
+export async function getSkinPhotoUrl(fileKey: string): Promise<string> {
+  return getPresignedDownloadUrl(fileKey);
 }
 
 export async function deleteSkinData(): Promise<void> {

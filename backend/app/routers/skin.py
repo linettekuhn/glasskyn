@@ -14,6 +14,7 @@ from app.schemas.skin import (
     SessionOut,
 )
 from app.services import storage
+from app.services.skin_anchor import compute_anchor
 
 logger = logging.getLogger(__name__)
 
@@ -54,14 +55,16 @@ def submit_check_in(
 ):
     _assert_owned_file_key(body.image_file_key, current_user.id)
 
+    face_landmarks_dict = (
+        {k: v.model_dump() for k, v in body.face_landmarks.items()}
+        if body.face_landmarks is not None
+        else None
+    )
+
     session_kwargs = {
         "user_id": current_user.id,
         "image_url": body.image_file_key,
-        "face_landmarks": (
-            {k: v.model_dump() for k, v in body.face_landmarks.items()}
-            if body.face_landmarks is not None
-            else None
-        ),
+        "face_landmarks": face_landmarks_dict,
     }
     if body.captured_at is not None:
         session_kwargs["timestamp"] = body.captured_at
@@ -72,13 +75,40 @@ def submit_check_in(
     concerns = []
     for c in body.concerns:
         coords = {"x": c.x, "y": c.y}
+        if c.carried_uuid:
+            existing = (
+                db.query(SkinConcern)
+                .filter(
+                    SkinConcern.user_id == current_user.id,
+                    SkinConcern.uuid == c.carried_uuid,
+                )
+                .first()
+            )
+            if existing is None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Carried concern {c.carried_uuid} not found",
+                )
+            history = existing.history
+            if history is None:
+                history = []
+            history.append(
+                {"session_id": session.id, "coords": coords, "size_estimate": None}
+            )
+            existing.history = history
+            if c.resolved:
+                existing.resolved_session_id = session.id
+            concerns.append(existing)
+            continue
+
+        anchor = compute_anchor(coords, face_landmarks_dict)
         concern = SkinConcern(
             uuid=c.uuid,
             user_id=current_user.id,
             label=c.concern_id,
             status=c.status,
             created_session_id=session.id,
-            anchor={"coords": coords},
+            anchor=anchor,
             history=[
                 {
                     "session_id": session.id,
