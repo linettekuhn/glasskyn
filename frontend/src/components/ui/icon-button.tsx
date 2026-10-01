@@ -11,6 +11,7 @@ type Props = {
   active?: boolean;
   activeColor?: string;
   backgroundColor?: string;
+  disabled?: boolean;
 };
 
 export default function IconButton({
@@ -22,6 +23,7 @@ export default function IconButton({
   active = false,
   activeColor = "rgba(255,200,0,0.6)",
   backgroundColor = "rgba(0,0,0,0.5)",
+  disabled = false,
 }: Props) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -29,10 +31,12 @@ export default function IconButton({
   return (
     <TouchableOpacity
       onPress={onPress}
+      disabled={disabled}
       style={[
         styles.button,
         { backgroundColor },
         active && { backgroundColor: activeColor },
+        disabled && { opacity: 0.4 },
       ]}
     >
       <IconComponent

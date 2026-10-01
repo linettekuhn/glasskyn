@@ -46,3 +46,7 @@ export async function getSkinPhotoUrl(fileKey: string): Promise<string> {
 export async function deleteSkinData(): Promise<void> {
   await apiClient.delete("/skin/data");
 }
+
+export async function deleteSkinSession(sessionId: number): Promise<void> {
+  await apiClient.delete(`/skin/sessions/${sessionId}`);
+}

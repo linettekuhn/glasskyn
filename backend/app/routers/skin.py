@@ -10,6 +10,7 @@ from app.schemas.skin import (
     CheckInRequest,
     CheckInResponse,
     ConcernOut,
+    DeleteSessionResponse,
     DeleteSkinDataResponse,
     SessionOut,
 )
@@ -73,6 +74,7 @@ def submit_check_in(
     db.flush()
 
     concerns = []
+    carried_count = 0
     for c in body.concerns:
         coords = {"x": c.x, "y": c.y}
         if c.carried_uuid:
@@ -89,9 +91,9 @@ def submit_check_in(
                     status_code=status.HTTP_409_CONFLICT,
                     detail=f"Carried concern {c.carried_uuid} not found",
                 )
-            history = existing.history
-            if history is None:
-                history = []
+            # Reassign a NEW list: the column has no MutableList wrapper, so
+            # an in-place append would not be flagged as a change.
+            history = list(existing.history or [])
             history.append(
                 {"session_id": session.id, "coords": coords, "size_estimate": None}
             )
@@ -99,6 +101,7 @@ def submit_check_in(
             if c.resolved:
                 existing.resolved_session_id = session.id
             concerns.append(existing)
+            carried_count += 1
             continue
 
         anchor = compute_anchor(coords, face_landmarks_dict)
@@ -126,10 +129,13 @@ def submit_check_in(
         db.refresh(concern)
 
     logger.info(
-        "Check-in: user=%s session=%s concerns=%d",
+        "Check-in: user=%s session=%s concerns=%d new=%d carried=%d landmarks=%s",
         current_user.id,
         session.id,
         len(concerns),
+        len(concerns) - carried_count,
+        carried_count,
+        "yes" if face_landmarks_dict else "no",
     )
 
     return CheckInResponse(
@@ -170,6 +176,98 @@ def get_session(
         )
     session.concerns = _get_session_concerns(db, session.id)  # type: ignore[attr-defined]
     return session
+
+
+@router.delete("/sessions/{session_id}", response_model=DeleteSessionResponse)
+def delete_session(
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    session = (
+        db.query(SkinSession)
+        .filter(
+            SkinSession.id == session_id,
+            SkinSession.user_id == current_user.id,
+        )
+        .first()
+    )
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found",
+        )
+
+    image_url = session.image_url
+
+    # 1. Concerns that originated in this session die with it. A concern is only
+    #    ever listed under the session that created it, so keeping them would
+    #    strand them away from the journal entirely.
+    origin_concerns = (
+        db.query(SkinConcern)
+        .filter(
+            SkinConcern.user_id == current_user.id,
+            SkinConcern.created_session_id == session.id,
+        )
+        .all()
+    )
+    for concern in origin_concerns:
+        db.delete(concern)
+    deleted_concerns = len(origin_concerns)
+    doomed_ids = {c.id for c in origin_concerns}
+
+    # 2. Concerns that merely passed through this session: drop the now-dangling
+    #    history entry and unpoint any resolution recorded here. Entries for
+    #    other sessions stay valid and keep rendering on their own days.
+    updated_concerns = 0
+    for concern in db.query(SkinConcern).filter(
+        SkinConcern.user_id == current_user.id
+    ):
+        if concern.id in doomed_ids:
+            continue
+        touched = False
+        if concern.resolved_session_id == session.id:
+            concern.resolved_session_id = None
+            touched = True
+        history = concern.history or []
+        trimmed = [h for h in history if h.get("session_id") != session.id]
+        if len(trimmed) != len(history):
+            # Reassign a new list: the column has no MutableList wrapper, so an
+            # in-place mutation would not be flagged as a change.
+            concern.history = trimmed
+            touched = True
+        if touched:
+            updated_concerns += 1
+
+    # 3. Best-effort object cleanup; a failure here must not block the delete.
+    try:
+        storage.delete_file(image_url)
+    except Exception as e:
+        logger.warning("Failed to delete S3 object %s: %s", image_url, e)
+
+    # Flush the concern changes first: the bulk DELETE below runs immediately,
+    # while these ORM mutations would otherwise still be pending, leaving rows
+    # that reference this session and tripping the foreign keys.
+    db.flush()
+
+    db.query(SkinSession).filter(SkinSession.id == session.id).delete(
+        synchronize_session=False
+    )
+    db.commit()
+
+    logger.info(
+        "Deleted skin session: user=%s session=%s deleted_concerns=%d updated_concerns=%d",
+        current_user.id,
+        session.id,
+        deleted_concerns,
+        updated_concerns,
+    )
+
+    return DeleteSessionResponse(
+        session_id=session.id,
+        deleted_concerns=deleted_concerns,
+        updated_concerns=updated_concerns,
+    )
 
 
 @router.delete("/data", response_model=DeleteSkinDataResponse)

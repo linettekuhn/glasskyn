@@ -37,7 +37,7 @@ export default function HomeScreen() {
   const affirmation =
     affirmations[Math.floor(Date.now() / 86400000) % affirmations.length];
 
-  const openRoutine = () => router.navigate("/(main)/routine");
+  const openRoutine = () => router.navigate("/(main)/journal");
 
   return (
     <View style={styles.container}>

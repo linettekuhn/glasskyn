@@ -44,12 +44,11 @@ import {
   renumber,
   reverseAction,
 } from "@/utils/annotation";
+import { computeAnchor, lastSeenCoords, projectConcern } from "@/utils/anchor";
 import {
-  computeAnchor,
-  lastSeenCoords,
-  projectConcern,
-} from "@/utils/anchor";
-import { useSkinCapture, type SkinLandmarkRefs } from "@/contexts/SkinCaptureContext";
+  useSkinCapture,
+  type SkinLandmarkRefs,
+} from "@/contexts/SkinCaptureContext";
 import { usePhotoTransform } from "@/hooks/use-photo-transform";
 import { submitSkinCheckIn, getSkinSessions } from "@/api/skin";
 import type {
@@ -74,19 +73,72 @@ function daysBetween(fromIso: string | null | undefined): number | null {
   return Math.max(1, Math.floor((Date.now() - start) / MS_PER_DAY));
 }
 
+interface CarrySkip {
+  id: number;
+  uuid: string | null;
+  reason: string;
+}
+
+interface CarryResult {
+  carried: CircleAnnotation[];
+  skipped: CarrySkip[];
+  /** True when no landmark ref could be used, so coords were carried as-is. */
+  usedFallbackCoords: boolean;
+}
+
 function carryConcernsFrom(
   prev: SkinSessionOut,
-  newLandmarks: SkinLandmarkRefs,
-): CircleAnnotation[] {
+  newLandmarks: SkinLandmarkRefs | null,
+): CarryResult {
   const carried: CircleAnnotation[] = [];
+  const skipped: CarrySkip[] = [];
+  const prevLandmarks = prev.face_landmarks ?? null;
+  let usedFallbackCoords = false;
+
   for (const concern of prev.concerns ?? []) {
-    if (!concern.uuid) continue;
-    if (!concern.label) continue;
-    if (concern.resolved_session_id != null) continue;
+    const skip = (reason: string) =>
+      skipped.push({ id: concern.id, uuid: concern.uuid, reason });
+
+    if (!concern.uuid) {
+      skip("no-uuid");
+      continue;
+    }
+    if (!concern.label) {
+      skip("no-label");
+      continue;
+    }
+    if (concern.resolved_session_id != null) {
+      skip("already-resolved");
+      continue;
+    }
     const coords = lastSeenCoords(concern);
-    if (!coords) continue;
-    const anchor = computeAnchor(coords, prev.face_landmarks);
+    if (!coords) {
+      skip("no-coords");
+      continue;
+    }
+    // With landmarks on either side the concern is re-projected onto the new
+    // capture; without them it carries at its last known coordinates.
+    if (!prevLandmarks || !newLandmarks) {
+      usedFallbackCoords = true;
+      carried.push({
+        uuid: concern.uuid,
+        number: 0,
+        x: coords.x,
+        y: coords.y,
+        concernId: concern.label,
+        status: "labeled",
+        createdOrder: 0,
+        carriedFrom: concern.uuid,
+        carriedCreatedAt: concern.created_at,
+        isResolved: false,
+      });
+      continue;
+    }
+    const anchor = computeAnchor(coords, prevLandmarks);
     const projected = projectConcern(anchor, newLandmarks, coords);
+    if (projected.x === coords.x && projected.y === coords.y) {
+      usedFallbackCoords = true;
+    }
     carried.push({
       uuid: concern.uuid,
       number: 0,
@@ -100,7 +152,7 @@ function carryConcernsFrom(
       isResolved: false,
     });
   }
-  return carried;
+  return { carried, skipped, usedFallbackCoords };
 }
 
 const btnColor = Colors["light"].primary[400];
@@ -272,9 +324,23 @@ export default function FaceAnnotationScreen() {
 
   const carriedLoadedRef = useRef(false);
   useEffect(() => {
-    if (!draft || carriedLoadedRef.current) return;
-    const landmarkRefs = draft.landmarks;
-    if (!landmarkRefs) return;
+    const bail = (reason: string, extra?: Record<string, unknown>) => {
+      if (__DEV__)
+        console.log(
+          `[face-annotation] carry-forward skipped reason=${reason}`,
+          extra ?? "",
+        );
+    };
+
+    if (!draft) {
+      bail("no-draft");
+      return;
+    }
+    if (carriedLoadedRef.current) {
+      bail("already-loaded");
+      return;
+    }
+    const landmarkRefs = draft.landmarks ?? null;
     carriedLoadedRef.current = true;
     let cancelled = false;
     const capturedAt = draft.capturedAt;
@@ -283,25 +349,39 @@ export default function FaceAnnotationScreen() {
         const sessions = await getSkinSessions();
         if (cancelled) return;
         const prev = sessions.find(
-          (s) => new Date(s.timestamp).getTime() < new Date(capturedAt).getTime(),
+          (s) =>
+            new Date(s.timestamp).getTime() < new Date(capturedAt).getTime(),
         );
-        if (!prev || !prev.face_landmarks) return;
-        const carried = carryConcernsFrom(prev, landmarkRefs);
-        if (cancelled || carried.length === 0) return;
-        setCircles((existing) =>
-          renumber([...carried, ...(existing ?? [])]),
+        if (!prev) {
+          bail("no-prev-session", { sessions: sessions.length });
+          return;
+        }
+        const { carried, skipped, usedFallbackCoords } = carryConcernsFrom(
+          prev,
+          landmarkRefs,
         );
+        if (carried.length === 0) {
+          bail("carried-zero", {
+            prev_session: prev.id,
+            concerns: prev.concerns?.length ?? 0,
+            skipped: JSON.stringify(skipped),
+          });
+          return;
+        }
+        setCircles((existing) => renumber([...carried, ...(existing ?? [])]));
         if (__DEV__)
           console.log(
-            "[face-annotation] carried over",
-            `prev_session=${prev.id}`, `n=${carried.length}`,
+            "[face-annotation] carry-forward ok",
+            `prev_session=${prev.id}`,
+            `n=${carried.length}`,
+            `skipped=${skipped.length}`,
+            `fallback_coords=${usedFallbackCoords}`,
+            `new_landmarks=${landmarkRefs ? "yes" : "no"}`,
+            `prev_landmarks=${prev.face_landmarks ? "yes" : "no"}`,
+            skipped.length ? `skipped_detail=${JSON.stringify(skipped)}` : "",
           );
       } catch (e) {
-        if (__DEV__)
-          console.warn(
-            "[face-annotation] carry-forward failed",
-            e instanceof Error ? e.message : String(e),
-          );
+        bail(`error:${e instanceof Error ? e.message : String(e)}`);
       }
     })();
     return () => {
@@ -566,8 +646,7 @@ export default function FaceAnnotationScreen() {
           >
             {carriedCount}{" "}
             {carriedCount === 1 ? "concern has" : "concerns have"} been carried
-            over from your last check-in — dashed circles. Drag a carried
-            circle to the trash to mark it healed.
+            over from your last check-in. To mark as healed drag to trash.
           </ThemedText>
         )}
         {resolvedCount > 0 && (

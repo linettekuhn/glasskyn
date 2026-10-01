@@ -62,3 +62,11 @@ class CheckInResponse(BaseModel):
 class DeleteSkinDataResponse(BaseModel):
     deleted_sessions: int
     deleted_concerns: int
+
+
+class DeleteSessionResponse(BaseModel):
+    session_id: int
+    """ Concerns that originated in this session and were removed with it. """
+    deleted_concerns: int
+    """ Concerns whose resolution pointer or history was trimmed. """
+    updated_concerns: int
