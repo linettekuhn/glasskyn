@@ -129,14 +129,14 @@ export default function MainLayout() {
             }}
           />
           <Tabs.Screen
-            name="routine"
+            name="journal"
             options={{
-              title: "Routines",
+              title: "Journal",
               tabBarIcon: ({ focused, color }: TabBarIconProps) => (
                 <TabIcon
                   IconComponent={MaterialCommunityIcons}
-                  outlineName="clipboard-list-outline"
-                  fillName="clipboard-list"
+                  outlineName="notebook-heart-outline"
+                  fillName="notebook-heart"
                   size={28}
                   color={color}
                   focused={focused}
