@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from urllib.parse import urlsplit, urlunsplit
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -38,6 +39,40 @@ def _get_cached_ocr(file_key: str) -> str | None:
 
 def _set_cached_ocr(file_key: str, text: str) -> None:
     _ocr_cache[file_key] = text
+
+
+def _redact_url(url: str | None) -> str | None:
+    """Drop the query string so presigned signatures never reach the logs."""
+    if not url:
+        return url
+    p = urlsplit(url)
+    return urlunsplit((p.scheme, p.netloc, p.path, "", ""))
+
+
+def _describe_exception(exc: BaseException) -> str:
+    """Type, message, and any Google/gRPC fields, following the cause chain."""
+    parts = []
+    seen = set()
+    cur: BaseException | None = exc
+    while cur is not None and id(cur) not in seen:
+        seen.add(id(cur))
+        info = {
+            "type": f"{type(cur).__module__}.{type(cur).__name__}",
+            "message": str(cur),
+        }
+        for attr in ("code", "reason", "details", "errors", "status_code", "grpc_status_code"):
+            val = getattr(cur, attr, None)
+            if val is None:
+                continue
+            if callable(val):
+                try:
+                    val = val()
+                except Exception:
+                    continue
+            info[attr] = val
+        parts.append(repr(info))
+        cur = cur.__cause__ or cur.__context__
+    return " <- caused by ".join(parts)
 
 
 @router.post(
@@ -119,7 +154,12 @@ async def process_multi_images(
                 _set_cached_ocr(file_key, text)
             return text
         except Exception as e:
-            logger.error("OCR failed for %s: %s", url, e)
+            logger.error(
+                "OCR failed for %s: %s",
+                _redact_url(url),
+                _describe_exception(e),
+                exc_info=True,
+            )
             return None
 
     async def run_ml(url: str | None) -> tuple[str | None, float | None]:
@@ -131,11 +171,16 @@ async def process_multi_images(
             cat, conf = await asyncio.to_thread(raw_ml_classify, url)
             logger.info(
                 "ML classifier result: category=%s confidence=%.3f url=%s",
-                cat, conf, url,
+                cat, conf, _redact_url(url),
             )
             return cat, conf
         except Exception as e:
-            logger.error("ML classifier failed for %s: %s", url, e)
+            logger.error(
+                "ML classifier failed for %s: %s",
+                _redact_url(url),
+                _describe_exception(e),
+                exc_info=True,
+            )
             return None, None
 
     front_text, back_text, ml_front, ml_back = await asyncio.gather(
@@ -322,7 +367,12 @@ async def process_pao_image(
                     "PAO OCR extracted %d chars", len(pao_text or "")
                 )
             except Exception as e:
-                logger.error("PAO OCR failed: %s", e)
+                logger.error(
+                    "PAO OCR failed for %s: %s",
+                    _redact_url(pao_url),
+                    _describe_exception(e),
+                    exc_info=True,
+                )
 
     # Run PAO extraction only
     pao_result = extract_pao(pao_text)

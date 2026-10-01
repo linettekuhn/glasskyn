@@ -1,11 +1,15 @@
 from io import BytesIO
 from pathlib import Path
 
+import logging
+
 import httpx
 import torch
 import torchvision.transforms as T
 from PIL import Image
 from torchvision import models
+
+logger = logging.getLogger(__name__)
 
 CLASSES = ["haircare", "makeup", "skincare"]
 
@@ -48,5 +52,6 @@ def classify_image(image_url: str) -> tuple[str | None, float | None]:
             probs = torch.softmax(logits, dim=1)
             conf, idx = probs.max(1)
         return CLASSES[idx.item()], conf.item()
-    except Exception:
+    except Exception as e:
+        logger.error("ML classify_image failed: %s", e, exc_info=True)
         return None, None
