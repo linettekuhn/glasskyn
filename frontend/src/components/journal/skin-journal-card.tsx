@@ -120,32 +120,32 @@ export default function SkinJournalCard({
             />
           )}
           {canPage && onStep && (
-          <View style={styles.pager}>
-            <IconButton
-              iconSize={18}
-              onPress={() => onStep(-1)}
-              disabled={dayIndex === 0}
-              IconComponent={MaterialCommunityIcons}
-              iconName="chevron-left"
-              iconColor={colors.neutral[600]}
-              backgroundColor={colors.neutral[300]}
-            />
-            <ThemedText
-              type="captionSmall"
-              weight="semiBold"
-              style={{ color: colors.neutral[600] }}
-            >
-              {`${dayIndex + 1} / ${dayCount}`}
-            </ThemedText>
-            <IconButton
-              iconSize={18}
-              onPress={() => onStep(1)}
-              disabled={dayIndex >= dayCount - 1}
-              IconComponent={MaterialCommunityIcons}
-              iconName="chevron-right"
-              iconColor={colors.neutral[600]}
-              backgroundColor={colors.neutral[300]}
-            />
+            <View style={styles.pager}>
+              <IconButton
+                iconSize={18}
+                onPress={() => onStep(-1)}
+                disabled={dayIndex === 0}
+                IconComponent={MaterialCommunityIcons}
+                iconName="chevron-left"
+                iconColor={colors.neutral[600]}
+                backgroundColor={colors.neutral[300]}
+              />
+              <ThemedText
+                type="captionSmall"
+                weight="semiBold"
+                style={{ color: colors.neutral[600] }}
+              >
+                {`${dayIndex + 1} / ${dayCount}`}
+              </ThemedText>
+              <IconButton
+                iconSize={18}
+                onPress={() => onStep(1)}
+                disabled={dayIndex >= dayCount - 1}
+                IconComponent={MaterialCommunityIcons}
+                iconName="chevron-right"
+                iconColor={colors.neutral[600]}
+                backgroundColor={colors.neutral[300]}
+              />
             </View>
           )}
         </View>
@@ -252,7 +252,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   listContent: {
-    gap: LINE_GAP,
     paddingBottom: 40,
   },
   row: {

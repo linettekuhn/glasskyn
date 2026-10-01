@@ -169,15 +169,16 @@ export default function ProgressSegment() {
           color={colors.secondary[500]}
         />
         <ThemedText type="h3" style={styles.centered}>
-          No check-ins yet
+          No journal entries yet
         </ThemedText>
         <ThemedText
           type="bodyLarge"
           style={{ color: colors.neutral[600], ...styles.centered }}
         >
-          Snap a photo to start tracking how your skin changes over time
+          Add a photo to start your skin journal and see how your skin changes
+          over time
         </ThemedText>
-        <ThemedButton text="Start a check-in" onPress={startCheckIn} />
+        <ThemedButton text="Add an entry" onPress={startCheckIn} />
       </View>
     );
   }
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 32,
     paddingTop: 24,
-    alignItems: "flex-start",
+    alignItems: "center",
   },
   centered: {
     textAlign: "center",
