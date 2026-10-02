@@ -104,6 +104,28 @@ export function allConcerns(sessions: SkinSessionOut[]): SkinConcernOut[] {
   return Array.from(byId.values());
 }
 
+const SESSION_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** e.g. "Mon, Jan 5" for an ISO timestamp. */
+export function formatSessionDay(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${SESSION_WEEKDAYS[date.getDay()]}, ${date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  })}`;
+}
+
+/** e.g. "3:05 PM" for an ISO timestamp. */
+export function formatSessionTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 /** Display label for a concern; `null`/unknown ids fall back to a status word. */
 export function concernLabel(concern: SkinConcernOut): string {
   if (concern.label) {

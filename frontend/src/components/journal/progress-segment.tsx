@@ -201,6 +201,12 @@ export default function ProgressSegment() {
             isFallback={isFallback}
             onStep={step}
             onDelete={handleDelete}
+            onPhotoPress={() =>
+              router.push({
+                pathname: "/(modals)/journal-montage",
+                params: { startId: String(session.id) },
+              })
+            }
           />
         )}
       </View>

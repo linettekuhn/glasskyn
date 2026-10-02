@@ -14,7 +14,8 @@ export default function ModalLayout() {
   const isEdgeToEdgeRoute =
     lastSegment === "scan" ||
     lastSegment === "skin-capture" ||
-    lastSegment === "face-annotation";
+    lastSegment === "face-annotation" ||
+    lastSegment === "journal-montage";
 
   return (
     <SafeAreaView
@@ -56,6 +57,14 @@ export default function ModalLayout() {
                 name="scan"
                 options={{
                   presentation: "fullScreenModal",
+                }}
+              />
+              <Stack.Screen
+                name="journal-montage"
+                options={{
+                  presentation: "fullScreenModal",
+                  animation: "slide_from_bottom",
+                  gestureDirection: "vertical",
                 }}
               />
               <Stack.Screen name="browse-templates" />

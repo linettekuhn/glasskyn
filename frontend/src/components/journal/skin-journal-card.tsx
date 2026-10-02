@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   useColorScheme,
@@ -15,30 +16,15 @@ import { ThemedText } from "@/components/ui/themed-text";
 import GlassSurface from "@/components/ui/glass-surface";
 import IconButton from "@/components/ui/icon-button";
 import SkinCirclePreview from "./skin-circle-preview";
-import { concernLabel, type SkinDayEntry } from "@/utils/skin-sessions";
+import {
+  concernLabel,
+  formatSessionDay as formatDay,
+  formatSessionTime as formatTime,
+  type SkinDayEntry,
+} from "@/utils/skin-sessions";
 
 const LINE_GAP = 16 * 1.6;
 const LINE_THICKNESS = 1;
-
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function formatDay(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return `${WEEKDAYS[date.getDay()]}, ${date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  })}`;
-}
-
-function formatTime(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 interface SkinJournalCardProps {
   session: SkinSessionOut;
@@ -53,6 +39,7 @@ interface SkinJournalCardProps {
   isFallback: boolean;
   onStep?: (delta: number) => void;
   onDelete?: () => void;
+  onPhotoPress?: () => void;
 }
 
 export default function SkinJournalCard({
@@ -64,6 +51,7 @@ export default function SkinJournalCard({
   isFallback,
   onStep,
   onDelete,
+  onPhotoPress,
 }: SkinJournalCardProps) {
   const [linesHeight, setLinesHeight] = useState(0);
   const colorScheme = useColorScheme();
@@ -150,7 +138,14 @@ export default function SkinJournalCard({
           )}
         </View>
       </View>
-      <SkinCirclePreview session={session} entries={entries} />
+      <Pressable
+        onPress={onPhotoPress}
+        accessibilityRole="button"
+        accessibilityLabel="Open progress montage"
+        disabled={!onPhotoPress}
+      >
+        <SkinCirclePreview session={session} entries={entries} />
+      </Pressable>
 
       <View style={styles.listArea}>
         <LinearGradient
