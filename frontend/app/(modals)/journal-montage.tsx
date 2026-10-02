@@ -14,6 +14,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  type SharedValue,
+} from "react-native-reanimated";
 import { getSkinPhotoUrl, getSkinSessions } from "@/api/skin";
 import type { SkinSessionOut } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
@@ -24,14 +31,181 @@ import {
   dayEntries,
   formatSessionDay,
   formatSessionTime,
+  type SkinDayEntry,
 } from "@/utils/skin-sessions";
 
 const THUMB_SIZE = 56;
 const THUMB_GAP = 8;
 const THUMB_STRIDE = THUMB_SIZE + THUMB_GAP;
-const PLAY_INTERVAL_MS = 700;
+const PLAY_CYCLE_MS = 1200;
+const FADE_MS = 500;
+const FADE_FALLBACK_MS = 600;
 const DOT_SIZE = 22;
 const DOT_RADIUS = DOT_SIZE / 2;
+
+/**
+ * Displayed rect of a `contentFit="contain"` image inside a container, so
+ * numbered markers land on the right pixels despite letterboxing.
+ */
+function containedRect(
+  containerW: number,
+  containerH: number,
+  aspect?: number,
+) {
+  let dispW = containerW;
+  let dispH = containerH;
+  let offX = 0;
+  let offY = 0;
+  if (aspect && containerW > 0 && containerH > 0) {
+    if (containerW / containerH > aspect) {
+      dispH = containerH;
+      dispW = containerH * aspect;
+    } else {
+      dispW = containerW;
+      dispH = containerW / aspect;
+    }
+    offX = (containerW - dispW) / 2;
+    offY = (containerH - dispH) / 2;
+  }
+  return { dispW, dispH, offX, offY };
+}
+
+interface MontageFrameProps {
+  sessionId: number;
+  uri?: string;
+  aspect?: number;
+  markers: SkinDayEntry[];
+  width: number;
+  height: number;
+  onLoad: (sessionId: number, w: number, h: number) => void;
+}
+
+/** One check-in photo with its numbered concern markers. */
+function MontageFrame({
+  sessionId,
+  uri,
+  aspect,
+  markers,
+  width,
+  height,
+  onLoad,
+}: MontageFrameProps) {
+  const { dispW, dispH, offX, offY } = containedRect(width, height, aspect);
+  return (
+    <View style={{ width, height }}>
+      {uri ? (
+        <Image
+          source={{ uri }}
+          style={{ width, height }}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          onLoad={(e) => onLoad(sessionId, e.source.width, e.source.height)}
+        />
+      ) : (
+        <View style={styles.pageFallback}>
+          <ActivityIndicator color="#FFFFFF" />
+        </View>
+      )}
+      {aspect != null &&
+        markers.map((entry) => (
+          <View
+            key={entry.concern.id}
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: offX + entry.coords.x * dispW - DOT_RADIUS,
+              top: offY + entry.coords.y * dispH - DOT_RADIUS,
+              width: DOT_SIZE,
+              height: DOT_SIZE,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <View
+              style={[
+                styles.dot,
+                { borderStyle: entry.carried ? "dashed" : "solid" },
+              ]}
+            >
+              <ThemedText
+                style={{ lineHeight: 13, color: "#FFFFFF", fontSize: 11 }}
+                weight="bold"
+              >
+                {entry.number}
+              </ThemedText>
+            </View>
+          </View>
+        ))}
+    </View>
+  );
+}
+
+interface PlayFrame {
+  id: number;
+  uri?: string;
+  aspect?: number;
+  markers: SkinDayEntry[];
+}
+
+interface PlayOverlayProps {
+  width: number;
+  height: number;
+  slotA: PlayFrame | null;
+  slotB: PlayFrame | null;
+  top: "A" | "B";
+  opA: SharedValue<number>;
+  opB: SharedValue<number>;
+  onFrameLoad: (sessionId: number, w: number, h: number) => void;
+  onStop: () => void;
+}
+
+/**
+ * Crossfading fixed slots shown while playing. A slot's content only ever
+ * changes while it's at opacity 0, and the outgoing slot is only zeroed once
+ * the incoming one is fully opaque on top. That way no content swap can race
+ * a render and no frame can flash. Markers live inside each layer so they
+ * dissolve with their photo.
+ */
+function PlayOverlay({
+  width,
+  height,
+  slotA,
+  slotB,
+  top,
+  opA,
+  opB,
+  onFrameLoad,
+  onStop,
+}: PlayOverlayProps) {
+  const styleA = useAnimatedStyle(() => ({ opacity: opA.value }));
+  const styleB = useAnimatedStyle(() => ({ opacity: opB.value }));
+  const render = (f: PlayFrame | null) =>
+    f && (
+      <MontageFrame
+        sessionId={f.id}
+        uri={f.uri}
+        aspect={f.aspect}
+        markers={f.markers}
+        width={width}
+        height={height}
+        onLoad={onFrameLoad}
+      />
+    );
+  return (
+    <View style={styles.playOverlay} onTouchStart={onStop}>
+      <Animated.View
+        style={[styles.playLayer, { zIndex: top === "A" ? 2 : 1 }, styleA]}
+      >
+        {render(slotA)}
+      </Animated.View>
+      <Animated.View
+        style={[styles.playLayer, { zIndex: top === "B" ? 2 : 1 }, styleB]}
+      >
+        {render(slotB)}
+      </Animated.View>
+    </View>
+  );
+}
 
 // TODO(progress-montage): the backend only returns the full-res original
 // (`SkinSessionOut.image_url` is an S3 file key). Once the backend provides
@@ -120,19 +294,122 @@ export default function JournalMontageScreen() {
     },
   ).current;
 
-  // Play mode: advance one frame every ~700ms, looping at the end.
+  // Play mode: crossfade one frame per cycle, looping at the end. Two
+  // fixed slots (A/B) each own an opacity value; a slot's content only ever
+  // changes while it's at opacity 0, so content swaps can't race renders.
+  const opA = useSharedValue(1);
+  const opB = useSharedValue(0);
+  const [slotAId, setSlotAId] = useState<number | null>(null);
+  const [slotBId, setSlotBId] = useState<number | null>(null);
+  const [topSlot, setTopSlot] = useState<"A" | "B">("A");
+  const visibleRef = useRef<"A" | "B">("A");
+  const incomingRef = useRef<{ slot: "A" | "B"; id: number } | null>(null);
+  const fadePendingRef = useRef(false);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Mirrors slotAId/slotBId so the play interval can read them without
+  // depending on state. Depending on state re-ran the effect every tick and
+  // its cleanup cancelled the pending fade, leaving the image stuck.
+  const slotIdsRef = useRef<{ A: number | null; B: number | null }>({
+    A: null,
+    B: null,
+  });
+
+  const startFade = useCallback(() => {
+    const inc = incomingRef.current;
+    if (!inc || !fadePendingRef.current) return;
+    fadePendingRef.current = false;
+    if (fadeTimerRef.current) {
+      clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = null;
+    }
+    const inSV = inc.slot === "A" ? opA : opB;
+    const outSV = inc.slot === "A" ? opB : opA;
+    visibleRef.current = inc.slot;
+    inSV.value = withTiming(
+      1,
+      { duration: FADE_MS, easing: Easing.out(Easing.cubic) },
+      (finished) => {
+        // Outgoing layer is fully covered now, so zeroing it is invisible.
+        if (finished) outSV.value = 0;
+      },
+    );
+  }, [opA, opB]);
+
+  // Seed everything in the same batch as `playing`, so the overlay's first
+  // render already has a photo in it.
+  const startPlaying = useCallback(() => {
+    if (sorted.length <= 1) return;
+    const seedId = sorted[activeRef.current]?.id ?? null;
+    opA.value = 1;
+    opB.value = 0;
+    visibleRef.current = "A";
+    incomingRef.current = null;
+    fadePendingRef.current = false;
+    slotIdsRef.current = { A: seedId, B: null };
+    setSlotAId(seedId);
+    setSlotBId(null);
+    setTopSlot("A");
+    setPlaying(true);
+  }, [sorted, opA, opB]);
+
   useEffect(() => {
     if (!playing || sorted.length <= 1) return;
     const id = setInterval(() => {
       const next = (activeRef.current + 1) % sorted.length;
+      const nextId = sorted[next].id;
+      const hidden = visibleRef.current === "A" ? "B" : "A";
+      const hiddenId = slotIdsRef.current[hidden];
+
+      // The hidden slot is at opacity 0, so changing its content is invisible.
+      if (hiddenId !== nextId) {
+        slotIdsRef.current[hidden] = nextId;
+        if (hidden === "A") setSlotAId(nextId);
+        else setSlotBId(nextId);
+      }
+      setTopSlot(hidden);
+      incomingRef.current = { slot: hidden, id: nextId };
+      fadePendingRef.current = true;
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+      if (hiddenId === nextId) {
+        // Same photo already in the slot: onLoad won't re-fire, so start the
+        // fade immediately instead of waiting out the fallback timer.
+        startFade();
+      } else {
+        // Never fade into a spinner: the incoming onLoad starts the fade,
+        // this is only a fallback in case it never fires.
+        fadeTimerRef.current = setTimeout(startFade, FADE_FALLBACK_MS);
+      }
+
+      // Keep the hidden pager in step so stopping doesn't flash a stale page.
       try {
-        pagerRef.current?.scrollToIndex({ index: next, animated: true });
+        pagerRef.current?.scrollToIndex({ index: next, animated: false });
       } catch {
-        // Pager not laid out yet; the index state still advances.
+        // Pager not laid out yet; the stop-sync effect below will catch up.
       }
       setActiveIndex(next);
-    }, PLAY_INTERVAL_MS);
-    return () => clearInterval(id);
+    }, PLAY_CYCLE_MS);
+
+    return () => {
+      clearInterval(id);
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+      fadePendingRef.current = false;
+    };
+  }, [playing, sorted, startFade]);
+
+  // When play stops, land the hidden pager on the frame that was visible.
+  const wasPlayingRef = useRef(false);
+  useEffect(() => {
+    if (wasPlayingRef.current && !playing && sorted.length > 0) {
+      try {
+        pagerRef.current?.scrollToIndex({
+          index: activeRef.current,
+          animated: false,
+        });
+      } catch {
+        // Pager not laid out yet; viewability sync will catch up.
+      }
+    }
+    wasPlayingRef.current = playing;
   }, [playing, sorted.length]);
 
   // Keep the active thumb centered in the filmstrip.
@@ -196,79 +473,52 @@ export default function JournalMontageScreen() {
 
   const activeSession = sorted[activeIndex] ?? null;
 
-  const renderPage = useCallback(
-    ({ item }: { item: SkinSessionOut }) => {
-      const uri = displayUrls[item.id];
-      const aspect = aspects[item.id];
-      const markers = showMarkers ? dayEntries(item.id, concerns) : [];
-
-      // `contentFit="contain"` letterboxes; derive the displayed rect so
-      // numbered markers land on the right pixels.
-      let dispW = windowWidth;
-      let dispH = pagerHeight;
-      let offX = 0;
-      let offY = 0;
-      if (aspect && windowWidth > 0 && pagerHeight > 0) {
-        if (windowWidth / pagerHeight > aspect) {
-          dispH = pagerHeight;
-          dispW = pagerHeight * aspect;
-        } else {
-          dispW = windowWidth;
-          dispH = windowWidth / aspect;
-        }
-        offX = (windowWidth - dispW) / 2;
-        offY = (pagerHeight - dispH) / 2;
-      }
-
-      return (
-        <View style={{ width: windowWidth, height: pagerHeight }}>
-          {uri ? (
-            <Image
-              source={{ uri }}
-              style={{ width: windowWidth, height: pagerHeight }}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-              onLoad={(e) => onImageLoad(item.id, e.source.width, e.source.height)}
-            />
-          ) : (
-            <View style={styles.pageFallback}>
-              <ActivityIndicator color="#FFFFFF" />
-            </View>
-          )}
-          {aspect != null &&
-            markers.map((entry) => (
-              <View
-                key={entry.concern.id}
-                pointerEvents="none"
-                style={{
-                  position: "absolute",
-                  left: offX + entry.coords.x * dispW - DOT_RADIUS,
-                  top: offY + entry.coords.y * dispH - DOT_RADIUS,
-                  width: DOT_SIZE,
-                  height: DOT_SIZE,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <View
-                  style={[
-                    styles.dot,
-                    { borderStyle: entry.carried ? "dashed" : "solid" },
-                  ]}
-                >
-                  <ThemedText
-                    style={{ lineHeight: 13, color: "#FFFFFF", fontSize: 11 }}
-                    weight="bold"
-                  >
-                    {entry.number}
-                  </ThemedText>
-                </View>
-              </View>
-            ))}
-        </View>
-      );
+  // Starts the fade once the incoming play layer has decoded. Falls back to
+  // the timer armed in the interval if onLoad never fires.
+  const onFrameLoad = useCallback(
+    (sessionId: number, w: number, h: number) => {
+      onImageLoad(sessionId, w, h);
+      if (sessionId === incomingRef.current?.id) startFade();
     },
-    [aspects, concerns, displayUrls, onImageLoad, pagerHeight, showMarkers, windowWidth],
+    [onImageLoad, startFade],
+  );
+
+  const buildFrame = useCallback(
+    (id: number | null): PlayFrame | null =>
+      id == null
+        ? null
+        : {
+            id,
+            uri: displayUrls[id],
+            aspect: aspects[id],
+            markers: showMarkers ? dayEntries(id, concerns) : [],
+          },
+    [displayUrls, aspects, showMarkers, concerns],
+  );
+  const slotA = useMemo(() => buildFrame(slotAId), [buildFrame, slotAId]);
+  const slotB = useMemo(() => buildFrame(slotBId), [buildFrame, slotBId]);
+
+  const renderPage = useCallback(
+    ({ item }: { item: SkinSessionOut }) => (
+      <MontageFrame
+        sessionId={item.id}
+        uri={displayUrls[item.id]}
+        aspect={aspects[item.id]}
+        markers={showMarkers ? dayEntries(item.id, concerns) : []}
+        width={windowWidth}
+        height={pagerHeight}
+        onLoad={onImageLoad}
+      />
+    ),
+    [
+      aspects,
+      concerns,
+      displayUrls,
+      onImageLoad,
+      pagerHeight,
+      showMarkers,
+      windowWidth,
+    ],
   );
 
   const renderThumb = useCallback(
@@ -401,6 +651,19 @@ export default function JournalMontageScreen() {
             windowSize={3}
           />
         )}
+        {playing && (
+          <PlayOverlay
+            width={windowWidth}
+            height={pagerHeight}
+            slotA={slotA}
+            slotB={slotB}
+            top={topSlot}
+            opA={opA}
+            opB={opB}
+            onFrameLoad={onFrameLoad}
+            onStop={stopPlaying}
+          />
+        )}
       </View>
 
       {activeSession && (
@@ -408,7 +671,10 @@ export default function JournalMontageScreen() {
           <ThemedText type="h3" style={{ color: "#FFFFFF" }}>
             {formatSessionDay(activeSession.timestamp)}
           </ThemedText>
-          <ThemedText type="captionSmall" style={{ color: "rgba(255,255,255,0.7)" }}>
+          <ThemedText
+            type="captionSmall"
+            style={{ color: "rgba(255,255,255,0.7)" }}
+          >
             {`${formatSessionTime(activeSession.timestamp)} · ${activeIndex + 1} of ${sorted.length}`}
           </ThemedText>
         </View>
@@ -450,7 +716,7 @@ export default function JournalMontageScreen() {
         />
         {showChrome ? (
           <IconButton
-            onPress={() => setPlaying((p) => !p)}
+            onPress={() => (playing ? stopPlaying() : startPlaying())}
             IconComponent={MaterialCommunityIcons}
             iconName={playing ? "pause" : "play"}
             iconSize={26}
@@ -458,7 +724,10 @@ export default function JournalMontageScreen() {
             backgroundColor={colors.primary[500]}
           />
         ) : (
-          <ThemedText type="captionSmall" style={{ color: "rgba(255,255,255,0.7)" }}>
+          <ThemedText
+            type="captionSmall"
+            style={{ color: "rgba(255,255,255,0.7)" }}
+          >
             Your first check-in
           </ThemedText>
         )}
@@ -497,6 +766,13 @@ const styles = StyleSheet.create({
   },
   pagerWrap: {
     flex: 1,
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000000",
+  },
+  playLayer: {
+    ...StyleSheet.absoluteFillObject,
   },
   pageFallback: {
     flex: 1,
