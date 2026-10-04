@@ -5,6 +5,8 @@ import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 
 export interface CaptureQualityResult {
   luma: number | null;
+  /** True when the brightness pipeline failed — verdicts below are absent, not "fine". */
+  lumaUnknown: boolean;
   tooDark: boolean;
   tooBright: boolean;
   variance: number;
@@ -27,14 +29,21 @@ export async function analyzeCapture(
     if (luma != null && !Number.isFinite(luma)) luma = null;
     rendered.release();
     context.release();
-  } catch {
-    // non-fatal: brightness simply stays unknown
+  } catch (e) {
+    // Non-fatal: brightness stays unknown — but log it so a dead pipeline
+    // can't silently report "Looks good".
+    if (__DEV__)
+      console.log(
+        "[capture-quality] luma pipeline failed:",
+        e instanceof Error ? e.message : String(e),
+      );
   }
 
   const blur = await checkBlur(uri);
 
   return {
     luma,
+    lumaUnknown: luma == null,
     tooDark: luma != null && luma < GATE_CONSTANTS.lumaMin,
     tooBright: luma != null && luma > GATE_CONSTANTS.lumaMax,
     variance: blur.variance >= 0 ? blur.variance : 0,

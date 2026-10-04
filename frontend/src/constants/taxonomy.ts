@@ -4,7 +4,7 @@ export const TAXONOMY_DISCLAIMER =
 const ACNE: Concern[] = [
   {
     id: "closed_comedone",
-    label: "Closed comedone (whitehead)",
+    label: "Whitehead",
     category: "acne",
     imageUrl: require("../../assets/concerns/whitehead.png"),
     circleImageUrl: require("../../assets/concerns/whitehead_circle.png"),
@@ -13,7 +13,7 @@ const ACNE: Concern[] = [
   },
   {
     id: "open_comedone",
-    label: "Open comedone (blackhead)",
+    label: "Blackhead",
     category: "acne",
     imageUrl: require("../../assets/concerns/blackhead.png"),
     circleImageUrl: require("../../assets/concerns/blackhead_circle.png"),
@@ -105,7 +105,7 @@ const PIGMENTATION: Concern[] = [
   },
   {
     id: "sunspots",
-    label: "Sunspots (solar lentigines)",
+    label: "Sunspots",
     category: "pigmentation",
     imageUrl: require("../../assets/concerns/sunspot.png"),
     circleImageUrl: require("../../assets/concerns/sunspots_circle.png"),
@@ -125,7 +125,7 @@ const TEXTURE: Concern[] = [
   },
   {
     id: "hypertrophic_scarring",
-    label: "Raised (hypertrophic/keloid) scarring",
+    label: "Raised scarring",
     category: "texture",
     imageUrl: require("../../assets/concerns/keloid.png"),
     circleImageUrl: require("../../assets/concerns/keloid_circle.png"),
@@ -134,7 +134,7 @@ const TEXTURE: Concern[] = [
   },
   {
     id: "enlarged_pores",
-    label: "Enlarged pores / uneven texture",
+    label: "Enlarged pores",
     category: "texture",
     imageUrl: require("../../assets/concerns/pores.png"),
     circleImageUrl: require("../../assets/concerns/pores_circle.png"),

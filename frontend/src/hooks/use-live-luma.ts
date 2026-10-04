@@ -5,7 +5,7 @@ import {
   type CameraFrameOutput,
   type Frame,
 } from "react-native-vision-camera";
-import { runOnJS } from "react-native-worklets";
+import { scheduleOnRN } from "react-native-worklets";
 import { useSharedValue } from "react-native-reanimated";
 
 export interface LiveLumaOptions {
@@ -32,7 +32,9 @@ export interface LiveLumaState {
  *
  * `luma` is `null` while unknown (before the first sample, while inactive, or
  * after a sampling failure) — callers must treat `null` as a non-blocking
- * "unknown" light gate rather than hard-failing the capture.
+ * "unknown" light gate rather than hard-failing the capture. Callers should
+ * still surface the unknown state in UI so a dead sampler can't masquerade
+ * as good lighting.
  *
  * @note Requires `react-native-vision-camera-worklets` (native) to be built
  * into the running app.
@@ -57,36 +59,68 @@ export function useLiveLuma({
     }
   }, []);
 
-  const forward = useMemo(() => runOnJS(internalOnLuma), [internalOnLuma]);
+  const internalOnLumaError = useCallback((detail: string) => {
+    onErrorRef.current?.(detail);
+  }, []);
 
-  const lastSampleAt = useSharedValue(0);
+  // NOTE: do NOT bridge via runOnJS() here. Its wrapper is a runtime-created
+  // plain closure, which the frame runtime rejects ("tried to synchronously
+  // call a non-worklet anonymous function"). scheduleOnRN is a global host
+  // function present on every runtime and accepts component-scope callbacks,
+  // which the babel plugin captures into the worklet closure below.
+
+  // Frame-counter throttle (~2 samples/sec at 30fps for the 500ms default).
+  // Deliberately avoids Date.now()/frame.timestamp inside the worklet — clock
+  // access has been observed to throw on some Nitro worklet runtimes, which
+  // killed every sample and left luma null forever.
+  const everyNthFrame = Math.max(1, Math.round(sampleIntervalMs / 33));
+  const frameCount = useSharedValue(0);
+  const didLogFirst = useSharedValue(false);
+  const didReportError = useSharedValue(false);
   const onFrame = useCallback(
     (frame: Frame) => {
       "worklet";
+      let stage = "throttle";
       try {
-        const now = Date.now();
-        if (now - lastSampleAt.value < sampleIntervalMs) return;
-        const planes = frame.getPlanes();
-        const plane = planes.length > 0 ? planes[0] : null;
-        if (!plane || plane.width <= 0 || plane.height <= 0) return;
+        frameCount.value += 1;
+        if (frameCount.value % everyNthFrame !== 0) return;
 
-        const bytes = new Uint8Array(plane.getPixelBuffer());
-        const w = plane.width;
-        const h = plane.height;
-        const bytesPerRow = plane.bytesPerRow > 0 ? plane.bytesPerRow : w;
+        stage = "planes";
+        let bytes: Uint8Array | null = null;
+        let w = 0;
+        let h = 0;
+        let bytesPerRow = 0;
+        if (frame.isPlanar) {
+          const planes = frame.getPlanes();
+          const plane = planes.length > 0 ? planes[0] : null;
+          if (!plane || plane.width <= 0 || plane.height <= 0) return;
+          bytes = new Uint8Array(plane.getPixelBuffer());
+          w = plane.width;
+          h = plane.height;
+          bytesPerRow = plane.bytesPerRow > 0 ? plane.bytesPerRow : w;
+        } else {
+          // Non-planar fallback (e.g. packed RGB): sample the buffer directly.
+          if (frame.width <= 0 || frame.height <= 0) return;
+          bytes = new Uint8Array(frame.getPixelBuffer());
+          w = frame.width;
+          h = frame.height;
+          bytesPerRow = w;
+        }
+
+        stage = "sample";
         const stride = Math.max(1, Math.floor((w * h) / 4096));
-
         let sum = 0;
         let count = 0;
         for (let y = 0; y < h; y++) {
           const row = y * bytesPerRow;
           for (let x = 0; x < w; x += stride) {
-            sum += bytes[row + x];
+            sum += (bytes as Uint8Array)[row + x];
             count += 1;
           }
         }
         if (count === 0) return;
 
+        stage = "normalize";
         let mean = sum / count;
         const pf = frame.pixelFormat ?? "";
         if (pf.includes("video") && !pf.includes("full")) {
@@ -96,15 +130,41 @@ export function useLiveLuma({
         if (mean < 0) mean = 0;
         else if (mean > 255) mean = 255;
 
-        lastSampleAt.value = now;
-        forward(mean);
+        stage = "forward";
+        scheduleOnRN(internalOnLuma, mean);
+        if (!didLogFirst.value) {
+          didLogFirst.value = true;
+          console.log(`[live-luma] first sample: ${mean}`);
+        }
       } catch (e) {
-        if (__DEV__) console.log("[live-luma] worklet sample error:", e);
+        // Worklet Errors don't serialize across the bridge (they log as {}),
+        // so extract a plain string and record which stage threw. Report once
+        // per activation to avoid spamming the JS thread at frame rate.
+        if (didReportError.value) return;
+        didReportError.value = true;
+        let detail = "unknown";
+        try {
+          const anyErr = e as { message?: unknown; code?: unknown } | null;
+          if (typeof anyErr?.message === "string" && anyErr.message) {
+            detail = anyErr.message;
+          } else if (
+            typeof anyErr?.code === "string" ||
+            typeof anyErr?.code === "number"
+          ) {
+            detail = String(anyErr.code);
+          } else if (typeof e === "string") {
+            detail = e;
+          }
+        } catch {
+          detail = "unserializable";
+        }
+        console.log(`[live-luma] worklet sample error at ${stage}: ${detail}`);
+        scheduleOnRN(internalOnLumaError, `${stage}: ${detail}`);
       } finally {
         frame.dispose();
       }
     },
-    [forward, sampleIntervalMs],
+    [internalOnLuma, internalOnLumaError, everyNthFrame],
   );
 
   const frameOutput = useFrameOutput({
@@ -125,7 +185,9 @@ export function useLiveLuma({
     }
     setLumaRef.current = setLuma;
     setSamplingRef.current = setSampling;
-  }, [isActive]);
+    // Allow one fresh worklet error report per activation.
+    didReportError.value = false;
+  }, [isActive, didReportError]);
 
   useEffect(() => {
     onErrorRef.current = onError;

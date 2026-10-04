@@ -74,7 +74,7 @@ export const GATE_CONSTANTS = {
   pitchMax: 15,
   rollMax: 10,
   yawMax: 22,
-  lumaMin: 42,
+  lumaMin: 100,
   lumaMax: 230,
 } as const;
 
@@ -88,7 +88,15 @@ export function selectTip(input: TipSelectorInput): TipOutput | null {
     if (!distance) failing.push("distance");
     if (!brightness) failing.push("light");
   }
-  if (failing.length === 0) return null;
+  if (failing.length === 0) {
+    // Luma unknown (live sampler hasn't delivered yet): stay non-blocking so
+    // a sampler hiccup can't brick capture, but surface it instead of fake
+    // success so a dead sampler is visible immediately.
+    if (input.luma == null || !Number.isFinite(input.luma)) {
+      return { category: "light", message: "Checking light…", failing };
+    }
+    return null;
+  }
 
   for (const category of CATEGORY_PRIORITY) {
     if (!failing.includes(category)) continue;

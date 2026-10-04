@@ -52,7 +52,9 @@ import {
 import { getSkinPhotoUrl, getSkinSessions } from "@/api/skin";
 import { Colors } from "@/constants/theme";
 
-const HOLD_MS = 1000;
+const HOLD_MS = 2000;
+const CAPTURE_TIMEOUT_MS = 8000;
+const POST_TIMEOUT_MS = 5000;
 const SHUTTER_SIZE = 84;
 const GHOST_MIN_OPACITY = 0.15;
 const GHOST_MAX_OPACITY = 0.6;
@@ -97,6 +99,23 @@ function normalizeLandmarks(
     }
   }
   return refs;
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 export default function SkinCaptureScreen() {
@@ -175,6 +194,15 @@ export default function SkinCaptureScreen() {
   const primaryFaceRef = useRef<GateFace | null>(null);
   const landmarkRefsRef = useRef<SkinLandmarkRefs | null>(null);
   const poseRef = useRef<SkinPose | null>(null);
+  const capturedLandmarksRef = useRef<SkinLandmarkRefs | null>(null);
+  const capturedPoseRef = useRef<SkinPose | null>(null);
+  // Auto-hold starts armed on mount; an explicit Retake disarms it for the
+  // rest of the session (manual shutter only from then on).
+  const autoHoldRef = useRef(true);
+  // Freshness timestamps so the hold loop can never accumulate on stale
+  // perception (e.g. a frozen passing face after a shutter cycle).
+  const lastFaceAtRef = useRef<number | null>(null);
+  const lastLumaAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -208,7 +236,9 @@ export default function SkinCaptureScreen() {
         if (cancelled) return;
         setGhostUri(url);
         if (__DEV__)
-          console.log("[skin-capture] ghost reference loaded from previous session");
+          console.log(
+            "[skin-capture] ghost reference loaded from previous session",
+          );
       } catch (e) {
         if (__DEV__)
           console.log("[skin-capture] ghost reference load failed:", e);
@@ -230,7 +260,12 @@ export default function SkinCaptureScreen() {
 
   const onFacesDetected = useCallback(
     (detected: Face[]) => {
+      // Freeze perception while the shutter pipeline is in-flight so a face
+      // move can't re-render/reconfigure the camera mid-capture or corrupt
+      // the shutter-time snapshot used for the draft.
+      if (busyRef.current || phaseRef.current !== "camera") return;
       setFaces(detected);
+      lastFaceAtRef.current = Date.now();
       const first = detected[0];
       primaryFaceRef.current = toGateFace(first);
       landmarkRefsRef.current = normalizeLandmarks(first, width, height);
@@ -296,6 +331,10 @@ export default function SkinCaptureScreen() {
     allPassRef.current = allPass;
   }, [allPass]);
 
+  useEffect(() => {
+    if (luma != null) lastLumaAtRef.current = Date.now();
+  }, [luma]);
+
   const lowLight = luma != null && luma < GATE_CONSTANTS.lumaMin;
   const wasLowLightRef = useRef(false);
   useEffect(() => {
@@ -308,25 +347,67 @@ export default function SkinCaptureScreen() {
     wasLowLightRef.current = lowLight;
   }, [lowLight, phase]);
 
+  // Stable JS-thread copy of luma for logging inside the shutter pipeline
+  // without recreating triggerCapture (and re-rendering) on every sample.
+  const lumaRef = useRef<number | null>(null);
+  lumaRef.current = luma;
+
+  // Memoized so face/luma re-renders don't reconfigure the native pipeline
+  // while a capture is in-flight (which previously hung capturePhotoToFile).
+  // NOTE: Camera stays active during capture — do NOT gate cameraActive on
+  // `capturing`, toggling isActive mid-shutter aborts the native capture.
+  const cameraOutputs = useMemo(
+    () => [faceDetectorOutput, frameOutput, photoOutput],
+    [faceDetectorOutput, frameOutput, photoOutput],
+  );
+
   const triggerCapture = useCallback(async () => {
     if (busyRef.current || phaseRef.current !== "camera") return;
     busyRef.current = true;
     setCapturing(true);
+    // Snapshot shutter-time perception: face moves after this point must not
+    // corrupt the draft, and a lost gate means discard-and-retry.
+    const snapshotLandmarks = landmarkRefsRef.current;
+    const snapshotPose = poseRef.current ? { ...poseRef.current } : null;
     try {
-      const result = await photoOutput.capturePhotoToFile(
-        {
-          flashMode: "off",
-          enableShutterSound: true,
-          enableDistortionCorrection: true,
-        },
-        {},
+      const result = await withTimeout(
+        photoOutput.capturePhotoToFile(
+          {
+            flashMode: "off",
+            enableShutterSound: true,
+            enableDistortionCorrection: true,
+          },
+          {},
+        ),
+        CAPTURE_TIMEOUT_MS,
+        "capture",
       );
+      if (phaseRef.current !== "camera") return;
+      // Discard-and-retry: the photo is frozen at shutter time, but if the
+      // live gates failed while the shutter was processing the user moved —
+      // stay in camera and require a fresh hold instead of showing a photo
+      // that no longer matches the preview.
+      if (!allPassRef.current) {
+        if (__DEV__)
+          console.log(
+            "[skin-capture] discarded capture — face moved during shutter, retrying",
+          );
+        holdStartRef.current = null;
+        setHoldProgress(0);
+        Toast.show({
+          type: "info",
+          text1: "Moved during capture",
+          text2: "Hold still to retry",
+          position: "bottom",
+        });
+        return;
+      }
       const path = result.filePath;
       const uri = `file://${path}`;
       Vibration.vibrate(40);
       if (__DEV__) {
         console.log(
-          `[skin-capture] captured ${path} luma=${luma?.toFixed(1)} pass=${allPassRef.current}`,
+          `[skin-capture] captured ${path} luma=${lumaRef.current?.toFixed(1)} pass=${allPassRef.current}`,
         );
       }
       let outUri = uri;
@@ -336,7 +417,11 @@ export default function SkinCaptureScreen() {
       let flipped = false;
       let flipError: string | undefined;
       if (device?.position === "front") {
-        const outcome = await flipPhotoHorizontal(uri);
+        const outcome = await withTimeout(
+          flipPhotoHorizontal(uri),
+          POST_TIMEOUT_MS,
+          "flip",
+        );
         outUri = outcome.uri;
         outPath = outcome.path;
         photoW = outcome.width;
@@ -352,12 +437,16 @@ export default function SkinCaptureScreen() {
         }
       }
       if (photoW > 0 && photoH > 0) {
-        const crop = await cropPhotoToScreenAspect(outUri, {
-          photoWidth: photoW,
-          photoHeight: photoH,
-          screenWidth: width,
-          screenHeight: height,
-        });
+        const crop = await withTimeout(
+          cropPhotoToScreenAspect(outUri, {
+            photoWidth: photoW,
+            photoHeight: photoH,
+            screenWidth: width,
+            screenHeight: height,
+          }),
+          POST_TIMEOUT_MS,
+          "crop",
+        );
         outUri = crop.uri;
         outPath = crop.path;
         photoW = crop.width;
@@ -370,6 +459,8 @@ export default function SkinCaptureScreen() {
           );
         }
       }
+      capturedLandmarksRef.current = snapshotLandmarks;
+      capturedPoseRef.current = snapshotPose;
       setCaptureInfo({
         width: photoW,
         height: photoH,
@@ -382,6 +473,8 @@ export default function SkinCaptureScreen() {
       setPhase("preview");
     } catch (e) {
       if (__DEV__) console.log("[skin-capture] capture error:", e);
+      holdStartRef.current = null;
+      setHoldProgress(0);
       Toast.show({
         type: "error",
         text1: "Capture failed",
@@ -392,7 +485,7 @@ export default function SkinCaptureScreen() {
       busyRef.current = false;
       setCapturing(false);
     }
-  }, [photoOutput, luma, device]);
+  }, [photoOutput, device, width, height]);
 
   const triggerCaptureRef = useRef(triggerCapture);
   triggerCaptureRef.current = triggerCapture;
@@ -404,12 +497,32 @@ export default function SkinCaptureScreen() {
       return;
     }
     const id = setInterval(() => {
-      if (busyRef.current || phaseRef.current !== "camera") {
+      if (
+        busyRef.current ||
+        phaseRef.current !== "camera" ||
+        !autoHoldRef.current
+      ) {
         holdStartRef.current = null;
         setHoldProgress(0);
         return;
       }
       if (!allPassRef.current) {
+        holdStartRef.current = null;
+        setHoldProgress(0);
+        return;
+      }
+      // Require live signals, not frozen perception: the face box and the
+      // light reading must both be fresh, otherwise a stale passing gate
+      // (e.g. after a shutter cycle) could auto-fire with no live face.
+      const now = Date.now();
+      const faceFresh =
+        lastFaceAtRef.current != null &&
+        now - lastFaceAtRef.current < 1500;
+      const lumaFresh =
+        lumaRef.current != null &&
+        lastLumaAtRef.current != null &&
+        now - lastLumaAtRef.current < 1500;
+      if (!faceFresh || !lumaFresh) {
         holdStartRef.current = null;
         setHoldProgress(0);
         return;
@@ -454,6 +567,20 @@ export default function SkinCaptureScreen() {
     setQuality(null);
     setCaptureInfo(null);
     setAnalyzing(false);
+    capturedLandmarksRef.current = null;
+    capturedPoseRef.current = null;
+    // Drop frozen shutter-time perception so the gates can't pass on stale
+    // data, and disarm auto-hold: from here on it's manual shutter only.
+    setFaces([]);
+    primaryFaceRef.current = null;
+    landmarkRefsRef.current = null;
+    poseRef.current = null;
+    allPassRef.current = false;
+    lastFaceAtRef.current = null;
+    lastLumaAtRef.current = null;
+    autoHoldRef.current = false;
+    holdStartRef.current = null;
+    setHoldProgress(0);
     setPhase("camera");
   };
 
@@ -463,8 +590,8 @@ export default function SkinCaptureScreen() {
       photoPath,
       photoUri,
       capturedAt: new Date().toISOString(),
-      landmarks: landmarkRefsRef.current,
-      pose: poseRef.current,
+      landmarks: capturedLandmarksRef.current ?? landmarkRefsRef.current,
+      pose: capturedPoseRef.current ?? poseRef.current,
       frameSize: { width, height },
       luma: quality?.luma ?? null,
       variance: quality?.variance ?? null,
@@ -472,6 +599,12 @@ export default function SkinCaptureScreen() {
     if (__DEV__) console.log("[skin-capture] draft saved to context");
     router.replace("/(modals)/face-annotation");
   };
+
+  const qualityIssue =
+    quality != null &&
+    (quality.blurry || quality.tooDark || quality.tooBright);
+  const qualityUnknown =
+    quality != null && !qualityIssue && quality.lumaUnknown;
 
   const mode: OvalMode = !primaryGateFace
     ? "gray"
@@ -502,7 +635,7 @@ export default function SkinCaptureScreen() {
             device={device}
             isActive={cameraActive}
             mirrorMode="auto"
-            outputs={[faceDetectorOutput, frameOutput, photoOutput]}
+            outputs={cameraOutputs}
             onError={(e) => {
               if (__DEV__)
                 console.log("[skin-capture] camera onError:", e?.message ?? e);
@@ -569,7 +702,11 @@ export default function SkinCaptureScreen() {
                       iconName="minus"
                     />
                     <ThemedText
-                      style={{ color: txtColor, minWidth: 40, textAlign: "center" }}
+                      style={{
+                        color: txtColor,
+                        minWidth: 40,
+                        textAlign: "center",
+                      }}
                       type="caption"
                       weight="semiBold"
                     >
@@ -658,19 +795,19 @@ export default function SkinCaptureScreen() {
                   <View style={styles.qualityRow}>
                     <MaterialCommunityIcons
                       name={
-                        quality &&
-                        (quality.blurry || quality.tooDark || quality.tooBright)
+                        qualityIssue
                           ? "alert-circle-outline"
-                          : "check-decagram-outline"
+                          : qualityUnknown
+                            ? "help-circle-outline"
+                            : "check-decagram-outline"
                       }
                       size={18}
                       color={
-                        quality &&
-                        !quality.blurry &&
-                        !quality.tooDark &&
-                        !quality.tooBright
-                          ? btnColor
-                          : "#F4B740"
+                        qualityIssue
+                          ? "#F4B740"
+                          : qualityUnknown
+                            ? txtColor
+                            : btnColor
                       }
                     />
                     <ThemedText
@@ -678,10 +815,11 @@ export default function SkinCaptureScreen() {
                       type="bodyLarge"
                       weight="semiBold"
                     >
-                      {quality &&
-                      (quality.blurry || quality.tooDark || quality.tooBright)
+                      {qualityIssue
                         ? "Retake recommended"
-                        : "Looks good"}
+                        : qualityUnknown
+                          ? "Couldn't check lighting"
+                          : "Looks good"}
                     </ThemedText>
                   </View>
                   {quality &&
@@ -693,10 +831,10 @@ export default function SkinCaptureScreen() {
                         type="caption"
                       >
                         {quality.tooDark
-                          ? "A bit dark! use more light."
+                          ? "A bit dark! Use more light."
                           : quality.tooBright
-                            ? "A bit bright! move out of direct light."
-                            : "Looking a little blurry! steady your hand."}
+                            ? "A bit bright! Move out of direct light."
+                            : "Looking a little blurry! Steady your hand."}
                       </ThemedText>
                     )}
                 </>

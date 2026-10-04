@@ -142,8 +142,12 @@ export default function GuideOval({
       <View style={[styles.chips, { top: inner.top - 66 }]}>
         {CHIP_DEFS.map((chip) => {
           const pass = gates[chip.gate];
+          // Unknown light (no luma sample yet) renders neutral gray rather
+          // than a fake green pass.
+          const unknownLight =
+            chip.gate === "brightness" && gates.metrics.luma == null;
           const color =
-            mode === "gray"
+            mode === "gray" || unknownLight
               ? OVAL_COLORS.gray
               : pass
                 ? OVAL_COLORS.green

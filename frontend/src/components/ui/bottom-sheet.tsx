@@ -25,6 +25,8 @@ type BottomSheetProps = {
   expandedContent: ReactNode;
   peekHeight?: number;
   expandedVisibleRatio?: number;
+  /** When true the sheet is pinned to peek: gestures can't pull it up. */
+  locked?: boolean;
 };
 
 export default function BottomSheet({
@@ -34,6 +36,7 @@ export default function BottomSheet({
   expandedContent,
   peekHeight = 154,
   expandedVisibleRatio = 0.82,
+  locked = false,
 }: BottomSheetProps) {
   const { height } = useWindowDimensions();
   const colorScheme = useColorScheme();
@@ -41,32 +44,37 @@ export default function BottomSheet({
 
   const expandedOffset = height - Math.round(height * expandedVisibleRatio);
   const peekOffset = height - peekHeight;
+  const effectiveSnap = locked ? "peek" : snap;
 
   const translateY = useSharedValue(
-    snap === "peek" ? peekOffset : expandedOffset,
+    effectiveSnap === "peek" ? peekOffset : expandedOffset,
   );
   const targetShared = useSharedValue(
-    snap === "peek" ? peekOffset : expandedOffset,
+    effectiveSnap === "peek" ? peekOffset : expandedOffset,
   );
 
   useEffect(() => {
-    const target = snap === "peek" ? peekOffset : expandedOffset;
+    const target = effectiveSnap === "peek" ? peekOffset : expandedOffset;
     if (targetShared.value === target) return;
     targetShared.value = target;
     translateY.value = withSpring(target, SPRING_CONFIG);
-  }, [snap, peekOffset, expandedOffset, targetShared, translateY]);
+  }, [effectiveSnap, peekOffset, expandedOffset, targetShared, translateY]);
 
   const pan = Gesture.Pan()
     .onUpdate((e) => {
       translateY.value = Math.min(
         peekOffset,
-        Math.max(expandedOffset, targetShared.value + e.translationY),
+        Math.max(
+          locked ? peekOffset : expandedOffset,
+          targetShared.value + e.translationY,
+        ),
       );
     })
     .onEnd((e) => {
       const projected = targetShared.value + e.translationY + e.velocityY * 0.25;
       const mid = (peekOffset + expandedOffset) / 2;
-      const nearest = projected >= mid ? peekOffset : expandedOffset;
+      const nearest =
+        locked || projected >= mid ? peekOffset : expandedOffset;
       translateY.value = withSpring(nearest, SPRING_CONFIG);
       if (nearest !== targetShared.value) {
         targetShared.value = nearest;
@@ -91,7 +99,7 @@ export default function BottomSheet({
           <View style={[styles.handleBar, { backgroundColor: colors.neutral[300] }]} />
         </View>
       </GestureDetector>
-      {snap === "peek" ? (
+      {effectiveSnap === "peek" ? (
         <View style={styles.collapsedContent}>{collapsedContent}</View>
       ) : (
         <View style={styles.expandedContent}>{expandedContent}</View>

@@ -58,11 +58,15 @@ import type {
   SkinCheckInPayload,
   SkinSessionOut,
 } from "@/types";
+import { withAlpha } from "@/components/ui/glass-surface";
 
 const DOT_SIZE = 24;
 const DOT_RADIUS = DOT_SIZE / 2;
 const TRASH_RADIUS = 32;
-const PEEK_HEIGHT = 178;
+const PEEK_HEIGHT_CIRCLING = 178;
+// Labeling peek budgets the full collapsed stack (title + chips + save) plus
+// the sheet handle, with breathing room.
+const PEEK_HEIGHT_LABELING = 220;
 
 const MS_PER_DAY = 86400000;
 
@@ -260,6 +264,9 @@ export default function FaceAnnotationScreen() {
   const [sheetSnap, setSheetSnap] = useState<BottomSheetSnap>("peek");
   const [draggingUuid, setDraggingUuid] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Manually selected circle for relabeling in labeling mode. Validated
+  // against live circles on every read so a deleted circle can't stick.
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
 
   const transform = usePhotoTransform(width, height);
 
@@ -283,7 +290,12 @@ export default function FaceAnnotationScreen() {
     if (!draft) router.back();
   }, [draft]);
 
-  const activeCircle = mode === "labeling" ? findNextUnlabeled(circles) : null;
+  const selectedCircle =
+    mode === "labeling" && selectedUuid != null
+      ? (circles.find((c) => c.uuid === selectedUuid) ?? null)
+      : null;
+  const activeCircle =
+    mode === "labeling" ? (selectedCircle ?? findNextUnlabeled(circles)) : null;
   const isAllSettled = allSettled(circles);
   const carriedCount = circles.filter(
     (c) => c.carriedFrom && !c.isResolved,
@@ -292,7 +304,7 @@ export default function FaceAnnotationScreen() {
 
   const counterText =
     mode === "circling"
-      ? `${circles.length} ${circles.length === 1 ? "concern" : "concerns"} marked`
+      ? `${circles.length === 1 ? "concern" : "concerns"} marked`
       : `${circles.filter((c) => c.status !== "unlabeled").length} of ${circles.length} labeled`;
 
   const pushHistory = (action: AnnotationAction) =>
@@ -390,6 +402,13 @@ export default function FaceAnnotationScreen() {
   }, [draft]);
 
   const onCanvasTap = (px: number, py: number) => {
+    if (modeRef.current === "labeling") {
+      // Relabel selection: tap a circle to make it active, tap empty canvas
+      // to fall back to the next unlabeled circle.
+      const hit = hitCircleAt(px, py);
+      setSelectedUuid(hit ? hit.uuid : null);
+      return;
+    }
     if (modeRef.current !== "circling") return;
     const scaleValue = transform.scale.value;
     const normalized = screenToNormalizedRef.current(px, py);
@@ -434,7 +453,10 @@ export default function FaceAnnotationScreen() {
     );
   };
 
-  const trashCenter = { x: width / 2, y: height - PEEK_HEIGHT - 96 };
+  const trashCenter = {
+    x: width / 2,
+    y: height - PEEK_HEIGHT_CIRCLING - 96,
+  };
 
   const onCircleDragEnd = () => {
     const start = dragStartRef.current;
@@ -545,6 +567,9 @@ export default function FaceAnnotationScreen() {
         ),
       ),
     );
+    // A manually selected circle falls back to the next unlabeled one after
+    // it is answered, so flow continues forward.
+    setSelectedUuid(null);
   };
 
   const skipActive = () => {
@@ -557,11 +582,20 @@ export default function FaceAnnotationScreen() {
         ),
       ),
     );
+    setSelectedUuid(null);
   };
 
   const handleStartLabeling = () => {
     setMode("labeling");
-    setSheetSnap("expanded");
+    setSheetSnap("peek");
+  };
+
+  // Back to marking: circles (positions AND labels), history, and drafts are
+  // untouched, so nothing is lost in either direction.
+  const handleBackToMarking = () => {
+    setSelectedUuid(null);
+    setMode("circling");
+    setSheetSnap("peek");
   };
 
   const handleSave = async () => {
@@ -635,8 +669,8 @@ export default function FaceAnnotationScreen() {
   const collapsedContent =
     mode === "circling" ? (
       <View style={styles.collapsedIntro}>
-        <ThemedText type="caption" style={{ color: colors.neutral[600] }}>
-          Mark the concerns you can see first, then label them all in one pass.
+        <ThemedText type="body" style={{ color: colors.neutral[600] }}>
+          Mark all the concerns you see, label them next
         </ThemedText>
         {carriedCount > 0 && (
           <ThemedText
@@ -674,47 +708,75 @@ export default function FaceAnnotationScreen() {
         />
       </View>
     ) : (
-      <View style={styles.collapsedLabel}>
-        <View style={styles.activeTitleRow}>
-          <ThemedText type="bodyLarge" weight="semiBold">
-            {activeCircle
-              ? `Circle ${activeCircle.number} — what do you see?`
-              : "All circles answered"}
-          </ThemedText>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipScroll}
-        >
-          {TAXONOMY.map((t) => (
-            <Chip
-              key={t.id}
-              label={t.label}
-              image={t.circleImageUrl}
-              active={activeCircle?.concernId === t.id}
-              onPress={() => labelActive(t.id)}
+      <View style={styles.collapsedLabelRow}>
+        <View style={[styles.collapsedLabel, { flex: 1 }]}>
+          <View style={styles.activeTitleRow}>
+            <IconButton
+              IconComponent={MaterialCommunityIcons}
+              iconName="chevron-left"
+              iconSize={22}
+              iconColor={colors.neutral[600]}
+              backgroundColor="transparent"
+              onPress={handleBackToMarking}
             />
-          ))}
-          <Chip
-            label="Other"
-            active={activeCircle?.concernId === "other"}
-            onPress={() => labelActive("other")}
-          />
-          <Chip label="Not sure / skip" muted onPress={skipActive} />
-        </ScrollView>
-        {isAllSettled && (
-          <ThemedButton
-            text="Save check-in"
-            onPress={handleSave}
-            loading={submitting}
-            disabled={submitting}
-            color={btnColor}
-            alignment="stretch"
-            leftIconName="check"
-            LeftIconComponent={MaterialCommunityIcons}
-          />
-        )}
+            <ThemedText
+              type="bodyLarge"
+              weight="semiBold"
+              style={{ flex: 1, textAlign: "center" }}
+            >
+              {activeCircle
+                ? `Label ${activeCircle.number}: what do you see?`
+                : "All concerns labeled"}
+            </ThemedText>
+            <IconButton
+              IconComponent={MaterialCommunityIcons}
+              iconName="information-outline"
+              iconSize={22}
+              iconColor={colors.neutral[600]}
+              backgroundColor="transparent"
+              onPress={() => setSheetSnap("expanded")}
+            />
+          </View>
+          {activeCircle ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipScroll}
+            >
+              {TAXONOMY.map((t) => (
+                <Chip
+                  key={t.id}
+                  label={t.label}
+                  image={t.circleImageUrl}
+                  active={activeCircle?.concernId === t.id}
+                  onPress={() => labelActive(t.id)}
+                />
+              ))}
+              <Chip
+                label="Other"
+                active={activeCircle?.concernId === "other"}
+                onPress={() => labelActive("other")}
+              />
+              <Chip label="Not sure / skip" muted onPress={skipActive} />
+            </ScrollView>
+          ) : (
+            <ThemedText type="caption" style={{ color: colors.neutral[600] }}>
+              Tap a circle to edit its label or save your journal entry.
+            </ThemedText>
+          )}
+          {isAllSettled && (
+            <ThemedButton
+              text="Save journal entry"
+              onPress={handleSave}
+              loading={submitting}
+              disabled={submitting}
+              color={btnColor}
+              alignment="stretch"
+              leftIconName="check"
+              LeftIconComponent={MaterialCommunityIcons}
+            />
+          )}
+        </View>
       </View>
     );
 
@@ -746,13 +808,18 @@ export default function FaceAnnotationScreen() {
     ) : (
       <View style={[styles.expandedPad, { paddingBottom: 0 }]}>
         <View style={styles.expandedHeader}>
-          <ThemedText type="h4">Concern guide</ThemedText>
-          <View style={styles.disclaimer}>
-            <MaterialCommunityIcons
-              name="information-outline"
-              size={16}
-              color={colors.neutral[600]}
+          <View style={{ flexDirection: "row" }}>
+            <ThemedText type="h4">Skin Concerns Guide</ThemedText>
+            <IconButton
+              IconComponent={MaterialCommunityIcons}
+              iconName="chevron-down"
+              iconSize={22}
+              iconColor={colors.neutral[600]}
+              backgroundColor="transparent"
+              onPress={() => setSheetSnap("peek")}
             />
+          </View>
+          <View style={styles.disclaimer}>
             <ThemedText
               type="captionSmall"
               style={{ color: colors.neutral[600], flex: 1 }}
@@ -772,7 +839,7 @@ export default function FaceAnnotationScreen() {
             section: { title: string; data: Concern[] };
           }) => (
             <View style={styles.sectionHeader}>
-              <ThemedText type="overline" weight="semiBold">
+              <ThemedText type="overline" weight="medium">
                 {section.title}
               </ThemedText>
             </View>
@@ -813,11 +880,20 @@ export default function FaceAnnotationScreen() {
           style={[
             styles.expandedFooter,
             {
-              paddingBottom: insets.bottom + 12,
+              paddingBottom: insets.bottom + 24,
               backgroundColor: colors.background,
             },
           ]}
         >
+          <ThemedButton
+            outlined
+            text="Back to marking"
+            onPress={handleBackToMarking}
+            color={colors.neutral[700]}
+            alignment="stretch"
+            leftIconName="arrow-left"
+            LeftIconComponent={MaterialCommunityIcons}
+          />
           <ThemedButton
             outlined
             text="Not sure / skip this circle"
@@ -828,7 +904,7 @@ export default function FaceAnnotationScreen() {
           />
           {isAllSettled ? (
             <ThemedButton
-              text="Save check-in"
+              text="Save journal entry"
               onPress={handleSave}
               loading={submitting}
               disabled={submitting}
@@ -909,7 +985,30 @@ export default function FaceAnnotationScreen() {
           IconComponent={MaterialCommunityIcons}
           iconName="close"
         />
-        <View style={{ flex: 1 }} />
+        {circles.length > 0 && (
+          <View pointerEvents="none">
+            <View style={styles.counterPill}>
+              {mode === "circling" && (
+                <MaterialCommunityIcons
+                  name={
+                    `numeric-${circles.length > 9 ? "9-plus" : String(circles.length)}-circle` as React.ComponentProps<
+                      typeof MaterialCommunityIcons
+                    >["name"]
+                  }
+                  size={20}
+                  color={txtColor}
+                />
+              )}
+              <ThemedText
+                style={{ color: txtColor }}
+                type="caption"
+                weight="semiBold"
+              >
+                {counterText}
+              </ThemedText>
+            </View>
+          </View>
+        )}
         {mode === "circling" && history.length > 0 && (
           <IconButton
             iconColor={txtColor}
@@ -921,55 +1020,65 @@ export default function FaceAnnotationScreen() {
         )}
       </View>
 
-      {circles.length > 0 && (
-        <View
-          pointerEvents="none"
-          style={[styles.counterWrap, { top: insets.top + 62 }]}
-        >
-          <View style={styles.counterPill}>
+      {mode === "circling" && circles.length === 0 && (
+        <>
+          <View pointerEvents="none" style={styles.instructionBackdrop} />
+          <View
+            pointerEvents="none"
+            style={[styles.instruction, { top: height * 0.3 }]}
+          >
             <MaterialCommunityIcons
-              name={
-                mode === "labeling"
-                  ? "label-outline"
-                  : "circle-multiple-outline"
-              }
-              size={14}
-              color={txtColor}
+              name="gesture-tap"
+              size={64}
+              color="#FFFFFF"
             />
             <ThemedText
-              style={{ color: txtColor }}
-              type="caption"
+              style={{ color: "#FFFFFF" }}
+              type="bodyLarge"
               weight="semiBold"
             >
-              {counterText}
+              Tap a spot to mark a concern
             </ThemedText>
           </View>
-        </View>
+        </>
       )}
 
-      {mode === "circling" && circles.length === 0 && (
+      {mode === "circling" && draggingUuid == null && (
         <View
           pointerEvents="none"
-          style={[styles.instruction, { top: height * 0.3 }]}
+          style={[styles.hintFloat, { bottom: PEEK_HEIGHT_CIRCLING + 12 }]}
         >
-          <MaterialCommunityIcons
-            name="gesture-tap"
-            size={28}
-            color="#FFFFFF"
-          />
-          <ThemedText
-            style={{ color: "#FFFFFF" }}
-            type="bodyLarge"
-            weight="semiBold"
+          <View
+            style={[
+              styles.hint,
+              { backgroundColor: withAlpha(colors.neutral[100], 0.8) },
+            ]}
           >
-            Tap a spot to mark a concern
-          </ThemedText>
-          <ThemedText
-            style={{ color: "#FFFFFF", opacity: 0.75 }}
-            type="caption"
-          >
-            Pinch to zoom • drag a circle to move it
-          </ThemedText>
+            <View
+              style={[
+                styles.hintIcon,
+                { backgroundColor: colors.neutral[400] },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="gesture-pinch"
+                size={24}
+                color="white"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="captionLarge" weight="semiBold">
+                How to edit circles
+              </ThemedText>
+              <ThemedText
+                type="captionSmall"
+                style={{ color: colors.neutral[700] }}
+              >
+                Drag a circle to move it. Pinch to zoom. Drag to trash or undo
+                to remove circles.
+              </ThemedText>
+            </View>
+          </View>
         </View>
       )}
 
@@ -991,9 +1100,12 @@ export default function FaceAnnotationScreen() {
       <BottomSheet
         snap={sheetSnap}
         onSnapChange={setSheetSnap}
-        peekHeight={PEEK_HEIGHT}
+        peekHeight={
+          mode === "circling" ? PEEK_HEIGHT_CIRCLING : PEEK_HEIGHT_LABELING
+        }
         collapsedContent={collapsedContent}
         expandedContent={expandedContent}
+        locked={mode === "circling"}
       />
     </View>
   );
@@ -1011,14 +1123,9 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     gap: 10,
-  },
-  counterWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    alignItems: "center",
   },
   counterPill: {
     flexDirection: "row",
@@ -1029,8 +1136,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
+  hint: {
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    gap: 16,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  hintIcon: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  hintFloat: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+  },
+  instructionBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
   instruction: {
     position: "absolute",
+    top: 0,
+    bottom: 0,
     left: 0,
     right: 0,
     alignItems: "center",
@@ -1073,13 +1205,17 @@ const styles = StyleSheet.create({
   },
   collapsedLabel: {
     gap: 10,
-    paddingBottom: 16,
+    paddingBottom: 24,
     paddingTop: 4,
+  },
+  collapsedLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   activeTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
   },
   chipScroll: {
     gap: 8,
