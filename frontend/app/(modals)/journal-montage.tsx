@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   useColorScheme,
   useWindowDimensions,
@@ -21,7 +23,8 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from "react-native-reanimated";
-import { getSkinSessions } from "@/api/skin";
+import Toast from "react-native-toast-message";
+import { deleteSkinSession, getSkinSessions } from "@/api/skin";
 import {
   getCachedSkinPhotoDimsSync,
   getCachedSkinPhotoUrl,
@@ -37,6 +40,7 @@ import IconButton from "@/components/ui/icon-button";
 import SessionReview, { hasReview } from "@/components/journal/session-review";
 import {
   allConcerns,
+  concernLabel,
   dayEntries,
   formatSessionDay,
   formatSessionTime,
@@ -247,6 +251,7 @@ export default function JournalMontageScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [showMarkers, setShowMarkers] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
   const [aspects, setAspects] = useState<Record<number, number>>({});
 
   const pagerRef = useRef<FlatList<SkinSessionOut>>(null);
@@ -554,6 +559,8 @@ export default function JournalMontageScreen() {
     [stopPlaying],
   );
 
+
+
   const onImageLoad = useCallback(
     (sessionId: number, w: number, h: number) => {
       if (!w || !h) return;
@@ -568,6 +575,60 @@ export default function JournalMontageScreen() {
   );
 
   const activeSession = sorted[activeIndex] ?? null;
+
+  const activeEntries = useMemo(
+    () => (activeSession ? dayEntries(activeSession.id, concerns) : []),
+    [activeSession, concerns],
+  );
+
+  const deletingRef = useRef(false);
+
+  const handleDelete = useCallback(() => {
+    if (!activeSession || deletingRef.current) return;
+    const target = activeSession;
+    stopPlaying();
+    Alert.alert(
+      "Delete this entry?",
+      "This will remove the photo, marked concerns, and ratings. This can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            if (deletingRef.current) return;
+            deletingRef.current = true;
+            deleteSkinSession(target.id)
+              .then(() => {
+                Toast.show({
+                  type: "success",
+                  text1: "Journal entry deleted",
+                  position: "bottom",
+                });
+                setSessions((prev) =>
+                  prev.filter((s) => s.id !== target.id),
+                );
+                const sortedIndex = sorted.findIndex(
+                  (s) => s.id === target.id,
+                );
+                const remaining = sorted.length - 1;
+                if (remaining <= 0) {
+                  router.back();
+                } else {
+                  goToIndex(Math.min(sortedIndex, remaining - 1));
+                }
+              })
+              .catch(() => {
+                // Interceptor shows the error toast, entry stays in place.
+              })
+              .finally(() => {
+                deletingRef.current = false;
+              });
+          },
+        },
+      ],
+    );
+  }, [activeSession, sorted, stopPlaying, goToIndex]);
 
   // Starts the fade once the incoming play layer has decoded. Falls back to
   // the timer armed in the interval if onLoad never fires.
@@ -790,6 +851,96 @@ export default function JournalMontageScreen() {
           </View>
         )}
 
+        {activeSession && (
+          <View style={styles.detailsToggleWrap}>
+            <Pressable
+              onPress={() => setShowDetails((v) => !v)}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: showDetails }}
+              accessibilityLabel="Toggle entry details"
+              style={styles.detailsToggle}
+            >
+              <MaterialCommunityIcons
+                name={showDetails ? "chevron-down" : "chevron-up"}
+                size={18}
+                color="#FFFFFF"
+              />
+              <ThemedText type="captionSmall" style={{ color: "#FFFFFF" }}>
+                {showDetails ? "Hide details" : "View details"}
+              </ThemedText>
+            </Pressable>
+          </View>
+        )}
+
+        {activeSession && showDetails && (
+          <View style={styles.detailsPanel}>
+            <ScrollView
+              style={styles.detailsScroll}
+              contentContainerStyle={styles.detailsContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {activeEntries.length === 0 ? (
+                <ThemedText
+                  type="bodySmall"
+                  style={{ color: "rgba(255,255,255,0.7)" }}
+                >
+                  No concerns marked on this check-in
+                </ThemedText>
+              ) : (
+                activeEntries.map((entry) => {
+                  const resolved = entry.resolvedHere;
+                  const badgeColor = resolved
+                    ? colors.success[500]
+                    : entry.concern.status === "labeled"
+                      ? colors.primary[500]
+                      : colors.neutral[400];
+                  const statusText = resolved
+                    ? "Healed today"
+                    : entry.isNew
+                      ? "New"
+                      : "Tracked";
+                  return (
+                    <View key={entry.concern.id} style={styles.detailRow}>
+                      <View
+                        style={[
+                          styles.detailBadge,
+                          { backgroundColor: badgeColor },
+                        ]}
+                      >
+                        <ThemedText
+                          style={{
+                            color: "#FFFFFF",
+                            fontSize: 11,
+                            lineHeight: 14,
+                          }}
+                          weight="bold"
+                        >
+                          {entry.number}
+                        </ThemedText>
+                      </View>
+                      <ThemedText
+                        type="bodySmall"
+                        style={{ color: "#FFFFFF", flex: 1 }}
+                      >
+                        {concernLabel(entry.concern)}
+                      </ThemedText>
+                      <ThemedText
+                        type="captionSmall"
+                        style={{ color: "rgba(255,255,255,0.7)" }}
+                      >
+                        {statusText}
+                      </ThemedText>
+                    </View>
+                  );
+                })
+              )}
+              {hasReview(activeSession) && (
+                <SessionReview session={activeSession} dark showNotes />
+              )}
+            </ScrollView>
+          </View>
+        )}
+
         {showChrome && (
           <FlatList
             ref={filmRef}
@@ -841,7 +992,15 @@ export default function JournalMontageScreen() {
               Your first check-in
             </ThemedText>
           )}
-          <View style={{ width: 36 }} />
+          <IconButton
+            onPress={handleDelete}
+            IconComponent={MaterialCommunityIcons}
+            iconName="trash-can-outline"
+            iconSize={22}
+            iconColor={colors.error}
+            backgroundColor="rgba(255,255,255,0.16)"
+            accessibilityLabel="Delete entry"
+          />
         </View>
       </View>
     </View>
@@ -927,6 +1086,48 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
     gap: 2,
+  },
+  detailsToggleWrap: {
+    alignItems: "center",
+    paddingBottom: 4,
+  },
+  detailsToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.16)",
+  },
+  detailsPanel: {
+    alignSelf: "stretch",
+    marginHorizontal: 16,
+    marginBottom: 8,
+    maxHeight: 220,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    overflow: "hidden",
+  },
+  detailsScroll: {
+    maxHeight: 220,
+  },
+  detailsContent: {
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  detailBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
   },
   filmstrip: {
     maxHeight: THUMB_SIZE + 16,

@@ -135,7 +135,7 @@ export default function JournalScreen() {
                 style={{ color: colors.neutral[600] }}
               >
                 {hasMultipleRoutines
-                  ? "Swipe to switch between your routines"
+                  ? "Swipe to switch between routines"
                   : "Log your routine each day"}
               </ThemedText>
             ) : (

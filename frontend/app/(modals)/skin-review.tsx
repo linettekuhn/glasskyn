@@ -110,6 +110,7 @@ export default function SkinReviewScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
+          <EntrySteps active="review" />
           <View style={styles.topBar}>
             <ThemedButton
               link
@@ -123,8 +124,6 @@ export default function SkinReviewScreen() {
             />
             <View style={{ width: 40 }} />
           </View>
-
-          <EntrySteps active="review" />
 
           <ThemedText type="h2">Review your skin</ThemedText>
           <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
