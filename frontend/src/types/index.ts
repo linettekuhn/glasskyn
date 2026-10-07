@@ -260,6 +260,10 @@ export interface SkinCheckInPayload {
   captured_at: string | null;
   face_landmarks: Record<string, { x: number; y: number } | undefined> | null;
   concerns: SkinCheckInConcernPayload[];
+  moisture_rating: number | null;
+  texture_rating: number | null;
+  tone_rating: number | null;
+  notes: string | null;
 }
 
 export interface SkinAnchorRef {
@@ -300,6 +304,10 @@ export interface SkinSessionOut {
   image_url: string;
   face_landmarks: Record<string, { x: number; y: number } | undefined> | null;
   concerns: SkinConcernOut[];
+  moisture_rating?: number | null;
+  texture_rating?: number | null;
+  tone_rating?: number | null;
+  notes?: string | null;
 }
 
 export interface SkinCheckInResponse {

@@ -30,6 +30,10 @@ export async function submitSkinCheckIn(
     captured_at: payload.captured_at,
     face_landmarks: payload.face_landmarks,
     concerns: payload.concerns,
+    moisture_rating: payload.moisture_rating,
+    texture_rating: payload.texture_rating,
+    tone_rating: payload.tone_rating,
+    notes: payload.notes,
   });
   return response.data;
 }

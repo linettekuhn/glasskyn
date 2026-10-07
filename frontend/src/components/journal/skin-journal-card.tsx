@@ -16,6 +16,7 @@ import { ThemedText } from "@/components/ui/themed-text";
 import GlassSurface from "@/components/ui/glass-surface";
 import IconButton from "@/components/ui/icon-button";
 import SkinCirclePreview from "./skin-circle-preview";
+import SessionReview from "./session-review";
 import {
   concernLabel,
   formatSessionDay as formatDay,
@@ -209,6 +210,7 @@ export default function SkinJournalCard({
           )}
         </ScrollView>
       </View>
+      <SessionReview session={session} />
     </GlassSurface>
   );
 }

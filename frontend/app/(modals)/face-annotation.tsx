@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { SetStateAction } from "react";
 import {
   Image,
   Pressable,
@@ -50,14 +51,14 @@ import {
   type SkinLandmarkRefs,
 } from "@/contexts/SkinCaptureContext";
 import { usePhotoTransform } from "@/hooks/use-photo-transform";
-import { submitSkinCheckIn, getSkinSessions } from "@/api/skin";
+import { getSkinSessions } from "@/api/skin";
 import type {
   AnnotationAction,
   Concern,
   CircleAnnotation,
-  SkinCheckInPayload,
   SkinSessionOut,
 } from "@/types";
+import EntrySteps from "@/components/journal/entry-steps";
 import { withAlpha } from "@/components/ui/glass-surface";
 import Divider from "@/components/ui/divider";
 
@@ -257,14 +258,25 @@ export default function FaceAnnotationScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const { draft, setDraft } = useSkinCapture();
+  const { draft, circles: sharedCircles, setCircles: setSharedCircles } =
+    useSkinCapture();
 
   const [mode, setMode] = useState<"circling" | "labeling">("circling");
-  const [circles, setCircles] = useState<CircleAnnotation[]>([]);
+  const [circles, setCirclesLocal] = useState<CircleAnnotation[]>(
+    sharedCircles ?? [],
+  );
+  const setCircles = useCallback(
+    (next: SetStateAction<CircleAnnotation[]>) => {
+      setCirclesLocal(next);
+    },
+    [],
+  );
+  useEffect(() => {
+    setSharedCircles(circles);
+  }, [circles, setSharedCircles]);
   const [history, setHistory] = useState<AnnotationAction[]>([]);
   const [sheetSnap, setSheetSnap] = useState<BottomSheetSnap>("peek");
   const [draggingUuid, setDraggingUuid] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   // Manually selected circle for relabeling in labeling mode. Validated
   // against live circles on every read so a deleted circle can't stick.
   const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
@@ -351,6 +363,10 @@ export default function FaceAnnotationScreen() {
     }
     if (carriedLoadedRef.current) {
       bail("already-loaded");
+      return;
+    }
+    if (sharedCircles !== null) {
+      bail("restored-from-context");
       return;
     }
     const landmarkRefs = draft.landmarks ?? null;
@@ -599,72 +615,9 @@ export default function FaceAnnotationScreen() {
     setSheetSnap("peek");
   };
 
-  const handleSave = async () => {
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      const payload: SkinCheckInPayload = {
-        photo_uri: draft?.photoUri ?? null,
-        captured_at: draft?.capturedAt ?? null,
-        face_landmarks: draft?.landmarks ?? null,
-        concerns: circles.map((c) => ({
-          uuid: c.uuid,
-          number: c.number,
-          x: c.x,
-          y: c.y,
-          concern_id: c.concernId,
-          status: c.status,
-          carried_uuid: c.carriedFrom,
-          resolved: c.isResolved,
-        })),
-      };
-      const result = await submitSkinCheckIn(payload);
-      if (__DEV__) {
-        getSkinSessions()
-          .then((sessions) =>
-            console.log(
-              "[skin] round-trip: session",
-              result.session_id,
-              "returned",
-              sessions.length,
-              "session(s)",
-            ),
-          )
-          .catch((e) =>
-            console.warn("[skin] round-trip list failed", e?.message ?? e),
-          );
-      }
-      const keptCarried = circles.filter(
-        (c) => c.carriedFrom && !c.isResolved,
-      ).length;
-      const healed = circles.filter((c) => c.isResolved).length;
-      const fresh = circles.filter((c) => !c.carriedFrom).length;
-      const parts = [
-        fresh > 0 ? `${fresh} new` : null,
-        keptCarried > 0 ? `${keptCarried} carried` : null,
-        healed > 0 ? `${healed} healed` : null,
-      ].filter(Boolean);
-      Toast.show({
-        type: "success",
-        text1: "Check-in saved",
-        text2:
-          parts.length > 0
-            ? parts.join(" · ")
-            : `${circles.length} ${circles.length === 1 ? "concern" : "concerns"} recorded`,
-        position: "bottom",
-      });
-      setDraft(null);
-      router.back();
-    } catch (e) {
-      Toast.show({
-        type: "error",
-        text1: "Could not save",
-        text2: e instanceof Error ? e.message : String(e),
-        position: "bottom",
-      });
-    } finally {
-      setSubmitting(false);
-    }
+  const handleContinueToReview = () => {
+    setSharedCircles(circles);
+    router.push("/(modals)/skin-review");
   };
 
   const collapsedContent =
@@ -767,14 +720,12 @@ export default function FaceAnnotationScreen() {
           )}
           {isAllSettled && (
             <ThemedButton
-              text="Save journal entry"
-              onPress={handleSave}
-              loading={submitting}
-              disabled={submitting}
+              text="Continue to review"
+              onPress={handleContinueToReview}
               color={btnColor}
               alignment="stretch"
-              leftIconName="check"
-              LeftIconComponent={MaterialCommunityIcons}
+              rightIconName="arrow-right"
+              RightIconComponent={MaterialCommunityIcons}
             />
           )}
         </View>
@@ -791,6 +742,7 @@ export default function FaceAnnotationScreen() {
       <View
         style={[styles.expandedCircling, { paddingBottom: insets.bottom + 16 }]}
       >
+        <EntrySteps active="mark" />
         <ThemedText type="h4">Marking concerns</ThemedText>
         <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
           Tap a spot on the photo to drop a numbered pin. Drag pins to nudge
@@ -809,6 +761,7 @@ export default function FaceAnnotationScreen() {
     ) : (
       <View style={[styles.expandedPad, { paddingBottom: 0 }]}>
         <View style={styles.expandedHeader}>
+          <EntrySteps active="mark" />
           <ThemedButton
             link
             text="Go Back To marking "
@@ -931,14 +884,12 @@ export default function FaceAnnotationScreen() {
           )}
           {isAllSettled ? (
             <ThemedButton
-              text="Save journal entry"
-              onPress={handleSave}
-              loading={submitting}
-              disabled={submitting}
+              text="Continue to review"
+              onPress={handleContinueToReview}
               color={btnColor}
               alignment="stretch"
-              leftIconName="check"
-              LeftIconComponent={MaterialCommunityIcons}
+              rightIconName="arrow-right"
+              RightIconComponent={MaterialCommunityIcons}
             />
           ) : (
             <ThemedText

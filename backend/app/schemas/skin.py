@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ConcernPoint(BaseModel):
@@ -25,6 +25,10 @@ class CheckInRequest(BaseModel):
     captured_at: datetime | None = None
     face_landmarks: dict[str, ConcernPoint] | None = None
     concerns: list[ConcernIn]
+    moisture_rating: int | None = Field(default=None, ge=1, le=5)
+    texture_rating: int | None = Field(default=None, ge=1, le=5)
+    tone_rating: int | None = Field(default=None, ge=1, le=5)
+    notes: str | None = Field(default=None, max_length=500)
 
 
 class ConcernOut(BaseModel):
@@ -50,6 +54,10 @@ class SessionOut(BaseModel):
     image_url: str
     face_landmarks: dict[str, ConcernPoint] | None
     concerns: list[ConcernOut] = []
+    moisture_rating: int | None = None
+    texture_rating: int | None = None
+    tone_rating: int | None = None
+    notes: str | None = None
 
     model_config = {"from_attributes": True}
 

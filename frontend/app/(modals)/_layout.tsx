@@ -53,6 +53,7 @@ export default function ModalLayout() {
                   gestureDirection: "vertical",
                 }}
               />
+              <Stack.Screen name="skin-review" />
               <Stack.Screen
                 name="scan"
                 options={{

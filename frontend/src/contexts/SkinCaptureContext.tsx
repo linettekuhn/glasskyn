@@ -7,6 +7,8 @@ import {
   type ReactNode,
 } from "react";
 
+import type { CircleAnnotation } from "@/types";
+
 export interface SkinLandmarkRefs {
   [key: string]: { x: number; y: number } | undefined;
 }
@@ -29,23 +31,63 @@ export interface SkinCaptureDraft {
   variance: number | null;
 }
 
+export interface SkinReviewState {
+  moisture: number | null;
+  texture: number | null;
+  tone: number | null;
+  notes: string;
+}
+
+const DEFAULT_REVIEW: SkinReviewState = {
+  moisture: null,
+  texture: null,
+  tone: null,
+  notes: "",
+};
+
 interface SkinCaptureContextType {
   draft: SkinCaptureDraft | null;
   setDraft: (draft: SkinCaptureDraft | null) => void;
+  circles: CircleAnnotation[] | null;
+  setCircles: (circles: CircleAnnotation[] | null) => void;
+  review: SkinReviewState;
+  setReview: (next: SkinReviewState | ((prev: SkinReviewState) => SkinReviewState)) => void;
+  clearEntry: () => void;
 }
 
 const SkinCaptureContext = createContext<SkinCaptureContextType | null>(null);
 
 export function SkinCaptureProvider({ children }: { children: ReactNode }) {
   const [draft, setDraftState] = useState<SkinCaptureDraft | null>(null);
+  const [circles, setCirclesState] = useState<CircleAnnotation[] | null>(null);
+  const [review, setReviewState] = useState<SkinReviewState>(DEFAULT_REVIEW);
 
   const setDraft = useCallback((next: SkinCaptureDraft | null) => {
     setDraftState(next);
   }, []);
 
+  const setCircles = useCallback((next: CircleAnnotation[] | null) => {
+    setCirclesState(next);
+  }, []);
+
+  const setReview = useCallback(
+    (next: SkinReviewState | ((prev: SkinReviewState) => SkinReviewState)) => {
+      setReviewState((prev) =>
+        typeof next === "function" ? next(prev) : next,
+      );
+    },
+    [],
+  );
+
+  const clearEntry = useCallback(() => {
+    setDraftState(null);
+    setCirclesState(null);
+    setReviewState(DEFAULT_REVIEW);
+  }, []);
+
   const value = useMemo(
-    () => ({ draft, setDraft }),
-    [draft, setDraft],
+    () => ({ draft, setDraft, circles, setCircles, review, setReview, clearEntry }),
+    [draft, setDraft, circles, setCircles, review, setReview, clearEntry],
   );
 
   return (

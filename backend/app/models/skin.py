@@ -11,6 +11,10 @@ class SkinSession(Base):
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     image_url = Column(String, nullable=False)
     face_landmarks = Column(JSONB, nullable=True)
+    moisture_rating = Column(Integer, nullable=True)
+    texture_rating = Column(Integer, nullable=True)
+    tone_rating = Column(Integer, nullable=True)
+    notes = Column(String, nullable=True)
 
 
 class SkinConcern(Base):

@@ -34,6 +34,7 @@ import type { SkinSessionOut } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import IconButton from "@/components/ui/icon-button";
+import SessionReview, { hasReview } from "@/components/journal/session-review";
 import {
   allConcerns,
   dayEntries,
@@ -783,6 +784,9 @@ export default function JournalMontageScreen() {
             >
               {`${formatSessionTime(activeSession.timestamp)} · ${activeIndex + 1} of ${sorted.length}`}
             </ThemedText>
+            {hasReview(activeSession) && (
+              <SessionReview session={activeSession} dark />
+            )}
           </View>
         )}
 

@@ -21,7 +21,7 @@ const ENTRY_STEPS = [
   },
   {
     icon: "pencil-circle",
-    title: "Mark & label",
+    title: "Mark and label",
     description: "Circle and name your concerns",
   },
   {

@@ -62,10 +62,15 @@ def submit_check_in(
         else None
     )
 
+    notes = body.notes.strip() if body.notes and body.notes.strip() else None
     session_kwargs = {
         "user_id": current_user.id,
         "image_url": body.image_file_key,
         "face_landmarks": face_landmarks_dict,
+        "moisture_rating": body.moisture_rating,
+        "texture_rating": body.texture_rating,
+        "tone_rating": body.tone_rating,
+        "notes": notes,
     }
     if body.captured_at is not None:
         session_kwargs["timestamp"] = body.captured_at
