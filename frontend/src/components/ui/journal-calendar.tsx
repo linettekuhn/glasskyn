@@ -214,7 +214,7 @@ export default function JournalCalendar({
     const isSelected = cell.key === selected;
     const descriptors = [
       isComplete ? "routine complete" : "",
-      hasCheckIn ? "has a check-in" : "",
+      hasCheckIn ? "has a journal entry" : "",
     ]
       .filter(Boolean)
       .join(", ");
@@ -371,11 +371,11 @@ export default function JournalCalendar({
             style={[styles.legendDot, { backgroundColor: colors.primary[500] }]}
           />
           <ThemedText
-            type="overline"
+            type="captionSmall"
             style={{ color: colors.neutral[600] }}
             numberOfLines={1}
           >
-            Routine Checked Off
+            Routine Complete
           </ThemedText>
         </View>
         <View style={styles.legendItem}>
@@ -386,11 +386,11 @@ export default function JournalCalendar({
             ]}
           />
           <ThemedText
-            type="overline"
+            type="captionSmall"
             style={{ color: colors.neutral[600] }}
             numberOfLines={1}
           >
-            Skin Checked in
+            Journal Entry
           </ThemedText>
         </View>
       </View>
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
   legend: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-evenly",
     gap: 16,
     paddingTop: 8,
   },
