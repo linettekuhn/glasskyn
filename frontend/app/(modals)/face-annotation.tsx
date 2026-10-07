@@ -21,7 +21,7 @@ import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Crypto from "expo-crypto";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
 import { ThemedText } from "@/components/ui/themed-text";
@@ -59,6 +59,7 @@ import type {
   SkinSessionOut,
 } from "@/types";
 import { withAlpha } from "@/components/ui/glass-surface";
+import Divider from "@/components/ui/divider";
 
 const DOT_SIZE = 24;
 const DOT_RADIUS = DOT_SIZE / 2;
@@ -757,7 +758,7 @@ export default function FaceAnnotationScreen() {
                 active={activeCircle?.concernId === "other"}
                 onPress={() => labelActive("other")}
               />
-              <Chip label="Not sure / skip" muted onPress={skipActive} />
+              <Chip label="Not sure" muted onPress={skipActive} />
             </ScrollView>
           ) : (
             <ThemedText type="caption" style={{ color: colors.neutral[600] }}>
@@ -808,13 +809,23 @@ export default function FaceAnnotationScreen() {
     ) : (
       <View style={[styles.expandedPad, { paddingBottom: 0 }]}>
         <View style={styles.expandedHeader}>
+          <ThemedButton
+            link
+            text="Go Back To marking "
+            leftIconName="arrow-back"
+            LeftIconComponent={MaterialIcons}
+            onPress={handleBackToMarking}
+            color={colors.secondary[700]}
+            alignment="flex-start"
+            textType="overline"
+          />
           <View style={{ flexDirection: "row" }}>
             <ThemedText type="h4">Skin Concerns Guide</ThemedText>
             <IconButton
               IconComponent={MaterialCommunityIcons}
               iconName="chevron-down"
               iconSize={22}
-              iconColor={colors.neutral[600]}
+              iconColor={colors.secondary[800]}
               backgroundColor="transparent"
               onPress={() => setSheetSnap("peek")}
             />
@@ -827,6 +838,29 @@ export default function FaceAnnotationScreen() {
               {TAXONOMY_DISCLAIMER}
             </ThemedText>
           </View>
+          <Divider color={colors.neutral[700]}>
+            <ThemedText
+              type="captionLarge"
+              weight="semiBold"
+              style={{
+                textAlign: "center",
+                paddingHorizontal: 10,
+                color: colors.neutral[700],
+              }}
+            >
+              {activeCircle
+                ? `Label ${activeCircle.number}`
+                : "All concerns labeled"}
+            </ThemedText>
+          </Divider>
+          <ThemedText
+            type="captionSmall"
+            style={{ color: colors.neutral[700] }}
+          >
+            {activeCircle
+              ? `Identify and label this skin concern as one of the following:`
+              : "Tap a circle to edit its label or save your journal entry."}
+          </ThemedText>
         </View>
         <SectionList
           style={styles.list}
@@ -854,7 +888,7 @@ export default function FaceAnnotationScreen() {
             >
               <Image source={item.imageUrl} style={styles.taxImage} />
               <View style={styles.taxText}>
-                <ThemedText type="bodySmall" weight="semiBold">
+                <ThemedText type="bodySmall" weight="regular">
                   {item.label}
                 </ThemedText>
                 <ThemedText
@@ -880,28 +914,21 @@ export default function FaceAnnotationScreen() {
           style={[
             styles.expandedFooter,
             {
-              paddingBottom: insets.bottom + 24,
+              paddingBottom: insets.bottom + 150,
               backgroundColor: colors.background,
             },
           ]}
         >
-          <ThemedButton
-            outlined
-            text="Back to marking"
-            onPress={handleBackToMarking}
-            color={colors.neutral[700]}
-            alignment="stretch"
-            leftIconName="arrow-left"
-            LeftIconComponent={MaterialCommunityIcons}
-          />
-          <ThemedButton
-            outlined
-            text="Not sure / skip this circle"
-            onPress={skipActive}
-            disabled={!activeCircle}
-            color={colors.neutral[700]}
-            alignment="stretch"
-          />
+          {activeCircle && (
+            <ThemedButton
+              outlined
+              text="Skip this label"
+              onPress={skipActive}
+              disabled={!activeCircle}
+              color={colors.neutral[700]}
+              alignment="stretch"
+            />
+          )}
           {isAllSettled ? (
             <ThemedButton
               text="Save journal entry"
@@ -1233,6 +1260,7 @@ const styles = StyleSheet.create({
   expandedHeader: {
     paddingHorizontal: 20,
     paddingTop: 4,
+    paddingBottom: 4,
     gap: 10,
   },
   disclaimer: {
@@ -1243,6 +1271,7 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+    marginBottom: 150,
   },
   sectionHeader: {
     paddingHorizontal: 20,
