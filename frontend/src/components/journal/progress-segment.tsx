@@ -78,13 +78,14 @@ export default function ProgressSegment({
 
   const startCheckIn = () => router.push("/(modals)/skin-capture");
 
-  const openEntry = (entry: SkinSessionOut) => {
+  const openEntry = (entry: SkinSessionOut, expanded: boolean) => {
     const initialUrl = getCachedSkinPhotoUrlSync(entry.image_url);
     const dims = getCachedSkinPhotoDimsSync(entry.image_url);
     router.push({
       pathname: "/(modals)/journal-montage",
       params: {
         startId: String(entry.id),
+        ...(expanded ? { expandDetails: "1" } : null),
         ...(initialUrl
           ? {
               initialId: String(entry.id),
@@ -138,7 +139,8 @@ export default function ProgressSegment({
           concerns={concerns}
           currentIndex={dayIndex}
           onIndexChange={onDayOffsetChange}
-          onPhotoPress={openEntry}
+          onPhotoPress={(entry) => openEntry(entry, false)}
+          onViewMorePress={(entry) => openEntry(entry, true)}
         />
         {viewingToday && <CheckInCTA compact onPress={startCheckIn} />}
       </View>

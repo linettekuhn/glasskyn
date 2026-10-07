@@ -16,15 +16,18 @@ interface SkinJournalCardProps {
   session: SkinSessionOut;
   entries: SkinDayEntry[];
   onPhotoPress?: () => void;
+  onViewMorePress?: () => void;
 }
 
 export default function SkinJournalCard({
   session,
   entries,
   onPhotoPress,
+  onViewMorePress,
 }: SkinJournalCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+  const handleViewMore = onViewMorePress ?? onPhotoPress;
 
   return (
     <GlassSurface style={styles.card}>
@@ -56,10 +59,10 @@ export default function SkinJournalCard({
                 ? "No concerns marked"
                 : `${entries.length} concern${entries.length === 1 ? "" : "s"}`}
             </ThemedText>
-            {onPhotoPress && (
+            {handleViewMore && (
               <ThemedButton
                 text="View more"
-                onPress={onPhotoPress}
+                onPress={handleViewMore}
                 link
                 textType="captionSmall"
                 color={colors.secondary[600]}

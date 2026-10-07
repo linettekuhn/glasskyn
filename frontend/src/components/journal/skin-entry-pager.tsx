@@ -21,6 +21,7 @@ interface SkinEntryPagerProps {
   currentIndex: number;
   onIndexChange: (index: number) => void;
   onPhotoPress: (session: SkinSessionOut) => void;
+  onViewMorePress: (session: SkinSessionOut) => void;
 }
 
 export default function SkinEntryPager({
@@ -29,6 +30,7 @@ export default function SkinEntryPager({
   currentIndex,
   onIndexChange,
   onPhotoPress,
+  onViewMorePress,
 }: SkinEntryPagerProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -80,6 +82,7 @@ export default function SkinEntryPager({
           session={only}
           entries={entriesBySession.get(only.id) ?? []}
           onPhotoPress={() => onPhotoPress(only)}
+          onViewMorePress={() => onViewMorePress(only)}
         />
       </View>
     );
@@ -111,6 +114,7 @@ export default function SkinEntryPager({
               session={item}
               entries={entriesBySession.get(item.id) ?? []}
               onPhotoPress={() => onPhotoPress(item)}
+              onViewMorePress={() => onViewMorePress(item)}
             />
           </View>
         )}

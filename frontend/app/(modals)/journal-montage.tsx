@@ -9,10 +9,12 @@ import {
   useColorScheme,
   useWindowDimensions,
   View,
+  type LayoutChangeEvent,
   type ViewToken,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -37,6 +39,9 @@ import type { SkinSessionOut } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import IconButton from "@/components/ui/icon-button";
+import BottomSheet, {
+  type BottomSheetSnap,
+} from "@/components/ui/bottom-sheet";
 import SessionReview, { hasReview } from "@/components/journal/session-review";
 import {
   allConcerns,
@@ -46,6 +51,7 @@ import {
   formatSessionTime,
   type SkinDayEntry,
 } from "@/utils/skin-sessions";
+import ThemedButton from "@/components/ui/themed-button";
 
 const THUMB_SIZE = 56;
 const THUMB_GAP = 8;
@@ -55,6 +61,9 @@ const FADE_MS = 500;
 const FADE_FALLBACK_MS = 600;
 const DOT_SIZE = 22;
 const DOT_RADIUS = DOT_SIZE / 2;
+const LINE_GAP = 15.13 * 1.65;
+const LINE_THICKNESS = 1;
+const txtColor = Colors["light"].neutral[100];
 
 /**
  * Displayed rect of a `contentFit="contain"` image inside a container, so
@@ -232,13 +241,14 @@ function PlayOverlay({
 const URL_RESOLVE_CONCURRENCY = 4;
 
 export default function JournalMontageScreen() {
-  const { startId, initialId, initialUrl, initialW, initialH } =
+  const { startId, initialId, initialUrl, initialW, initialH, expandDetails } =
     useLocalSearchParams<{
       startId?: string;
       initialId?: string;
       initialUrl?: string;
       initialW?: string;
       initialH?: string;
+      expandDetails?: string;
     }>();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -251,7 +261,9 @@ export default function JournalMontageScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [showMarkers, setShowMarkers] = useState(true);
-  const [showDetails, setShowDetails] = useState(false);
+  const [sheetSnap, setSheetSnap] = useState<BottomSheetSnap>(
+    expandDetails === "1" ? "expanded" : "peek",
+  );
   const [aspects, setAspects] = useState<Record<number, number>>({});
 
   const pagerRef = useRef<FlatList<SkinSessionOut>>(null);
@@ -263,6 +275,37 @@ export default function JournalMontageScreen() {
   // `getSkinSessions()` returns sessions newest first.
   const sorted = useMemo(() => [...sessions].reverse(), [sessions]);
   const concerns = useMemo(() => allConcerns(sessions), [sessions]);
+
+  // Repeating ruled-lines background for the expanded details, same
+  // pattern as the routine card: the gradient measures its own laid-out
+  // height and builds one thin rule per LINE_GAP of space.
+  const [linesHeight, setLinesHeight] = useState(0);
+
+  const onLinesLayout = useCallback((e: LayoutChangeEvent) => {
+    setLinesHeight(e.nativeEvent.layout.height);
+  }, []);
+
+  const lineColor = colors.neutral[300];
+
+  const { ruleColors, ruleLocations } = useMemo(() => {
+    if (linesHeight <= 0) return { ruleColors: [], ruleLocations: [] };
+    const ruleColors: string[] = [];
+    const ruleLocations: number[] = [];
+    const count = Math.ceil(linesHeight / LINE_GAP);
+    for (let i = 0; i < count; i++) {
+      const lineStart = i * LINE_GAP;
+      if (lineStart >= linesHeight) break;
+      const lineEnd = Math.min(lineStart + LINE_THICKNESS, linesHeight);
+      ruleColors.push("transparent", lineColor, lineColor, "transparent");
+      ruleLocations.push(
+        lineStart / linesHeight,
+        lineStart / linesHeight,
+        lineEnd / linesHeight,
+        lineEnd / linesHeight,
+      );
+    }
+    return { ruleColors, ruleLocations };
+  }, [linesHeight, lineColor]);
 
   const startIndex = useMemo(() => {
     if (sorted.length === 0) return 0;
@@ -294,9 +337,7 @@ export default function JournalMontageScreen() {
         const seedAspects: Record<number, number> = {};
         for (const s of ordered) {
           const cached =
-            s.image_url != null
-              ? getCachedSkinPhotoUrlSync(s.image_url)
-              : null;
+            s.image_url != null ? getCachedSkinPhotoUrlSync(s.image_url) : null;
           if (cached) seedUrls[s.id] = cached;
           const dims =
             s.image_url != null
@@ -559,8 +600,6 @@ export default function JournalMontageScreen() {
     [stopPlaying],
   );
 
-
-
   const onImageLoad = useCallback(
     (sessionId: number, w: number, h: number) => {
       if (!w || !h) return;
@@ -605,12 +644,8 @@ export default function JournalMontageScreen() {
                   text1: "Journal entry deleted",
                   position: "bottom",
                 });
-                setSessions((prev) =>
-                  prev.filter((s) => s.id !== target.id),
-                );
-                const sortedIndex = sorted.findIndex(
-                  (s) => s.id === target.id,
-                );
+                setSessions((prev) => prev.filter((s) => s.id !== target.id));
+                const sortedIndex = sorted.findIndex((s) => s.id === target.id);
                 const remaining = sorted.length - 1;
                 if (remaining <= 0) {
                   router.back();
@@ -751,6 +786,270 @@ export default function JournalMontageScreen() {
 
   const showChrome = sorted.length > 1;
 
+  const collapsedContent = (
+    <View>
+      {showChrome && (
+        <FlatList
+          ref={filmRef}
+          data={sorted}
+          keyExtractor={(s: SkinSessionOut) => String(s.id)}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingHorizontal: windowWidth / 2 - THUMB_SIZE / 2,
+            gap: THUMB_GAP,
+            alignItems: "center",
+          }}
+          getItemLayout={(
+            _: ArrayLike<SkinSessionOut> | null | undefined,
+            index: number,
+          ) => ({
+            length: THUMB_STRIDE,
+            offset: THUMB_STRIDE * index,
+            index,
+          })}
+          renderItem={renderThumb}
+          style={[
+            styles.filmstrip,
+            {
+              backgroundColor: colors.primary[100],
+            },
+          ]}
+        />
+      )}
+      <View style={styles.collapsedRow}>
+        {showChrome ? (
+          <>
+            <IconButton
+              onPress={() => goToIndex(activeIndex - 1)}
+              disabled={activeIndex <= 0}
+              IconComponent={MaterialCommunityIcons}
+              iconName="chevron-left"
+              iconSize={26}
+              iconColor={colors.neutral[600]}
+              backgroundColor="transparent"
+              accessibilityLabel="Previous entry"
+            />
+            <IconButton
+              onPress={() => (playing ? stopPlaying() : startPlaying())}
+              IconComponent={MaterialCommunityIcons}
+              iconName={playing ? "pause" : "play"}
+              iconSize={26}
+              iconColor="#FFFFFF"
+              backgroundColor={colors.primary[500]}
+              accessibilityLabel={
+                playing ? "Pause slideshow" : "Play slideshow"
+              }
+            />
+            <IconButton
+              onPress={() => goToIndex(activeIndex + 1)}
+              disabled={activeIndex >= sorted.length - 1}
+              IconComponent={MaterialCommunityIcons}
+              iconName="chevron-right"
+              iconSize={26}
+              iconColor={colors.neutral[600]}
+              backgroundColor="transparent"
+              accessibilityLabel="Next entry"
+            />
+            <ThemedText
+              type="captionSmall"
+              style={{ color: colors.neutral[600] }}
+            >
+              {`${activeIndex + 1} of ${sorted.length}`}
+            </ThemedText>
+          </>
+        ) : (
+          <ThemedText
+            type="captionSmall"
+            style={{ color: colors.neutral[600] }}
+          >
+            Your first check-in
+          </ThemedText>
+        )}
+        <IconButton
+          onPress={() => setSheetSnap("expanded")}
+          IconComponent={MaterialCommunityIcons}
+          iconName="chevron-up"
+          iconSize={22}
+          iconColor={colors.neutral[600]}
+          backgroundColor="transparent"
+          accessibilityLabel="View entry details"
+        />
+      </View>
+    </View>
+  );
+
+  const expandedContent = activeSession ? (
+    <View style={[styles.expandedWrap, { paddingBottom: insets.bottom + 16 }]}>
+      <View style={styles.expandedHeader}>
+        {showChrome && (
+          <FlatList
+            ref={filmRef}
+            data={sorted}
+            keyExtractor={(s: SkinSessionOut) => String(s.id)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: windowWidth / 2 - THUMB_SIZE / 2,
+              gap: THUMB_GAP,
+              alignItems: "center",
+            }}
+            getItemLayout={(
+              _: ArrayLike<SkinSessionOut> | null | undefined,
+              index: number,
+            ) => ({
+              length: THUMB_STRIDE,
+              offset: THUMB_STRIDE * index,
+              index,
+            })}
+            renderItem={renderThumb}
+            style={[
+              styles.filmstrip,
+              {
+                backgroundColor: colors.primary[100],
+              },
+            ]}
+          />
+        )}
+        <View style={styles.collapsedRow}>
+          {showChrome ? (
+            <>
+              <IconButton
+                onPress={() => goToIndex(activeIndex - 1)}
+                disabled={activeIndex <= 0}
+                IconComponent={MaterialCommunityIcons}
+                iconName="chevron-left"
+                iconSize={26}
+                iconColor={colors.neutral[600]}
+                backgroundColor="transparent"
+                accessibilityLabel="Previous entry"
+              />
+              <IconButton
+                onPress={() => (playing ? stopPlaying() : startPlaying())}
+                IconComponent={MaterialCommunityIcons}
+                iconName={playing ? "pause" : "play"}
+                iconSize={26}
+                iconColor="#FFFFFF"
+                backgroundColor={colors.primary[500]}
+                accessibilityLabel={
+                  playing ? "Pause slideshow" : "Play slideshow"
+                }
+              />
+              <IconButton
+                onPress={() => goToIndex(activeIndex + 1)}
+                disabled={activeIndex >= sorted.length - 1}
+                IconComponent={MaterialCommunityIcons}
+                iconName="chevron-right"
+                iconSize={26}
+                iconColor={colors.neutral[600]}
+                backgroundColor="transparent"
+                accessibilityLabel="Next entry"
+              />
+              <ThemedText
+                type="captionSmall"
+                style={{ color: colors.neutral[600] }}
+              >
+                {`${activeIndex + 1} of ${sorted.length}`}
+              </ThemedText>
+            </>
+          ) : (
+            <ThemedText
+              type="captionSmall"
+              style={{ color: colors.neutral[600] }}
+            >
+              Your first check-in
+            </ThemedText>
+          )}
+          <IconButton
+            onPress={() => setSheetSnap("peek")}
+            IconComponent={MaterialCommunityIcons}
+            iconName="chevron-down"
+            iconSize={22}
+            iconColor={colors.neutral[600]}
+            backgroundColor="transparent"
+            accessibilityLabel="View entry details"
+          />
+        </View>
+      </View>
+      <View style={styles.linesWrap}>
+        <LinearGradient
+          pointerEvents="none"
+          colors={ruleColors as [string, string, ...string[]]}
+          locations={ruleLocations as [number, number, ...number[]]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          onLayout={onLinesLayout}
+          style={styles.linesBackground}
+        />
+        <ScrollView
+          contentContainerStyle={styles.expandedContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View>
+            {activeEntries.length === 0 ? (
+              <ThemedText
+                type="bodySmall"
+                style={{ color: colors.neutral[600] }}
+              >
+                No concerns marked on this check-in
+              </ThemedText>
+            ) : (
+              activeEntries.map((entry) => {
+                const resolved = entry.resolvedHere;
+                const badgeColor = resolved
+                  ? colors.success[500]
+                  : entry.concern.status === "labeled"
+                    ? colors.primary[500]
+                    : colors.neutral[400];
+                const statusText = resolved
+                  ? "Healed today"
+                  : entry.isNew
+                    ? "New"
+                    : "Tracked";
+                return (
+                  <View key={entry.concern.id} style={styles.detailRow}>
+                    <View
+                      style={[
+                        styles.detailBadge,
+                        { backgroundColor: badgeColor },
+                      ]}
+                    >
+                      <ThemedText
+                        style={{
+                          color: "#FFFFFF",
+                          fontSize: 11,
+                          lineHeight: 14,
+                        }}
+                        weight="bold"
+                      >
+                        {entry.number}
+                      </ThemedText>
+                    </View>
+                    <ThemedText
+                      type="bodySmall"
+                      style={{ color: colors.text, flex: 1 }}
+                    >
+                      {concernLabel(entry.concern)}
+                    </ThemedText>
+                    <ThemedText
+                      type="captionSmall"
+                      style={{ color: colors.neutral[600] }}
+                    >
+                      {statusText}
+                    </ThemedText>
+                  </View>
+                );
+              })
+            )}
+          </View>
+          {hasReview(activeSession) && (
+            <SessionReview session={activeSession} showNotes />
+          )}
+        </ScrollView>
+      </View>
+    </View>
+  ) : null;
+
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
@@ -806,203 +1105,44 @@ export default function JournalMontageScreen() {
             IconComponent={MaterialCommunityIcons}
             iconName="close"
             iconSize={22}
-            iconColor="#FFFFFF"
-            backgroundColor="rgba(255,255,255,0.16)"
+            iconColor={txtColor}
           />
-          <Pressable
-            onPress={() => setShowMarkers((v) => !v)}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: showMarkers }}
-            accessibilityLabel="Toggle concern markers"
-            style={styles.toggle}
-          >
-            <MaterialCommunityIcons
-              name={showMarkers ? "eye-outline" : "eye-off-outline"}
-              size={18}
-              color="#FFFFFF"
-            />
-            <ThemedText type="captionSmall" style={{ color: "#FFFFFF" }}>
-              {showMarkers ? "Markers on" : "Markers off"}
-            </ThemedText>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Floating bottom chrome: date + filmstrip + controls. */}
-      <View
-        pointerEvents="box-none"
-        style={[styles.bottomOverlay, { paddingBottom: insets.bottom }]}
-      >
-        <View pointerEvents="none" style={styles.bottomScrim} />
-        {activeSession && (
-          <View pointerEvents="none" style={styles.dateRow}>
-            <ThemedText type="h3" style={{ color: "#FFFFFF" }}>
-              {formatSessionDay(activeSession.timestamp)}
-            </ThemedText>
-            <ThemedText
-              type="captionSmall"
-              style={{ color: "rgba(255,255,255,0.7)" }}
-            >
-              {`${formatSessionTime(activeSession.timestamp)} · ${activeIndex + 1} of ${sorted.length}`}
-            </ThemedText>
-            {hasReview(activeSession) && (
-              <SessionReview session={activeSession} dark />
-            )}
-          </View>
-        )}
-
-        {activeSession && (
-          <View style={styles.detailsToggleWrap}>
-            <Pressable
-              onPress={() => setShowDetails((v) => !v)}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: showDetails }}
-              accessibilityLabel="Toggle entry details"
-              style={styles.detailsToggle}
-            >
-              <MaterialCommunityIcons
-                name={showDetails ? "chevron-down" : "chevron-up"}
-                size={18}
-                color="#FFFFFF"
-              />
-              <ThemedText type="captionSmall" style={{ color: "#FFFFFF" }}>
-                {showDetails ? "Hide details" : "View details"}
+          {activeSession && (
+            <View pointerEvents="none" style={styles.dateRow}>
+              <ThemedText type="h3" style={{ color: "#FFFFFF" }}>
+                {formatSessionDay(activeSession.timestamp)}
               </ThemedText>
-            </Pressable>
-          </View>
-        )}
-
-        {activeSession && showDetails && (
-          <View style={styles.detailsPanel}>
-            <ScrollView
-              style={styles.detailsScroll}
-              contentContainerStyle={styles.detailsContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {activeEntries.length === 0 ? (
-                <ThemedText
-                  type="bodySmall"
-                  style={{ color: "rgba(255,255,255,0.7)" }}
-                >
-                  No concerns marked on this check-in
-                </ThemedText>
-              ) : (
-                activeEntries.map((entry) => {
-                  const resolved = entry.resolvedHere;
-                  const badgeColor = resolved
-                    ? colors.success[500]
-                    : entry.concern.status === "labeled"
-                      ? colors.primary[500]
-                      : colors.neutral[400];
-                  const statusText = resolved
-                    ? "Healed today"
-                    : entry.isNew
-                      ? "New"
-                      : "Tracked";
-                  return (
-                    <View key={entry.concern.id} style={styles.detailRow}>
-                      <View
-                        style={[
-                          styles.detailBadge,
-                          { backgroundColor: badgeColor },
-                        ]}
-                      >
-                        <ThemedText
-                          style={{
-                            color: "#FFFFFF",
-                            fontSize: 11,
-                            lineHeight: 14,
-                          }}
-                          weight="bold"
-                        >
-                          {entry.number}
-                        </ThemedText>
-                      </View>
-                      <ThemedText
-                        type="bodySmall"
-                        style={{ color: "#FFFFFF", flex: 1 }}
-                      >
-                        {concernLabel(entry.concern)}
-                      </ThemedText>
-                      <ThemedText
-                        type="captionSmall"
-                        style={{ color: "rgba(255,255,255,0.7)" }}
-                      >
-                        {statusText}
-                      </ThemedText>
-                    </View>
-                  );
-                })
-              )}
-              {hasReview(activeSession) && (
-                <SessionReview session={activeSession} dark showNotes />
-              )}
-            </ScrollView>
-          </View>
-        )}
-
-        {showChrome && (
-          <FlatList
-            ref={filmRef}
-            data={sorted}
-            keyExtractor={(s: SkinSessionOut) => String(s.id)}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: windowWidth / 2 - THUMB_SIZE / 2,
-              gap: THUMB_GAP,
-              alignItems: "center",
-            }}
-            getItemLayout={(
-              _: ArrayLike<SkinSessionOut> | null | undefined,
-              index: number,
-            ) => ({
-              length: THUMB_STRIDE,
-              offset: THUMB_STRIDE * index,
-              index,
-            })}
-            renderItem={renderThumb}
-            style={styles.filmstrip}
-          />
-        )}
-
-        <View style={styles.controls}>
-          <IconButton
-            onPress={() => router.back()}
-            IconComponent={MaterialCommunityIcons}
-            iconName="close"
-            iconSize={22}
-            iconColor="#FFFFFF"
-            backgroundColor="rgba(255,255,255,0.16)"
-          />
-          {showChrome ? (
-            <IconButton
-              onPress={() => (playing ? stopPlaying() : startPlaying())}
-              IconComponent={MaterialCommunityIcons}
-              iconName={playing ? "pause" : "play"}
-              iconSize={26}
-              iconColor="#FFFFFF"
-              backgroundColor={colors.primary[500]}
-            />
-          ) : (
-            <ThemedText
-              type="captionSmall"
-              style={{ color: "rgba(255,255,255,0.7)" }}
-            >
-              Your first check-in
-            </ThemedText>
+              <ThemedText type="captionSmall" style={{ color: txtColor }}>
+                {`${formatSessionTime(activeSession.timestamp)} · ${activeIndex + 1} of ${sorted.length}`}
+              </ThemedText>
+            </View>
           )}
-          <IconButton
-            onPress={handleDelete}
-            IconComponent={MaterialCommunityIcons}
-            iconName="trash-can-outline"
-            iconSize={22}
-            iconColor={colors.error}
-            backgroundColor="rgba(255,255,255,0.16)"
-            accessibilityLabel="Delete entry"
-          />
+          <View style={styles.controls}>
+            <IconButton
+              onPress={() => setShowMarkers((v) => !v)}
+              iconName={!showMarkers ? "eye-outline" : "eye-off-outline"}
+              IconComponent={MaterialCommunityIcons}
+              iconColor={txtColor}
+            />
+            <IconButton
+              onPress={handleDelete}
+              IconComponent={MaterialCommunityIcons}
+              iconName="trash-can-outline"
+              iconSize={22}
+              iconColor={colors.error}
+            />
+          </View>
         </View>
       </View>
+
+      <BottomSheet
+        snap={sheetSnap}
+        onSnapChange={setSheetSnap}
+        peekHeight={150 + insets.bottom}
+        collapsedContent={collapsedContent}
+        expandedContent={expandedContent}
+        expandedVisibleRatio={0.6}
+      />
     </View>
   );
 }
@@ -1026,17 +1166,6 @@ const styles = StyleSheet.create({
   },
   topScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  bottomOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    top: undefined,
-    bottom: 0,
-    zIndex: 10,
-  },
-  bottomScrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
   },
   topBar: {
     flexDirection: "row",
@@ -1087,35 +1216,32 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 2,
   },
-  detailsToggleWrap: {
-    alignItems: "center",
-    paddingBottom: 4,
-  },
-  detailsToggle: {
+  collapsedRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.16)",
-  },
-  detailsPanel: {
-    alignSelf: "stretch",
-    marginHorizontal: 16,
-    marginBottom: 8,
-    maxHeight: 220,
-    borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    overflow: "hidden",
-  },
-  detailsScroll: {
-    maxHeight: 220,
-  },
-  detailsContent: {
+    justifyContent: "center",
     gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingBottom: 16,
+    paddingTop: 4,
+  },
+  expandedWrap: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  expandedHeader: {
+    alignItems: "center",
+    gap: 8,
+    paddingBottom: 8,
+  },
+  expandedContent: {
+    paddingBottom: 16,
+    gap: LINE_GAP,
+  },
+  linesWrap: {
+    flex: 1,
+  },
+  linesBackground: {
+    ...StyleSheet.absoluteFillObject,
   },
   detailRow: {
     flexDirection: "row",
@@ -1132,6 +1258,7 @@ const styles = StyleSheet.create({
   filmstrip: {
     maxHeight: THUMB_SIZE + 16,
     paddingVertical: 8,
+    borderRadius: 10,
   },
   thumb: {
     width: THUMB_SIZE,
@@ -1154,8 +1281,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    gap: 4,
   },
   closePill: {
     paddingHorizontal: 24,

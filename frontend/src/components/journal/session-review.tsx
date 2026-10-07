@@ -48,12 +48,11 @@ export default function SessionReview({
 
   return (
     <View
-      style={styles.wrap}
       accessibilityRole="summary"
       accessibilityLabel="Skin ratings for this entry"
     >
       {ratings.length > 0 && (
-        <View style={styles.rows}>
+        <View>
           {ratings.map((row) => (
             <View
               key={row.key}
@@ -62,7 +61,7 @@ export default function SessionReview({
               accessibilityLabel={`${row.label}, ${row.value} of 5 stars`}
             >
               <ThemedText
-                type="captionSmall"
+                type="bodySmall"
                 weight="medium"
                 style={{ color: labelColor, minWidth: 64 }}
               >
@@ -86,7 +85,7 @@ export default function SessionReview({
         <ThemedText
           type="bodySmall"
           numberOfLines={4}
-          style={{ color: notesColor }}
+          style={{ paddingTop: 15.13 * 1.65, color: notesColor }}
         >
           {notes}
         </ThemedText>
@@ -96,13 +95,6 @@ export default function SessionReview({
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    gap: 8,
-    paddingTop: 8,
-  },
-  rows: {
-    gap: 4,
-  },
   row: {
     flexDirection: "row",
     alignItems: "center",
