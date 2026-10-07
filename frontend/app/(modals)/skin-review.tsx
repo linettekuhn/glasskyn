@@ -11,7 +11,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
 import { ThemedText } from "@/components/ui/themed-text";
@@ -111,13 +111,15 @@ export default function SkinReviewScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.topBar}>
-            <IconButton
-              IconComponent={MaterialCommunityIcons}
-              iconName="chevron-left"
-              iconSize={22}
-              iconColor={colors.neutral[600]}
-              backgroundColor="transparent"
+            <ThemedButton
+              link
+              text="Go Back To marking "
+              leftIconName="arrow-back"
+              LeftIconComponent={MaterialIcons}
               onPress={() => router.back()}
+              color={colors.secondary[700]}
+              alignment="flex-start"
+              textType="overline"
             />
             <View style={{ width: 40 }} />
           </View>
@@ -125,17 +127,14 @@ export default function SkinReviewScreen() {
           <EntrySteps active="review" />
 
           <ThemedText type="h2">Review your skin</ThemedText>
-          <ThemedText
-            type="bodyLarge"
-            style={{ color: colors.neutral[600] }}
-          >
+          <ThemedText type="bodyLarge" style={{ color: colors.neutral[600] }}>
             Rate how your skin feels today
           </ThemedText>
 
           <View style={styles.rows}>
             {RATING_ROWS.map((row) => (
               <View key={row.key} style={styles.row}>
-                <ThemedText type="bodyLarge" weight="semiBold">
+                <ThemedText type="overline" weight="semiBold">
                   {row.label}
                 </ThemedText>
                 <StarRating
@@ -150,7 +149,7 @@ export default function SkinReviewScreen() {
           </View>
 
           <View style={styles.notesBlock}>
-            <ThemedText type="bodyLarge" weight="semiBold">
+            <ThemedText type="overline" weight="semiBold">
               Notes (optional)
             </ThemedText>
             <TextInput

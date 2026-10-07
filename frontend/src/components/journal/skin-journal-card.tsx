@@ -16,7 +16,7 @@ import { ThemedText } from "@/components/ui/themed-text";
 import GlassSurface from "@/components/ui/glass-surface";
 import IconButton from "@/components/ui/icon-button";
 import SkinCirclePreview from "./skin-circle-preview";
-import SessionReview from "./session-review";
+import SessionReview, { hasReview } from "./session-review";
 import {
   concernLabel,
   formatSessionDay as formatDay,
@@ -86,131 +86,78 @@ export default function SkinJournalCard({
   return (
     <GlassSurface style={styles.card}>
       <View style={styles.cardHeader}>
-        <View>
-          <ThemedText type="h3" italic numberOfLines={1}>
-            {formatDay(session.timestamp)}
-          </ThemedText>
-          <ThemedText
-            type="captionSmall"
-            style={{ color: colors.neutral[600] }}
-          >
-            {formatTime(session.timestamp)}
-          </ThemedText>
-        </View>
-        <View style={styles.headerActions}>
-          {onDelete && (
-            <IconButton
-              iconSize={18}
-              onPress={onDelete}
-              IconComponent={MaterialCommunityIcons}
-              iconName="trash-can-outline"
-              iconColor={colors.error}
-              backgroundColor={colors.neutral[300]}
-            />
-          )}
-          {canPage && onStep && (
-            <View style={styles.pager}>
-              <IconButton
-                iconSize={18}
-                onPress={() => onStep(-1)}
-                disabled={dayIndex === 0}
-                IconComponent={MaterialCommunityIcons}
-                iconName="chevron-left"
-                iconColor={colors.neutral[600]}
-                backgroundColor={colors.neutral[300]}
-              />
-              <ThemedText
-                type="captionSmall"
-                weight="semiBold"
-                style={{ color: colors.neutral[600] }}
-              >
-                {`${dayIndex + 1} / ${dayCount}`}
-              </ThemedText>
-              <IconButton
-                iconSize={18}
-                onPress={() => onStep(1)}
-                disabled={dayIndex >= dayCount - 1}
-                IconComponent={MaterialCommunityIcons}
-                iconName="chevron-right"
-                iconColor={colors.neutral[600]}
-                backgroundColor={colors.neutral[300]}
-              />
-            </View>
-          )}
-        </View>
-      </View>
-      <Pressable
-        onPress={onPhotoPress}
-        accessibilityRole="button"
-        accessibilityLabel="Open progress montage"
-        disabled={!onPhotoPress}
-      >
-        <SkinCirclePreview session={session} entries={entries} />
-      </Pressable>
-
-      <View style={styles.listArea}>
-        <LinearGradient
-          pointerEvents="none"
-          colors={ruleColors as [string, string, ...string[]]}
-          locations={ruleLocations as [number, number, ...number[]]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          onLayout={onLinesLayout}
-          style={styles.linesBackground}
-        />
-
-        <ScrollView
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
+        <Pressable
+          onPress={onPhotoPress}
+          accessibilityRole="button"
+          accessibilityLabel="Open progress montage"
+          disabled={!onPhotoPress}
         >
-          {entries.length === 0 ? (
-            <ThemedText type="bodyLarge" style={{ color: colors.neutral[500] }}>
-              No concerns marked on this check-in
+          <SkinCirclePreview session={session} entries={entries} size={130} />
+        </Pressable>
+        <View>
+          <View style={styles.headerActions}>
+            {canPage && onStep && (
+              <View style={styles.pager}>
+                <IconButton
+                  iconSize={18}
+                  onPress={() => onStep(-1)}
+                  disabled={dayIndex === 0}
+                  IconComponent={MaterialCommunityIcons}
+                  iconName="chevron-left"
+                  iconColor={colors.neutral[600]}
+                  backgroundColor={colors.neutral[300]}
+                />
+                <ThemedText
+                  type="captionSmall"
+                  weight="semiBold"
+                  style={{ color: colors.neutral[600] }}
+                >
+                  {`${dayIndex + 1} / ${dayCount}`}
+                </ThemedText>
+                <IconButton
+                  iconSize={18}
+                  onPress={() => onStep(1)}
+                  disabled={dayIndex >= dayCount - 1}
+                  IconComponent={MaterialCommunityIcons}
+                  iconName="chevron-right"
+                  iconColor={colors.neutral[600]}
+                  backgroundColor={colors.neutral[300]}
+                />
+              </View>
+            )}
+            {onDelete && (
+              <IconButton
+                iconSize={18}
+                onPress={onDelete}
+                IconComponent={MaterialCommunityIcons}
+                iconName="trash-can-outline"
+                iconColor={colors.error}
+                backgroundColor={colors.neutral[300]}
+              />
+            )}
+          </View>
+          <View>
+            <ThemedText type="h3" italic numberOfLines={1}>
+              {formatDay(session.timestamp)}
             </ThemedText>
-          ) : (
-            entries.map((entry) => {
-              const resolved = entry.resolvedHere;
-              const badgeColor = resolved
-                ? colors.success[500]
-                : entry.concern.status === "labeled"
-                  ? colors.primary[500]
-                  : colors.neutral[400];
-              const statusText = resolved
-                ? "Healed today"
-                : entry.isNew
-                  ? "New"
-                  : "Tracked";
-              return (
-                <View key={entry.concern.id} style={styles.row}>
-                  <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-                    <ThemedText
-                      style={{ color: "#FFFFFF", fontSize: 11, lineHeight: 14 }}
-                      weight="bold"
-                    >
-                      {entry.number}
-                    </ThemedText>
-                  </View>
-                  <ThemedText
-                    style={[
-                      styles.rowLabel,
-                      resolved && { color: colors.neutral[500] },
-                    ]}
-                  >
-                    {concernLabel(entry.concern)}
-                  </ThemedText>
-                  <ThemedText
-                    type="captionSmall"
-                    style={{ color: colors.neutral[600] }}
-                  >
-                    {statusText}
-                  </ThemedText>
-                </View>
-              );
-            })
-          )}
-        </ScrollView>
+            <ThemedText
+              type="captionSmall"
+              style={{ color: colors.neutral[600] }}
+            >
+              {formatTime(session.timestamp)}
+            </ThemedText>
+            <ThemedText
+              type="captionSmall"
+              style={{ color: colors.neutral[600] }}
+            >
+              {entries.length === 0
+                ? "No concerns marked"
+                : `${entries.length} concern${entries.length === 1 ? "" : "s"}`}
+            </ThemedText>
+          </View>
+        </View>
       </View>
-      <SessionReview session={session} />
+      {hasReview(session) && <SessionReview session={session} />}
     </GlassSurface>
   );
 }
@@ -228,7 +175,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginVertical: 8,
     gap: 2,
   },
   headerActions: {

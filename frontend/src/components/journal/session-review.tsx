@@ -7,6 +7,7 @@ import type { SkinSessionOut } from "@/types";
 interface SessionReviewProps {
   session: SkinSessionOut;
   dark?: boolean;
+  showNotes?: boolean;
 }
 
 const CATEGORIES = [
@@ -24,7 +25,11 @@ export function hasReview(session: SkinSessionOut): boolean {
   );
 }
 
-export default function SessionReview({ session, dark = false }: SessionReviewProps) {
+export default function SessionReview({
+  session,
+  dark = false,
+  showNotes = false,
+}: SessionReviewProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
 
@@ -58,7 +63,7 @@ export default function SessionReview({ session, dark = false }: SessionReviewPr
             >
               <ThemedText
                 type="captionSmall"
-                weight="semiBold"
+                weight="medium"
                 style={{ color: labelColor, minWidth: 64 }}
               >
                 {row.label}
@@ -77,7 +82,7 @@ export default function SessionReview({ session, dark = false }: SessionReviewPr
           ))}
         </View>
       )}
-      {notes && (
+      {notes && showNotes && (
         <ThemedText
           type="bodySmall"
           numberOfLines={4}

@@ -1,4 +1,10 @@
-import { Pressable, StyleSheet, Vibration, View, useColorScheme } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Vibration,
+  View,
+  useColorScheme,
+} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, getTheme } from "@/constants/theme";
 
@@ -24,7 +30,6 @@ export default function StarRating({
 
   const handlePress = (star: number) => {
     if (disabled) return;
-    Vibration.vibrate(10);
     onChange(value === star ? null : star);
   };
 

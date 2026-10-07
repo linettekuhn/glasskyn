@@ -258,19 +258,19 @@ export default function FaceAnnotationScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
-  const { draft, circles: sharedCircles, setCircles: setSharedCircles } =
-    useSkinCapture();
+  const {
+    draft,
+    circles: sharedCircles,
+    setCircles: setSharedCircles,
+  } = useSkinCapture();
 
   const [mode, setMode] = useState<"circling" | "labeling">("circling");
   const [circles, setCirclesLocal] = useState<CircleAnnotation[]>(
     sharedCircles ?? [],
   );
-  const setCircles = useCallback(
-    (next: SetStateAction<CircleAnnotation[]>) => {
-      setCirclesLocal(next);
-    },
-    [],
-  );
+  const setCircles = useCallback((next: SetStateAction<CircleAnnotation[]>) => {
+    setCirclesLocal(next);
+  }, []);
   useEffect(() => {
     setSharedCircles(circles);
   }, [circles, setSharedCircles]);
@@ -626,27 +626,7 @@ export default function FaceAnnotationScreen() {
         <ThemedText type="body" style={{ color: colors.neutral[600] }}>
           Mark all the concerns you see, label them next
         </ThemedText>
-        {carriedCount > 0 && (
-          <ThemedText
-            type="caption"
-            weight="semiBold"
-            style={{ color: colors.neutral[600] }}
-          >
-            {carriedCount}{" "}
-            {carriedCount === 1 ? "concern has" : "concerns have"} been carried
-            over from your last check-in. To mark as healed drag to trash.
-          </ThemedText>
-        )}
-        {resolvedCount > 0 && (
-          <ThemedText
-            type="caption"
-            weight="semiBold"
-            style={{ color: colors.success[500] }}
-          >
-            {"\u2713"} {resolvedCount}{" "}
-            {resolvedCount === 1 ? "concern" : "concerns"} healed this session
-          </ThemedText>
-        )}
+
         <ThemedButton
           text={
             circles.length === 0
@@ -964,7 +944,7 @@ export default function FaceAnnotationScreen() {
           iconName="close"
         />
         {circles.length > 0 && (
-          <View pointerEvents="none">
+          <View pointerEvents="none" style={{ gap: 2 }}>
             <View style={styles.counterPill}>
               {mode === "circling" && (
                 <MaterialCommunityIcons
@@ -985,6 +965,26 @@ export default function FaceAnnotationScreen() {
                 {counterText}
               </ThemedText>
             </View>
+            {resolvedCount > 0 && mode === "circling" && (
+              <View style={styles.counterPill}>
+                <MaterialCommunityIcons
+                  name={
+                    `numeric-${resolvedCount > 9 ? "9-plus" : String(resolvedCount)}-circle` as React.ComponentProps<
+                      typeof MaterialCommunityIcons
+                    >["name"]
+                  }
+                  size={20}
+                  color={txtColor}
+                />
+                <ThemedText
+                  style={{ color: txtColor }}
+                  type="caption"
+                  weight="semiBold"
+                >
+                  {resolvedCount === 1 ? "concern" : "concerns"} healed
+                </ThemedText>
+              </View>
+            )}
           </View>
         )}
         {mode === "circling" && history.length > 0 && (
@@ -1053,7 +1053,10 @@ export default function FaceAnnotationScreen() {
                 style={{ color: colors.neutral[700] }}
               >
                 Drag a circle to move it. Pinch to zoom. Drag to trash or undo
-                to remove circles.
+                to remove circles.{" "}
+                {carriedCount > 0
+                  ? "Dashed means older concerns. Trash if healed."
+                  : null}
               </ThemedText>
             </View>
           </View>

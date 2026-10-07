@@ -175,15 +175,6 @@ export default function SkinCirclePreview({
           </View>
         )}
       </View>
-
-      <ThemedText
-        type="captionSmall"
-        style={{ color: colors.neutral[600], textAlign: "center" }}
-      >
-        {entries.length === 0
-          ? "No concerns marked"
-          : `${entries.length} concern${entries.length === 1 ? "" : "s"}`}
-      </ThemedText>
     </View>
   );
 }
