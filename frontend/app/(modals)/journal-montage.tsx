@@ -7,10 +7,10 @@ import {
   useColorScheme,
   useWindowDimensions,
   View,
-  type LayoutChangeEvent,
   type ViewToken,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,7 +21,15 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from "react-native-reanimated";
-import { getSkinPhotoUrl, getSkinSessions } from "@/api/skin";
+import { getSkinSessions } from "@/api/skin";
+import {
+  getCachedSkinPhotoDimsSync,
+  getCachedSkinPhotoUrl,
+  getCachedSkinPhotoUrlSync,
+  prefetchSkinPhotoUrls,
+  primeSkinPhotoDims,
+  primeSkinPhotoUrlCache,
+} from "@/api/skin-photo-urls";
 import type { SkinSessionOut } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
@@ -99,6 +107,8 @@ function MontageFrame({
           style={{ width, height }}
           contentFit="contain"
           cachePolicy="memory-disk"
+          recyclingKey={String(sessionId)}
+          priority="high"
           onLoad={(e) => onLoad(sessionId, e.source.width, e.source.height)}
         />
       ) : (
@@ -214,9 +224,18 @@ function PlayOverlay({
 // Needed backend change: generate resized variants at check-in upload time
 // and expose them (e.g. `image_thumb_url` / `image_medium_url`) on
 // `GET /skin/sessions`.
+const URL_RESOLVE_CONCURRENCY = 4;
+
 export default function JournalMontageScreen() {
-  const { startId } = useLocalSearchParams<{ startId?: string }>();
-  const { width: windowWidth } = useWindowDimensions();
+  const { startId, initialId, initialUrl, initialW, initialH } =
+    useLocalSearchParams<{
+      startId?: string;
+      initialId?: string;
+      initialUrl?: string;
+      initialW?: string;
+      initialH?: string;
+    }>();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -228,7 +247,6 @@ export default function JournalMontageScreen() {
   const [playing, setPlaying] = useState(false);
   const [showMarkers, setShowMarkers] = useState(true);
   const [aspects, setAspects] = useState<Record<number, number>>({});
-  const [pagerHeight, setPagerHeight] = useState(0);
 
   const pagerRef = useRef<FlatList<SkinSessionOut>>(null);
   const filmRef = useRef<FlatList<SkinSessionOut>>(null);
@@ -248,39 +266,105 @@ export default function JournalMontageScreen() {
 
   useEffect(() => {
     let cancelled = false;
+    // Pass-through photo from the journal card (its file key is resolved
+    // below once sessions arrive) so the tapped frame paints instantly.
+    const seedId = initialId != null ? Number(initialId) : NaN;
+    const seedW = initialW != null ? Number(initialW) : NaN;
+    const seedH = initialH != null ? Number(initialH) : NaN;
     getSkinSessions()
       .then((data) => {
         if (cancelled) return;
         setSessions(data);
         const ordered = [...data].reverse();
         const i = ordered.findIndex((s) => String(s.id) === startId);
-        setActiveIndex(i >= 0 ? i : Math.max(ordered.length - 1, 0));
-        activeRef.current = i >= 0 ? i : Math.max(ordered.length - 1, 0);
-        // Resolve each session's S3 file key to a display URL.
-        Promise.all(
-          ordered.map((s) =>
-            getSkinPhotoUrl(s.image_url)
-              .then((url) => ({ id: s.id, url }))
-              .catch(() => null),
-          ),
-        ).then((resolved) => {
-          if (cancelled) return;
-          const map: Record<number, string> = {};
-          for (const r of resolved) {
-            if (r) map[r.id] = r.url;
+        const startIdx = i >= 0 ? i : Math.max(ordered.length - 1, 0);
+        setActiveIndex(startIdx);
+        activeRef.current = startIdx;
+
+        // Seed instantly from the shared cache (warmed by the journal card
+        // and any previous montage visit) so the first frame + aspects are
+        // ready without waiting on the network.
+        const seedUrls: Record<number, string> = {};
+        const seedAspects: Record<number, number> = {};
+        for (const s of ordered) {
+          const cached =
+            s.image_url != null
+              ? getCachedSkinPhotoUrlSync(s.image_url)
+              : null;
+          if (cached) seedUrls[s.id] = cached;
+          const dims =
+            s.image_url != null
+              ? getCachedSkinPhotoDimsSync(s.image_url)
+              : null;
+          if (dims) seedAspects[s.id] = dims.width / dims.height;
+        }
+        // Fold in the pending pass-through URL once its file key is known.
+        if (initialUrl && Number.isFinite(seedId)) {
+          const match = ordered.find((s) => s.id === seedId);
+          if (match) {
+            seedUrls[seedId] = initialUrl;
+            primeSkinPhotoUrlCache(match.image_url, initialUrl);
+            if (Number.isFinite(seedW) && Number.isFinite(seedH) && seedH) {
+              seedAspects[seedId] = (seedW as number) / (seedH as number);
+              primeSkinPhotoUrlCache(
+                match.image_url,
+                initialUrl,
+                seedW as number,
+                seedH as number,
+              );
+            }
           }
-          setDisplayUrls(map);
-        });
+        }
+        setDisplayUrls(seedUrls);
+        setAspects((prev) => ({ ...seedAspects, ...prev }));
+        setLoading(false);
+
+        // Resolve the rest in viewing-priority order (start, ±1, ±2, …)
+        // with bounded concurrency, painting each URL as it arrives instead
+        // of blocking on the slowest of all N presigns.
+        const queue: SkinSessionOut[] = [];
+        for (let o = 0; o < ordered.length; o += 1) {
+          const fwd = ordered[startIdx + o];
+          const back = o === 0 ? undefined : ordered[startIdx - o];
+          if (fwd && seedUrls[fwd.id] == null) queue.push(fwd);
+          if (back && seedUrls[back.id] == null) queue.push(back);
+        }
+        if (queue.length === 0) return;
+        let cursor = 0;
+        const worker = async (): Promise<void> => {
+          while (!cancelled) {
+            const next = queue[cursor];
+            cursor += 1;
+            if (!next) return;
+            try {
+              const url = await getCachedSkinPhotoUrl(next.image_url);
+              if (cancelled) return;
+              setDisplayUrls((prev) =>
+                prev[next.id] ? prev : { ...prev, [next.id]: url },
+              );
+            } catch {
+              // Per-frame spinner stays; a retry happens on remount.
+            }
+          }
+        };
+        void Promise.all(
+          Array.from(
+            { length: Math.min(URL_RESOLVE_CONCURRENCY, queue.length) },
+            () => worker(),
+          ),
+        );
       })
       .catch(() => {
-        if (!cancelled) setSessions([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setSessions([]);
+          setLoading(false);
+        }
       });
     return () => {
       cancelled = true;
     };
+    // initial* params seed first paint only; sessions load once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startId]);
 
   // Stable viewability callback (settle-based sync is fine for v1).
@@ -432,16 +516,25 @@ export default function JournalMontageScreen() {
     }
   }, [activeIndex, sorted.length, windowWidth]);
 
-  // Prefetch the next few display URLs as the active index changes.
+  // Keep upcoming presigns warm (cheap, deduped) and prefetch decoded bytes
+  // for resolved neighbors in both directions as the active index changes.
   useEffect(() => {
     if (sorted.length === 0) return;
-    const upcoming: string[] = [];
+    const neighborKeys: string[] = [];
+    const neighborUrls: string[] = [];
     for (let o = 1; o <= 3; o += 1) {
-      const url = displayUrls[sorted[(activeIndex + o) % sorted.length]?.id];
-      if (url) upcoming.push(url);
+      for (const idx of [activeIndex + o, activeIndex - o]) {
+        if (idx < 0 || idx >= sorted.length) continue;
+        const session = sorted[idx];
+        if (!session) continue;
+        const url = displayUrls[session.id];
+        if (url) neighborUrls.push(url);
+        else if (session.image_url) neighborKeys.push(session.image_url);
+      }
     }
-    if (upcoming.length > 0) {
-      Image.prefetch(upcoming).catch(() => {});
+    if (neighborKeys.length > 0) void prefetchSkinPhotoUrls(neighborKeys);
+    if (neighborUrls.length > 0) {
+      Image.prefetch(neighborUrls).catch(() => {});
     }
   }, [activeIndex, displayUrls, sorted]);
 
@@ -460,16 +553,18 @@ export default function JournalMontageScreen() {
     [stopPlaying],
   );
 
-  const onPagerLayout = useCallback((e: LayoutChangeEvent) => {
-    setPagerHeight(e.nativeEvent.layout.height);
-  }, []);
-
-  const onImageLoad = useCallback((sessionId: number, w: number, h: number) => {
-    if (!w || !h) return;
-    setAspects((prev) =>
-      prev[sessionId] ? prev : { ...prev, [sessionId]: w / h },
-    );
-  }, []);
+  const onImageLoad = useCallback(
+    (sessionId: number, w: number, h: number) => {
+      if (!w || !h) return;
+      setAspects((prev) =>
+        prev[sessionId] ? prev : { ...prev, [sessionId]: w / h },
+      );
+      // Remember intrinsic dims for instant marker layout on remount.
+      const key = sessions.find((s) => s.id === sessionId)?.image_url;
+      if (key) primeSkinPhotoDims(key, w, h);
+    },
+    [sessions],
+  );
 
   const activeSession = sorted[activeIndex] ?? null;
 
@@ -506,7 +601,7 @@ export default function JournalMontageScreen() {
         aspect={aspects[item.id]}
         markers={showMarkers ? dayEntries(item.id, concerns) : []}
         width={windowWidth}
-        height={pagerHeight}
+        height={windowHeight}
         onLoad={onImageLoad}
       />
     ),
@@ -515,8 +610,8 @@ export default function JournalMontageScreen() {
       concerns,
       displayUrls,
       onImageLoad,
-      pagerHeight,
       showMarkers,
+      windowHeight,
       windowWidth,
     ],
   );
@@ -544,6 +639,8 @@ export default function JournalMontageScreen() {
               style={styles.thumbImage}
               contentFit="cover"
               cachePolicy="memory-disk"
+              recyclingKey={`thumb-${item.id}`}
+              priority="low"
             />
           ) : (
             <View style={styles.thumbFallback}>
@@ -593,145 +690,155 @@ export default function JournalMontageScreen() {
   const showChrome = sorted.length > 1;
 
   return (
-    <View
-      style={[
-        styles.root,
-        { paddingTop: insets.top, paddingBottom: insets.bottom },
-      ]}
-    >
-      <View style={styles.topBar}>
-        <IconButton
-          onPress={() => router.back()}
-          IconComponent={MaterialCommunityIcons}
-          iconName="close"
-          iconSize={22}
-          iconColor="#FFFFFF"
-          backgroundColor="rgba(255,255,255,0.16)"
-        />
-        <Pressable
-          onPress={() => setShowMarkers((v) => !v)}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: showMarkers }}
-          accessibilityLabel="Toggle concern markers"
-          style={styles.toggle}
-        >
-          <MaterialCommunityIcons
-            name={showMarkers ? "eye-outline" : "eye-off-outline"}
-            size={18}
-            color="#FFFFFF"
-          />
-          <ThemedText type="captionSmall" style={{ color: "#FFFFFF" }}>
-            {showMarkers ? "Markers on" : "Markers off"}
-          </ThemedText>
-        </Pressable>
-      </View>
-
-      <View style={styles.pagerWrap} onLayout={onPagerLayout}>
-        {pagerHeight > 0 && (
-          <FlatList
-            ref={pagerRef}
-            data={sorted}
-            keyExtractor={(s: SkinSessionOut) => String(s.id)}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            initialScrollIndex={startIndex}
-            getItemLayout={(
-              _: ArrayLike<SkinSessionOut> | null | undefined,
-              index: number,
-            ) => ({
-              length: windowWidth,
-              offset: windowWidth * index,
-              index,
-            })}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig}
-            onScrollBeginDrag={stopPlaying}
-            renderItem={renderPage}
-            windowSize={3}
-          />
-        )}
-        {playing && (
-          <PlayOverlay
-            width={windowWidth}
-            height={pagerHeight}
-            slotA={slotA}
-            slotB={slotB}
-            top={topSlot}
-            opA={opA}
-            opB={opB}
-            onFrameLoad={onFrameLoad}
-            onStop={stopPlaying}
-          />
-        )}
-      </View>
-
-      {activeSession && (
-        <View style={styles.dateRow}>
-          <ThemedText type="h3" style={{ color: "#FFFFFF" }}>
-            {formatSessionDay(activeSession.timestamp)}
-          </ThemedText>
-          <ThemedText
-            type="captionSmall"
-            style={{ color: "rgba(255,255,255,0.7)" }}
-          >
-            {`${formatSessionTime(activeSession.timestamp)} · ${activeIndex + 1} of ${sorted.length}`}
-          </ThemedText>
-        </View>
-      )}
-
-      {showChrome && (
+    <View style={styles.root}>
+      <StatusBar style="light" />
+      {/* Full-screen photo pager behind everything. */}
+      <View style={styles.pagerWrap}>
         <FlatList
-          ref={filmRef}
+          ref={pagerRef}
           data={sorted}
           keyExtractor={(s: SkinSessionOut) => String(s.id)}
           horizontal
+          pagingEnabled
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: windowWidth / 2 - THUMB_SIZE / 2,
-            gap: THUMB_GAP,
-            alignItems: "center",
-          }}
+          style={styles.pagerList}
+          initialScrollIndex={startIndex}
           getItemLayout={(
             _: ArrayLike<SkinSessionOut> | null | undefined,
             index: number,
           ) => ({
-            length: THUMB_STRIDE,
-            offset: THUMB_STRIDE * index,
+            length: windowWidth,
+            offset: windowWidth * index,
             index,
           })}
-          renderItem={renderThumb}
-          style={styles.filmstrip}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          onScrollBeginDrag={stopPlaying}
+          renderItem={renderPage}
+          windowSize={3}
+        />
+      </View>
+      {playing && (
+        <PlayOverlay
+          width={windowWidth}
+          height={windowHeight}
+          slotA={slotA}
+          slotB={slotB}
+          top={topSlot}
+          opA={opA}
+          opB={opB}
+          onFrameLoad={onFrameLoad}
+          onStop={stopPlaying}
         />
       )}
 
-      <View style={styles.controls}>
-        <IconButton
-          onPress={() => router.back()}
-          IconComponent={MaterialCommunityIcons}
-          iconName="close"
-          iconSize={22}
-          iconColor="#FFFFFF"
-          backgroundColor="rgba(255,255,255,0.16)"
-        />
-        {showChrome ? (
+      {/* Floating top chrome. box-none lets swipes reach the pager. */}
+      <View
+        pointerEvents="box-none"
+        style={[styles.topOverlay, { paddingTop: insets.top }]}
+      >
+        <View pointerEvents="none" style={styles.topScrim} />
+        <View style={styles.topBar}>
           <IconButton
-            onPress={() => (playing ? stopPlaying() : startPlaying())}
+            onPress={() => router.back()}
             IconComponent={MaterialCommunityIcons}
-            iconName={playing ? "pause" : "play"}
-            iconSize={26}
+            iconName="close"
+            iconSize={22}
             iconColor="#FFFFFF"
-            backgroundColor={colors.primary[500]}
+            backgroundColor="rgba(255,255,255,0.16)"
           />
-        ) : (
-          <ThemedText
-            type="captionSmall"
-            style={{ color: "rgba(255,255,255,0.7)" }}
+          <Pressable
+            onPress={() => setShowMarkers((v) => !v)}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: showMarkers }}
+            accessibilityLabel="Toggle concern markers"
+            style={styles.toggle}
           >
-            Your first check-in
-          </ThemedText>
+            <MaterialCommunityIcons
+              name={showMarkers ? "eye-outline" : "eye-off-outline"}
+              size={18}
+              color="#FFFFFF"
+            />
+            <ThemedText type="captionSmall" style={{ color: "#FFFFFF" }}>
+              {showMarkers ? "Markers on" : "Markers off"}
+            </ThemedText>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Floating bottom chrome: date + filmstrip + controls. */}
+      <View
+        pointerEvents="box-none"
+        style={[styles.bottomOverlay, { paddingBottom: insets.bottom }]}
+      >
+        <View pointerEvents="none" style={styles.bottomScrim} />
+        {activeSession && (
+          <View pointerEvents="none" style={styles.dateRow}>
+            <ThemedText type="h3" style={{ color: "#FFFFFF" }}>
+              {formatSessionDay(activeSession.timestamp)}
+            </ThemedText>
+            <ThemedText
+              type="captionSmall"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+            >
+              {`${formatSessionTime(activeSession.timestamp)} · ${activeIndex + 1} of ${sorted.length}`}
+            </ThemedText>
+          </View>
         )}
-        <View style={{ width: 36 }} />
+
+        {showChrome && (
+          <FlatList
+            ref={filmRef}
+            data={sorted}
+            keyExtractor={(s: SkinSessionOut) => String(s.id)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: windowWidth / 2 - THUMB_SIZE / 2,
+              gap: THUMB_GAP,
+              alignItems: "center",
+            }}
+            getItemLayout={(
+              _: ArrayLike<SkinSessionOut> | null | undefined,
+              index: number,
+            ) => ({
+              length: THUMB_STRIDE,
+              offset: THUMB_STRIDE * index,
+              index,
+            })}
+            renderItem={renderThumb}
+            style={styles.filmstrip}
+          />
+        )}
+
+        <View style={styles.controls}>
+          <IconButton
+            onPress={() => router.back()}
+            IconComponent={MaterialCommunityIcons}
+            iconName="close"
+            iconSize={22}
+            iconColor="#FFFFFF"
+            backgroundColor="rgba(255,255,255,0.16)"
+          />
+          {showChrome ? (
+            <IconButton
+              onPress={() => (playing ? stopPlaying() : startPlaying())}
+              IconComponent={MaterialCommunityIcons}
+              iconName={playing ? "pause" : "play"}
+              iconSize={26}
+              iconColor="#FFFFFF"
+              backgroundColor={colors.primary[500]}
+            />
+          ) : (
+            <ThemedText
+              type="captionSmall"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+            >
+              Your first check-in
+            </ThemedText>
+          )}
+          <View style={{ width: 36 }} />
+        </View>
       </View>
     </View>
   );
@@ -747,6 +854,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 16,
+  },
+  topOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    top: 0,
+    bottom: undefined,
+    zIndex: 10,
+  },
+  topScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  bottomOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    top: undefined,
+    bottom: 0,
+    zIndex: 10,
+  },
+  bottomScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
   topBar: {
     flexDirection: "row",
@@ -765,6 +892,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.16)",
   },
   pagerWrap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  pagerList: {
     flex: 1,
   },
   playOverlay: {

@@ -4,6 +4,10 @@ import { useFocusEffect, router } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { deleteSkinSession, getSkinSessions } from "@/api/skin";
+import {
+  getCachedSkinPhotoDimsSync,
+  getCachedSkinPhotoUrlSync,
+} from "@/api/skin-photo-urls";
 import type { SkinSessionOut } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
@@ -201,12 +205,28 @@ export default function ProgressSegment() {
             isFallback={isFallback}
             onStep={step}
             onDelete={handleDelete}
-            onPhotoPress={() =>
+            onPhotoPress={() => {
+              const initialUrl = getCachedSkinPhotoUrlSync(session.image_url);
+              const dims = getCachedSkinPhotoDimsSync(session.image_url);
               router.push({
                 pathname: "/(modals)/journal-montage",
-                params: { startId: String(session.id) },
-              })
-            }
+                params: {
+                  startId: String(session.id),
+                  ...(initialUrl
+                    ? {
+                        initialId: String(session.id),
+                        initialUrl,
+                        ...(dims
+                          ? {
+                              initialW: String(dims.width),
+                              initialH: String(dims.height),
+                            }
+                          : null),
+                      }
+                    : null),
+                },
+              });
+            }}
           />
         )}
       </View>

@@ -65,6 +65,7 @@ export default function ModalLayout() {
                   presentation: "fullScreenModal",
                   animation: "slide_from_bottom",
                   gestureDirection: "vertical",
+                  contentStyle: { backgroundColor: "#000000" },
                 }}
               />
               <Stack.Screen name="browse-templates" />

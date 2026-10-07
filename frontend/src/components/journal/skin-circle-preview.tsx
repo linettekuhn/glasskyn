@@ -7,7 +7,11 @@ import {
   useColorScheme,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { getSkinPhotoUrl } from "@/api/skin";
+import {
+  getCachedSkinPhotoUrl,
+  primeSkinPhotoDims,
+  primeSkinPhotoUrlCache,
+} from "@/api/skin-photo-urls";
 import type { SkinSessionOut } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
@@ -58,16 +62,21 @@ export default function SkinCirclePreview({
     let cancelled = false;
     setFailed(false);
     setUri(null);
-    getSkinPhotoUrl(fileKey)
+    getCachedSkinPhotoUrl(fileKey)
       .then((url) => {
         if (cancelled) return;
+        primeSkinPhotoUrlCache(fileKey, url);
         setUri(url);
-        if (known) return;
+        if (known) {
+          primeSkinPhotoDims(fileKey, known.width, known.height);
+          return;
+        }
         measure(url)
           .then((dims) => {
             if (cancelled) return;
             if (!dims.width || !dims.height) return;
             sizeCache.set(fileKey, dims);
+            primeSkinPhotoUrlCache(fileKey, url, dims.width, dims.height);
             setAspect(dims.height / dims.width);
           })
           .catch(() => {});
