@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -49,18 +50,35 @@ interface CalendarCell {
   key: string;
 }
 
-interface SkinCalendarProps {
-  /** Local `YYYY-MM-DD` keys that have at least one check-in. */
+interface JournalCalendarProps {
+  /** Local `YYYY-MM-DD` keys where at least one routine was fully checked off. */
+  completedDays: Set<string>;
+  /** Local `YYYY-MM-DD` keys that have at least one skin check-in. */
   checkInDays: Set<string>;
   selected: string | null;
   onSelect: (day: string | null) => void;
+  loading?: boolean;
+  /**
+   * Reported whenever the displayed week/month changes so callers can fetch
+   * dot data for exactly the months on screen. Months are `{ year, month }`
+   * with a zero-based month.
+   */
+  onVisibleMonths?: (months: { year: number; month: number }[]) => void;
 }
 
-export default function SkinCalendar({
+/**
+ * Shared journal calendar: primary dots mark fully checked-off routine days,
+ * secondary dots mark skin check-in days, and the tertiary fill marks the
+ * selected day. Used identically on the Routines and Progress tabs.
+ */
+export default function JournalCalendar({
+  completedDays,
   checkInDays,
   selected,
   onSelect,
-}: SkinCalendarProps) {
+  loading = false,
+  onVisibleMonths,
+}: JournalCalendarProps) {
   const [anchor, setAnchor] = useState(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -87,6 +105,29 @@ export default function SkinCalendar({
     d.setDate(weekStart.getDate() + 6);
     return d;
   }, [weekStart]);
+
+  const monthsNeeded = useMemo(() => {
+    const months = new Map<string, { year: number; month: number }>();
+    const targets = viewMode === "week" ? [weekStart, weekEnd] : [anchor];
+    for (const d of targets) {
+      months.set(`${d.getFullYear()}-${d.getMonth()}`, {
+        year: d.getFullYear(),
+        month: d.getMonth(),
+      });
+    }
+    return Array.from(months.values());
+  }, [anchor, viewMode, weekStart, weekEnd]);
+
+  const monthsKey = monthsNeeded
+    .map(({ year, month }) => `${year}-${month}`)
+    .sort()
+    .join(",");
+
+  useEffect(() => {
+    onVisibleMonths?.(monthsNeeded);
+    // monthsKey re-fires only when the visible months actually change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthsKey, onVisibleMonths]);
 
   const changeWeek = (delta: number) => {
     onSelect(null);
@@ -168,8 +209,15 @@ export default function SkinCalendar({
 
   const renderCell = (cell: CalendarCell | null, key: string) => {
     if (!cell) return <View key={key} style={styles.cell} />;
+    const isComplete = completedDays.has(cell.key);
     const hasCheckIn = checkInDays.has(cell.key);
     const isSelected = cell.key === selected;
+    const descriptors = [
+      isComplete ? "routine complete" : "",
+      hasCheckIn ? "has a check-in" : "",
+    ]
+      .filter(Boolean)
+      .join(", ");
     return (
       <TouchableOpacity
         key={key}
@@ -177,35 +225,48 @@ export default function SkinCalendar({
         onPress={() => onSelect(isSelected ? null : cell.key)}
         accessibilityRole="button"
         accessibilityState={{ selected: isSelected }}
-        accessibilityLabel={`${cell.key}${hasCheckIn ? ", has a check-in" : ""}`}
+        accessibilityLabel={`${cell.key}${descriptors ? `, ${descriptors}` : ""}`}
       >
         <View
           style={[
             styles.dayCircle,
             cell.key === todayKey && {
-              borderColor: colors.primary[600],
+              borderColor: colors.tertiary[600],
               borderWidth: 1.5,
             },
-            isSelected && { backgroundColor: colors.primary[100] },
+            isSelected && { backgroundColor: colors.tertiary[500] },
           ]}
         >
           <ThemedText
             type="overline"
             weight={cell.key === todayKey ? "semiBold" : "regular"}
+            style={isSelected && { color: "#FFFFFF" }}
           >
             {cell.day}
           </ThemedText>
         </View>
-        <View
-          style={[
-            styles.dot,
-            {
-              backgroundColor: hasCheckIn
-                ? colors.secondary[500]
-                : "transparent",
-            },
-          ]}
-        />
+        <View style={styles.dotsRow}>
+          {isComplete && (
+            <View
+              style={[
+                styles.dot,
+                {
+                  backgroundColor: colors.primary[500],
+                },
+              ]}
+            />
+          )}
+          {hasCheckIn && (
+            <View
+              style={[
+                styles.dot,
+                {
+                  backgroundColor: colors.secondary[500],
+                },
+              ]}
+            />
+          )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -214,8 +275,11 @@ export default function SkinCalendar({
     <GlassSurface style={styles.container} color={colors.tertiary[200]}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => (viewMode === "week" ? changeWeek(-1) : changeMonth(-1))}
+          onPress={() =>
+            viewMode === "week" ? changeWeek(-1) : changeMonth(-1)
+          }
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          disabled={loading}
         >
           <MaterialCommunityIcons
             name="chevron-left"
@@ -239,14 +303,21 @@ export default function SkinCalendar({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <MaterialCommunityIcons
-              name={viewMode === "week" ? "chevron-double-down" : "chevron-double-up"}
+              name={
+                viewMode === "week"
+                  ? "chevron-double-down"
+                  : "chevron-double-up"
+              }
               size={20}
               color={colors.primary[600]}
             />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => (viewMode === "week" ? changeWeek(1) : changeMonth(1))}
+            onPress={() =>
+              viewMode === "week" ? changeWeek(1) : changeMonth(1)
+            }
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            disabled={loading}
           >
             <MaterialCommunityIcons
               name="chevron-right"
@@ -267,7 +338,16 @@ export default function SkinCalendar({
         ))}
       </View>
 
-      {viewMode === "week" ? (
+      {loading ? (
+        <View
+          style={[
+            styles.loadingRow,
+            viewMode === "week" && styles.loadingRowWeek,
+          ]}
+        >
+          <ActivityIndicator color={colors.neutral[700]} />
+        </View>
+      ) : viewMode === "week" ? (
         <View style={styles.weekRow}>
           {weekCells.map((cell) => renderCell(cell, cell.key))}
         </View>
@@ -277,11 +357,43 @@ export default function SkinCalendar({
             <View key={week} style={styles.weekRow}>
               {monthCells
                 .slice(week * 7, week * 7 + 7)
-                .map((cell, i) => renderCell(cell, cell ? cell.key : `blank-${i}`))}
+                .map((cell, i) =>
+                  renderCell(cell, cell ? cell.key : `blank-${i}`),
+                )}
             </View>
           ))}
         </View>
       )}
+
+      <View style={styles.legend}>
+        <View style={styles.legendItem}>
+          <View
+            style={[styles.legendDot, { backgroundColor: colors.primary[500] }]}
+          />
+          <ThemedText
+            type="overline"
+            style={{ color: colors.neutral[600] }}
+            numberOfLines={1}
+          >
+            Routine Checked Off
+          </ThemedText>
+        </View>
+        <View style={styles.legendItem}>
+          <View
+            style={[
+              styles.legendDot,
+              { backgroundColor: colors.secondary[500] },
+            ]}
+          />
+          <ThemedText
+            type="overline"
+            style={{ color: colors.neutral[600] }}
+            numberOfLines={1}
+          >
+            Skin Checked in
+          </ThemedText>
+        </View>
+      </View>
     </GlassSurface>
   );
 }
@@ -316,12 +428,20 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    height: 35,
+    height: 40,
   },
   dayCircle: {
-    width: 30,
-    height: 30,
+    width: 28,
+    height: 28,
     borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dotsRow: {
+    flexDirection: "row",
+    gap: 3,
+    marginTop: 2,
+    height: 6,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -329,6 +449,35 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    marginTop: 2,
+  },
+  loadingRow: {
+    height: 210,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingRowWeek: {
+    height: 70,
+  },
+  legend: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+    paddingTop: 8,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendSelected: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
 });

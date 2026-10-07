@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Alert, StyleSheet, useColorScheme, View } from "react-native";
-import { useFocusEffect, router } from "expo-router";
+import { router } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { deleteSkinSession, getSkinSessions } from "@/api/skin";
+import { localToday } from "@/api/routines";
 import {
   getCachedSkinPhotoDimsSync,
   getCachedSkinPhotoUrlSync,
@@ -11,10 +12,9 @@ import {
 import type { SkinSessionOut } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
-import ThemedButton from "@/components/ui/themed-button";
 import LoadingSpinner from "@/components/ui/loading-spinner";
-import SkinCalendar from "./skin-calendar";
 import SkinJournalCard from "./skin-journal-card";
+import CheckInCTA from "./check-in-cta";
 import {
   allConcerns,
   dayEntries,
@@ -22,41 +22,42 @@ import {
   localDayKey,
 } from "@/utils/skin-sessions";
 
-export default function ProgressSegment() {
-  const [sessions, setSessions] = useState<SkinSessionOut[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [dayOffset, setDayOffset] = useState(0);
+interface ProgressSegmentProps {
+  /** All skin sessions, owned and fetched by the journal screen. */
+  sessions: SkinSessionOut[];
+  /** True until the first sessions fetch completes (avoids empty flash). */
+  sessionsLoading: boolean;
+  /** Day selected in the shared journal calendar. */
+  selected: string | null;
+  /** Paging offset within a multi-check-in day. */
+  dayOffset: number;
+  onSelect: (day: string | null) => void;
+  onDayOffsetChange: (offset: number) => void;
+  onSessionsChange: (sessions: SkinSessionOut[]) => void;
+}
+
+export default function ProgressSegment({
+  sessions,
+  sessionsLoading,
+  selected,
+  dayOffset,
+  onSelect,
+  onDayOffsetChange,
+  onSessionsChange,
+}: ProgressSegmentProps) {
   const deletingRef = useRef(false);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
 
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      getSkinSessions()
-        .then((data) => {
-          if (cancelled) return;
-          setSessions(data);
-        })
-        .catch(() => {
-          if (!cancelled) setSessions([]);
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, []),
-  );
-
   const dayMap = useMemo(() => groupSessionsByDay(sessions), [sessions]);
-  const checkInDays = useMemo(
-    () => new Set(Array.from(dayMap.keys())),
-    [dayMap],
-  );
   const concerns = useMemo(() => allConcerns(sessions), [sessions]);
+
+  // The check-in CTA only ever targets today: backfilling a selfie onto a
+  // past day would break the montage's honesty.
+  const todayKey = localToday();
+  const todayBucket = dayMap.get(todayKey);
+  const todayEmpty = !todayBucket || todayBucket.length === 0;
+  const viewingToday = selected == null || selected === todayKey;
 
   // Latest session on the selected day, falling back to the latest overall.
   // `getSkinSessions()` already returns sessions newest first.
@@ -98,20 +99,15 @@ export default function ProgressSegment() {
     [session, concerns],
   );
 
-  const handleSelect = useCallback((day: string | null) => {
-    setDayOffset(0);
-    setSelected(day);
-  }, []);
-
   const step = useCallback(
     (delta: number) => {
       const bucket = selected ? dayMap.get(selected) : undefined;
       if (!bucket || bucket.length === 0) return;
-      setDayOffset((prev) =>
-        Math.min(Math.max(prev + delta, 0), bucket.length - 1),
+      onDayOffsetChange(
+        Math.min(Math.max(dayOffset + delta, 0), bucket.length - 1),
       );
     },
-    [selected, dayMap],
+    [selected, dayMap, dayOffset, onDayOffsetChange],
   );
 
   const handleDelete = useCallback(() => {
@@ -141,10 +137,10 @@ export default function ProgressSegment() {
                 position: "bottom",
               });
               return getSkinSessions()
-                .then(setSessions)
+                .then(onSessionsChange)
                 .catch(() => {
                   // Keep the card from lingering if the refetch fails.
-                  setSessions((prev) => prev.filter((s) => s.id !== target.id));
+                  onSessionsChange(sessions.filter((s) => s.id !== target.id));
                 });
             })
             .catch(() => {
@@ -156,79 +152,79 @@ export default function ProgressSegment() {
         },
       },
     ]);
-  }, [session, entries]);
+  }, [session, entries, onSessionsChange, sessions]);
 
-  if (loading) {
+  if (sessionsLoading) {
     return <LoadingSpinner />;
   }
 
   const startCheckIn = () => router.push("/(modals)/skin-capture");
 
-  if (sessions.length === 0) {
+  // Primary moment: viewing today with no check-in yet (including the
+  // first-ever check-in) gets the large CTA instead of any card.
+  if (sessions.length === 0 || (viewingToday && todayEmpty)) {
     return (
-      <View style={styles.emptyState}>
-        <MaterialCommunityIcons
-          name="camera-outline"
-          size={44}
-          color={colors.secondary[500]}
-        />
-        <ThemedText type="h3" style={styles.centered}>
-          No journal entries yet
-        </ThemedText>
-        <ThemedText
-          type="bodyLarge"
-          style={{ color: colors.neutral[600], ...styles.centered }}
-        >
-          Add a photo to start your skin journal and see how your skin changes
-          over time
-        </ThemedText>
-        <ThemedButton text="Add an entry" onPress={startCheckIn} />
+      <View style={styles.dashboard}>
+        <CheckInCTA onPress={startCheckIn} />
+      </View>
+    );
+  }
+
+  // Past day with no entry: plain empty state, deliberately no CTA so a
+  // check-in can't be backfilled onto a past day.
+  if (!session) {
+    return (
+      <View style={styles.dashboard}>
+        <View style={styles.emptyState}>
+          <MaterialCommunityIcons
+            name="image-off-outline"
+            size={44}
+            color={colors.neutral[500]}
+          />
+          <ThemedText type="h3" style={styles.centered}>
+            No check-in on this day
+          </ThemedText>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.dashboard}>
-      <SkinCalendar
-        checkInDays={checkInDays}
-        selected={selected}
-        onSelect={handleSelect}
-      />
       <View style={styles.cardArea}>
-        {session && (
-          <SkinJournalCard
-            session={session}
-            entries={entries}
-            dayCount={dayCount}
-            dayIndex={dayIndex}
-            canPage={canPage}
-            isFallback={isFallback}
-            onStep={step}
-            onDelete={handleDelete}
-            onPhotoPress={() => {
-              const initialUrl = getCachedSkinPhotoUrlSync(session.image_url);
-              const dims = getCachedSkinPhotoDimsSync(session.image_url);
-              router.push({
-                pathname: "/(modals)/journal-montage",
-                params: {
-                  startId: String(session.id),
-                  ...(initialUrl
-                    ? {
-                        initialId: String(session.id),
-                        initialUrl,
-                        ...(dims
-                          ? {
-                              initialW: String(dims.width),
-                              initialH: String(dims.height),
-                            }
-                          : null),
-                      }
-                    : null),
-                },
-              });
-            }}
-          />
-        )}
+        <SkinJournalCard
+          session={session}
+          entries={entries}
+          dayCount={dayCount}
+          dayIndex={dayIndex}
+          canPage={canPage}
+          isFallback={isFallback}
+          onStep={step}
+          onDelete={handleDelete}
+          onPhotoPress={() => {
+            const initialUrl = getCachedSkinPhotoUrlSync(session.image_url);
+            const dims = getCachedSkinPhotoDimsSync(session.image_url);
+            router.push({
+              pathname: "/(modals)/journal-montage",
+              params: {
+                startId: String(session.id),
+                ...(initialUrl
+                  ? {
+                      initialId: String(session.id),
+                      initialUrl,
+                      ...(dims
+                        ? {
+                            initialW: String(dims.width),
+                            initialH: String(dims.height),
+                          }
+                        : null),
+                    }
+                  : null),
+              },
+            });
+          }}
+        />
+        {viewingToday && <CheckInCTA compact onPress={startCheckIn} />}
       </View>
     </View>
   );
@@ -242,6 +238,7 @@ const styles = StyleSheet.create({
   cardArea: {
     flex: 1,
     alignItems: "center",
+    paddingBottom: 24,
   },
   emptyState: {
     gap: 12,

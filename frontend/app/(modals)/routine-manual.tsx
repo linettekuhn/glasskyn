@@ -26,7 +26,7 @@ export default function ManualRoutineScreen() {
     });
     clearPendingChanges();
     router.dismissAll();
-    router.replace("/(main)/routine");
+    router.replace("/(main)/journal");
   };
 
   return (

@@ -1,7 +1,9 @@
+import { ComponentType } from "react";
 import {
   StyleSheet,
   TouchableOpacity,
   useColorScheme,
+  View,
 } from "react-native";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "./themed-text";
@@ -10,6 +12,10 @@ import GlassSurface from "./glass-surface";
 export interface SegmentedControlOption<T extends string> {
   value: T;
   label: string;
+  LeftIconComponent?: ComponentType<any>;
+  leftIconName?: string;
+  RightIconComponent?: ComponentType<any>;
+  rightIconName?: string;
 }
 
 interface SegmentedControlProps<T extends string> {
@@ -27,7 +33,11 @@ export default function SegmentedControl<T extends string>({
   const colors = Colors[getTheme(colorScheme)];
 
   return (
-    <GlassSurface style={styles.track}>
+    <View style={styles.track}>
+      <View
+        pointerEvents="none"
+        style={[styles.baseline, { backgroundColor: colors.neutral[300] }]}
+      />
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -36,8 +46,9 @@ export default function SegmentedControl<T extends string>({
             style={[
               styles.segment,
               {
-                backgroundColor: selected
-                  ? colors.secondary[300]
+                borderBottomWidth: 1.5,
+                borderBottomColor: selected
+                  ? colors.secondary[700]
                   : "transparent",
               },
             ]}
@@ -46,30 +57,59 @@ export default function SegmentedControl<T extends string>({
             accessibilityState={{ selected }}
             accessibilityLabel={option.label}
           >
-            <ThemedText
-              type="bodySmall"
-              weight={selected ? "semiBold" : "regular"}
-              style={{
-                color: selected ? colors.primary[700] : colors.neutral[600],
-              }}
-            >
-              {option.label}
-            </ThemedText>
+            <View style={styles.content}>
+              {option.LeftIconComponent && option.leftIconName && (
+                <option.LeftIconComponent
+                  name={option.leftIconName}
+                  size={16}
+                  color={selected ? colors.secondary[800] : colors.neutral[600]}
+                />
+              )}
+              <ThemedText
+                type="overline"
+                weight={selected ? "bold" : "medium"}
+                style={{
+                  color: selected ? colors.secondary[800] : colors.neutral[600],
+                }}
+              >
+                {option.label}
+              </ThemedText>
+              {option.RightIconComponent && option.rightIconName && (
+                <option.RightIconComponent
+                  name={option.rightIconName}
+                  size={16}
+                  color={selected ? colors.secondary[800] : colors.neutral[600]}
+                />
+              )}
+            </View>
           </TouchableOpacity>
         );
       })}
-    </GlassSurface>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   track: {
     flexDirection: "row",
+    justifyContent: "space-between",
     overflow: "hidden",
   },
+  baseline: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 1.5,
+  },
   segment: {
-    flex: 1,
     paddingVertical: 10,
+    paddingHorizontal: 12,
     alignItems: "center",
+  },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
 });

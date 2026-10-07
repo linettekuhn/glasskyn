@@ -46,7 +46,7 @@ export default function CompleteScreen() {
 
   const handleSeeRoutine = async () => {
     await saveProfile();
-    router.replace("/(main)/routine");
+    router.replace("/(main)/journal");
   };
 
   const handleScanProduct = async () => {
