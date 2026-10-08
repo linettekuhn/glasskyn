@@ -450,6 +450,33 @@ export default function JournalMontageScreen() {
   // session set changes (deletes included). No network or image work here.
   const zoneMap = useMemo(() => zoneByConcernId(concerns), [concerns]);
   const counts = useMemo(() => zoneCounts(concerns), [concerns]);
+  // TEMP-DEBUG 12G: what anchors came back + what the filter computed.
+  useEffect(() => {
+    console.log("[12G] sessions:", sessions.length, "concerns:", concerns.length);
+    for (const s of sorted.slice(0, 5)) {
+      console.log(
+        "[12G] session",
+        s.id,
+        "landmarkKeys:",
+        s.face_landmarks ? Object.keys(s.face_landmarks).join(",") : "null",
+      );
+    }
+    for (const c of concerns.slice(0, 10)) {
+      console.log(
+        "[12G] concern",
+        c.id,
+        "uuid:",
+        c.uuid,
+        "anchor:",
+        JSON.stringify(c.anchor),
+      );
+    }
+    console.log("[12G] counts:", JSON.stringify(counts));
+    console.log(
+      "[12G] zoneMap:",
+      JSON.stringify(Array.from(zoneMap.entries()).slice(0, 10)),
+    );
+  }, [sessions, concerns, counts, zoneMap, sorted]);
   const isFiltered = selectedZones.size > 0;
   const selectedList = useMemo(() => Array.from(selectedZones), [selectedZones]);
   // Positive empty-state line shared by the inline row and the details list.

@@ -223,6 +223,9 @@ def compute_anchor(
 
     return {
         "point": {"x": round(px, 6), "y": round(py, 6)},
-        "region": classify_region((px, py), lm),
+        # Pass the raw landmarks: classify_region runs finite_landmarks()
+        # itself, and passing the already-converted `lm` (tuples) would be
+        # silently dropped to {} and force every region to "unknown".
+        "region": classify_region((px, py), landmarks),
         "refs": refs,
     }
