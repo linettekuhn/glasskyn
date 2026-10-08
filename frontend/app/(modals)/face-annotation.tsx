@@ -52,10 +52,12 @@ import {
 } from "@/contexts/SkinCaptureContext";
 import { usePhotoTransform } from "@/hooks/use-photo-transform";
 import { getSkinSessions } from "@/api/skin";
+import { allConcerns, dayEntries } from "@/utils/skin-sessions";
 import type {
   AnnotationAction,
   Concern,
   CircleAnnotation,
+  SkinConcernOut,
   SkinSessionOut,
 } from "@/types";
 import EntrySteps from "@/components/journal/entry-steps";
@@ -85,6 +87,14 @@ interface CarrySkip {
   id: number;
   uuid: string | null;
   reason: string;
+  /** Session ids in the concern's history, for diagnosing carry gaps. */
+  historySessions?: number[];
+}
+
+interface CarrySource {
+  concern: SkinConcernOut;
+  /** Coordinates of this concern on the prev session (source of truth). */
+  coords: { x: number; y: number } | null;
 }
 
 interface CarryResult {
@@ -97,15 +107,29 @@ interface CarryResult {
 function carryConcernsFrom(
   prev: SkinSessionOut,
   newLandmarks: SkinLandmarkRefs | null,
+  sources?: CarrySource[],
 ): CarryResult {
   const carried: CircleAnnotation[] = [];
   const skipped: CarrySkip[] = [];
   const prevLandmarks = prev.face_landmarks ?? null;
   let usedFallbackCoords = false;
 
-  for (const concern of prev.concerns ?? []) {
+  // Default source preserves the old behavior; callers pass history-aware
+  // sources so concerns carried *through* prev (not originated there) are
+  // included — the backend only lists origin concerns on each session.
+  const list: CarrySource[] = sources ?? [];
+  if (!sources) {
+    for (const concern of prev.concerns ?? []) {
+      list.push({ concern, coords: lastSeenCoords(concern) });
+    }
+  }
+
+  for (const { concern, coords: prevCoords } of list) {
+    const historySessions = (concern.history ?? [])
+      .map((h) => h.session_id)
+      .filter((id): id is number => typeof id === "number");
     const skip = (reason: string) =>
-      skipped.push({ id: concern.id, uuid: concern.uuid, reason });
+      skipped.push({ id: concern.id, uuid: concern.uuid, reason, historySessions });
 
     if (!concern.uuid) {
       skip("no-uuid");
@@ -119,7 +143,9 @@ function carryConcernsFrom(
       skip("already-resolved");
       continue;
     }
-    const coords = lastSeenCoords(concern);
+    // Stored coords on prev are the source of truth; fall back to the
+    // latest seen only if the caller didn't supply prev's coords.
+    const coords = prevCoords ?? lastSeenCoords(concern);
     if (!coords) {
       skip("no-coords");
       continue;
@@ -387,14 +413,21 @@ export default function FaceAnnotationScreen() {
           bail("no-prev-session", { sessions: sessions.length });
           return;
         }
+        // History-aware sources: the backend only lists origin concerns on
+        // each session, so concerns carried *through* prev would be missed
+        // if we read prev.concerns alone (e.g. 3rd photo of the day).
+        const present = dayEntries(prev.id, allConcerns(sessions));
         const { carried, skipped, usedFallbackCoords } = carryConcernsFrom(
           prev,
           landmarkRefs,
+          present.map((e) => ({ concern: e.concern, coords: e.coords })),
         );
         if (carried.length === 0) {
           bail("carried-zero", {
             prev_session: prev.id,
             concerns: prev.concerns?.length ?? 0,
+            present_on_prev: present.length,
+            all_concerns: allConcerns(sessions).length,
             skipped: JSON.stringify(skipped),
           });
           return;
@@ -405,6 +438,7 @@ export default function FaceAnnotationScreen() {
             "[face-annotation] carry-forward ok",
             `prev_session=${prev.id}`,
             `n=${carried.length}`,
+            `present_on_prev=${present.length}`,
             `skipped=${skipped.length}`,
             `fallback_coords=${usedFallbackCoords}`,
             `new_landmarks=${landmarkRefs ? "yes" : "no"}`,

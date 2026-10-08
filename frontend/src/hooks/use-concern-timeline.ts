@@ -5,7 +5,7 @@ import { dayNumber, healedInDays } from "@/utils/skin-days";
 
 // Heuristic thresholds for the alignment-confidence fallback. Guesses — tune
 // against real sessions (see 12G plan).
-export const LOW_CONF_REF_DIST = 0.3;
+export const LOW_CONF_REF_DIST = 0.09;
 export const LOW_CONF_DISPLACEMENT = 0.15;
 
 export interface ConcernFrame {
@@ -39,9 +39,11 @@ function sessionById(
 }
 
 function nearestRefDist(concern: SkinConcernOut): number | null {
-  const refs = (concern.anchor as unknown as {
-    refs?: Array<{ dist?: number }>;
-  } | null)?.refs;
+  const refs = (
+    concern.anchor as unknown as {
+      refs?: Array<{ dist?: number }>;
+    } | null
+  )?.refs;
   if (!refs || refs.length === 0) return null;
   let min: number | null = null;
   for (const r of refs) {
@@ -58,8 +60,7 @@ export function buildConcernTimeline(
 ): ConcernTimeline | null {
   if (!concernUuid || sessions.length === 0) return null;
   const concerns = allConcerns(sessions);
-  const concern =
-    concerns.find((c) => c.uuid === concernUuid) ?? null;
+  const concern = concerns.find((c) => c.uuid === concernUuid) ?? null;
   if (!concern) return null;
 
   const ordered = [...sessions].sort(
@@ -136,8 +137,7 @@ export function buildConcernTimeline(
             frame.coords.y - prevCoords.y,
           )
         : 0;
-    const jumped =
-      prevCoords != null && displacement > LOW_CONF_DISPLACEMENT;
+    const jumped = prevCoords != null && displacement > LOW_CONF_DISPLACEMENT;
     // Note: projected-vs-stored divergence is intentionally NOT a signal
     // here — stored coords were already projected at capture time so they
     // mostly match. Landmark / ref-distance / displacement do the real work.

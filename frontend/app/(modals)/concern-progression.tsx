@@ -14,13 +14,10 @@ import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import * as Haptics from "expo-haptics";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import {
-  getSkinSessions,
-  patchConcernPosition,
-} from "@/api/skin";
+import { getSkinSessions, patchConcernPosition } from "@/api/skin";
 import {
   getCachedSkinPhotoDimsSync,
   getCachedSkinPhotoUrl,
@@ -37,14 +34,8 @@ import GlassSurface from "@/components/ui/glass-surface";
 import ConcernHero from "@/components/journal/concern-hero";
 import ConcernScrubber from "@/components/journal/concern-scrubber";
 import { buildConcernTimeline } from "@/hooks/use-concern-timeline";
-import {
-  formatSessionDay,
-  formatSessionTime,
-} from "@/utils/skin-sessions";
-import {
-  cropImageLayout,
-  getConcernCropRect,
-} from "@/utils/concern-crop";
+import { formatSessionDay, formatSessionTime } from "@/utils/skin-sessions";
+import { cropImageLayout, getConcernCropRect } from "@/utils/concern-crop";
 
 function clamp01(v: number): number {
   return Math.min(1, Math.max(0, v));
@@ -59,6 +50,7 @@ export default function ConcernProgressionScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+  const txtColor = colors.text;
 
   const [sessions, setSessions] = useState<SkinSessionOut[] | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -96,9 +88,9 @@ export default function ConcernProgressionScreen() {
   );
 
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled?.().then(setReduceMotion).catch(
-      () => {},
-    );
+    AccessibilityInfo.isReduceMotionEnabled?.()
+      .then(setReduceMotion)
+      .catch(() => {});
   }, []);
 
   const load = useCallback(() => {
@@ -205,10 +197,7 @@ export default function ConcernProgressionScreen() {
   const selectIndex = useCallback(
     (index: number) => {
       if (!timeline || timeline.frames.length === 0) return;
-      const clamped = Math.min(
-        Math.max(0, index),
-        timeline.frames.length - 1,
-      );
+      const clamped = Math.min(Math.max(0, index), timeline.frames.length - 1);
       setSelectedIndex((prev) => (prev === clamped ? prev : clamped));
       setAdjusting(false);
       setAdjustValue(null);
@@ -293,7 +282,7 @@ export default function ConcernProgressionScreen() {
       Toast.show({
         type: "success",
         text1: "Position updated",
-        text2: "Thanks — future check-ins will use this as reference.",
+        text2: "Future check-ins will use this as reference.",
         position: "bottom",
       });
     } catch {
@@ -315,24 +304,31 @@ export default function ConcernProgressionScreen() {
       <View
         style={[
           styles.root,
-          { paddingTop: insets.top, paddingBottom: insets.bottom },
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+            backgroundColor: colors.secondary[100],
+          },
         ]}
       >
         <StatusBar style="light" />
         {loadError ? (
           <View style={styles.centered}>
-            <ThemedText type="h3" style={styles.lightText}>
-              Couldn't load progress
-            </ThemedText>
-            <ThemedText type="bodySmall" style={styles.mutedText}>
+            <ThemedText type="h3">Couldn't load progress</ThemedText>
+            <ThemedText type="bodySmall">
               Check your connection and try again.
             </ThemedText>
             <ThemedButton text="Retry" onPress={load} />
           </View>
         ) : (
           <View style={styles.centered}>
-            <View style={[styles.skeletonHero, { width: heroSize, height: heroSize }]} />
-            <ActivityIndicator color="#FFFFFF" />
+            <View
+              style={[
+                styles.skeletonHero,
+                { width: heroSize, height: heroSize },
+              ]}
+            />
+            <ActivityIndicator color={txtColor} />
           </View>
         )}
       </View>
@@ -345,20 +341,21 @@ export default function ConcernProgressionScreen() {
         style={[
           styles.root,
           styles.centered,
-          { paddingTop: insets.top, paddingBottom: insets.bottom },
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+            backgroundColor: colors.secondary[100],
+          },
         ]}
       >
         <StatusBar style="light" />
-        <ThemedText type="h3" style={styles.lightText}>
-          Concern not found
-        </ThemedText>
+        <ThemedText type="h3">Concern not found</ThemedText>
         <ThemedButton text="Go back" onPress={() => router.back()} />
       </View>
     );
   }
 
-  const captionDay =
-    frame?.dayN != null ? `Day ${frame.dayN}` : null;
+  const captionDay = frame?.dayN != null ? `Day ${frame.dayN}` : null;
   const captionDate = frame
     ? `${formatSessionDay(frame.dateIso)} · ${formatSessionTime(frame.dateIso)}`
     : "";
@@ -369,12 +366,34 @@ export default function ConcernProgressionScreen() {
     frame.dateIso === timeline.resolvedIso;
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View
+      style={[
+        styles.root,
+        { paddingTop: insets.top, backgroundColor: colors.secondary[100] },
+      ]}
+    >
       <StatusBar style="light" />
       {/* Header */}
       <View style={styles.header}>
+        <View style={styles.controls}>
+          <ThemedButton
+            link
+            text="Go Back"
+            leftIconName="arrow-back"
+            LeftIconComponent={MaterialIcons}
+            onPress={() => router.back()}
+            color={colors.neutral[800]}
+            alignment="flex-start"
+          />
+          <IconButton
+            onPress={() => setShowCircle((v) => !v)}
+            iconName={showCircle ? "eye-off-outline" : "eye-outline"}
+            IconComponent={MaterialCommunityIcons}
+            iconColor={txtColor}
+          />
+        </View>
         <View style={styles.headerTitle}>
-          <ThemedText type="h3" style={styles.lightText} numberOfLines={1}>
+          <ThemedText type="h3" numberOfLines={1}>
             {timeline.label}
           </ThemedText>
           <View
@@ -387,24 +406,11 @@ export default function ConcernProgressionScreen() {
               },
             ]}
           >
-            <ThemedText
-              type="captionSmall"
-              weight="semiBold"
-              style={{ color: "#FFFFFF" }}
-            >
+            <ThemedText type="captionSmall" weight="semiBold">
               {timeline.statusText}
             </ThemedText>
           </View>
         </View>
-        <IconButton
-          onPress={() => router.back()}
-          IconComponent={MaterialCommunityIcons}
-          iconName="close"
-          iconSize={22}
-          iconColor="#FFFFFF"
-          accessibilityLabel="Close progression view"
-          hitSlop={12}
-        />
       </View>
 
       <ScrollView
@@ -423,7 +429,12 @@ export default function ConcernProgressionScreen() {
               accessibilityRole="button"
               accessibilityLabel="Exit compare view"
             >
-              <View style={[styles.compareRow, { width: heroSize, height: heroSize }]}>
+              <View
+                style={[
+                  styles.compareRow,
+                  { width: heroSize, height: heroSize },
+                ]}
+              >
                 <CompareHalf
                   uri={displayUrls[firstFrame.session.id]}
                   aspect={aspects[firstFrame.session.id]}
@@ -441,9 +452,9 @@ export default function ConcernProgressionScreen() {
               </View>
               <ThemedText
                 type="captionSmall"
-                style={[styles.mutedText, { marginTop: 8, textAlign: "center" }]}
+                style={[{ marginTop: 8, textAlign: "center" }]}
               >
-                First appearance vs current — tap to exit
+                First appearance vs selected. Tap to exit
               </ThemedText>
             </Pressable>
           ) : adjusting ? (
@@ -467,24 +478,33 @@ export default function ConcernProgressionScreen() {
                   uri={frame ? displayUrls[frame.session.id] : undefined}
                   aspect={frame ? aspects[frame.session.id] : undefined}
                   coords={frame?.coords ?? null}
-                  mode={frame && (frame.isGap || frame.lowConfidence) ? "full" : "crop"}
+                  mode={
+                    frame && (frame.isGap || frame.lowConfidence)
+                      ? "full"
+                      : "crop"
+                  }
                   size={heroSize}
                   showCircle={showCircle}
                   reduceMotion={reduceMotion}
                   onPhotoLoad={handlePhotoLoad}
                 />
+                {timeline.frames.length > 1 && !adjusting && (
+                  <ThemedText
+                    type="captionSmall"
+                    style={[{ marginTop: 8, textAlign: "center" }]}
+                  >
+                    Long-press to compare with the first appearance
+                  </ThemedText>
+                )}
               </View>
             </GestureDetector>
           )}
 
           {/* Caption */}
           <View style={styles.caption}>
-            <ThemedText type="bodySmall" style={styles.lightText}>
+            <ThemedText type="bodySmall">
               {captionDate}
               {captionDay ? ` · ${captionDay}` : ""}
-            </ThemedText>
-            <ThemedText type="captionSmall" style={styles.mutedText}>
-              {timeline.label}
             </ThemedText>
             {isFinalHealedFrame && (
               <ThemedText
@@ -499,23 +519,43 @@ export default function ConcernProgressionScreen() {
             )}
           </View>
 
+          {/* Scrubber */}
+          <View style={styles.scrubberWrap}>
+            <ConcernScrubber
+              frames={timeline.frames}
+              selectedIndex={selectedIndex}
+              onSelect={selectIndex}
+              displayUrls={displayUrls}
+              aspects={aspects}
+            />
+          </View>
+
+          {timeline.frames.length <= 1 && (
+            <ThemedText
+              type="captionSmall"
+              style={[{ textAlign: "center", marginTop: 12 }]}
+            >
+              Progress appears after the next entry.
+            </ThemedText>
+          )}
+
           {/* Gap / low-confidence states */}
           {frame?.isGap && (
             <GlassSurface style={styles.notice}>
-              <ThemedText type="bodySmall" style={styles.lightText}>
+              <ThemedText type="bodySmall">
                 Not marked in this session
               </ThemedText>
-              <ThemedText type="captionSmall" style={styles.mutedText}>
+              <ThemedText type="captionSmall">
                 Showing the full photo so nothing is hidden.
               </ThemedText>
             </GlassSurface>
           )}
           {frame && !frame.isGap && frame.lowConfidence && !adjusting && (
             <GlassSurface style={styles.notice}>
-              <ThemedText type="bodySmall" style={styles.lightText}>
+              <ThemedText type="bodySmall">
                 Position may be off in this frame
               </ThemedText>
-              <ThemedText type="captionSmall" style={styles.mutedText}>
+              <ThemedText type="captionSmall">
                 Showing the full photo. Drag the marker to the right spot.
               </ThemedText>
               <ThemedButton
@@ -544,52 +584,7 @@ export default function ConcernProgressionScreen() {
               />
             </View>
           )}
-
-          {/* Controls */}
-          <View style={styles.controls}>
-            <Pressable
-              onPress={() => setShowCircle((v) => !v)}
-              accessibilityRole="button"
-              accessibilityLabel={showCircle ? "Hide marker" : "Show marker"}
-              hitSlop={12}
-              style={styles.toggle}
-            >
-              <MaterialCommunityIcons
-                name={showCircle ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color="#FFFFFF"
-              />
-              <ThemedText type="captionSmall" style={styles.lightText}>
-                {showCircle ? "Hide circle" : "Show circle"}
-              </ThemedText>
-            </Pressable>
-            {timeline.frames.length > 1 && !adjusting && (
-              <ThemedText type="captionSmall" style={styles.mutedText}>
-                Long-press the photo to compare with the first appearance
-              </ThemedText>
-            )}
-          </View>
         </View>
-
-        {/* Scrubber */}
-        <View style={styles.scrubberWrap}>
-          <ConcernScrubber
-            frames={timeline.frames}
-            selectedIndex={selectedIndex}
-            onSelect={selectIndex}
-            displayUrls={displayUrls}
-            aspects={aspects}
-          />
-        </View>
-
-        {timeline.frames.length <= 1 && (
-          <ThemedText
-            type="captionSmall"
-            style={[styles.mutedText, { textAlign: "center", marginTop: 12 }]}
-          >
-            Progress appears after the next entry.
-          </ThemedText>
-        )}
       </ScrollView>
     </View>
   );
@@ -620,7 +615,9 @@ function CompareHalf({
   const full = cropImageLayout(refSize, rect);
   const scale = width / refSize;
   return (
-    <View style={{ width, height, overflow: "hidden", backgroundColor: "#000" }}>
+    <View
+      style={{ width, height, overflow: "hidden", backgroundColor: "#000" }}
+    >
       {uri ? (
         <Image
           source={{ uri }}
@@ -643,7 +640,6 @@ function CompareHalf({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#10201D",
   },
   centered: {
     flex: 1,
@@ -656,15 +652,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.08)",
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 8,
-    gap: 12,
   },
   headerTitle: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -677,6 +668,7 @@ const styles = StyleSheet.create({
   body: {
     gap: 12,
     paddingHorizontal: 16,
+    justifyContent: "flex-start",
   },
   compareRow: {
     flexDirection: "row",
@@ -686,12 +678,6 @@ const styles = StyleSheet.create({
   caption: {
     marginTop: 10,
     gap: 2,
-  },
-  lightText: {
-    color: "#FFFFFF",
-  },
-  mutedText: {
-    color: "rgba(255,255,255,0.65)",
   },
   notice: {
     marginTop: 12,
@@ -706,7 +692,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   controls: {
-    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 6,
   },
   toggle: {
