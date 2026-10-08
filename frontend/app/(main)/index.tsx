@@ -2,7 +2,7 @@ import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
 import GlassSurface from "@/components/ui/glass-surface";
 import { Colors, getTheme } from "@/constants/theme";
-import { affirmations } from "@/constants/affirmations";
+import MirrorAffirmationCard from "@/components/home/mirror-affirmation-card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHomeRoutine } from "@/hooks/use-home-routine";
 import RoutineStatusCard from "@/components/routine/routine-status-card";
@@ -35,8 +35,6 @@ export default function HomeScreen() {
   const greeting = firstName
     ? getGreeting(new Date().getHours(), firstName)
     : "Welcome";
-  const affirmation =
-    affirmations[Math.floor(Date.now() / 86400000) % affirmations.length];
 
   const openRoutine = () => router.navigate("/(main)/journal");
 
@@ -46,18 +44,9 @@ export default function HomeScreen() {
         <ThemedText type="h1" style={{ color: colors.text }}>
           {greeting}
         </ThemedText>
-        <ThemedText
-          type="bodyLarge"
-          italic
-          style={{ color: colors.neutral[600] }}
-        >
-          "{affirmation}"
-        </ThemedText>
       </View>
 
       <ExpiringSoonCard />
-
-      <SkinNudgeCard />
 
       <ScrollView contentContainerStyle={styles.body}>
         {loading ? (
@@ -85,21 +74,9 @@ export default function HomeScreen() {
             onPressCta={openRoutine}
           />
         ) : null}
+        <MirrorAffirmationCard />
         <WaterIntakeCard />
         <EntryCards />
-        <ThemedButton
-          text="Skin check-in (12B)"
-          onPress={() => router.push("/(modals)/skin-capture")}
-          alignment="flex-start"
-        />
-        {__DEV__ && (
-          <ThemedButton
-            outlined
-            text="Dev: Skin face-detection test"
-            onPress={() => router.push("/(modals)/skin-face-test")}
-            alignment="flex-start"
-          />
-        )}
       </ScrollView>
     </View>
   );
