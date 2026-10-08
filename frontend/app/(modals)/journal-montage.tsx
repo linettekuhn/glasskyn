@@ -311,7 +311,7 @@ const URL_RESOLVE_CONCURRENCY = 4;
 
 // Peek grows to fit the 12G region filter bar above the filmstrip so the
 // bar + playback controls stay visible on small devices.
-const PEEK_BASE_HEIGHT = 214;
+const PEEK_BASE_HEIGHT = 190;
 
 interface ZoneFilterBarProps {
   counts: { all: number } & Record<SkinZone, number>;
@@ -1078,24 +1078,6 @@ export default function JournalMontageScreen() {
           dimmedText={colors.neutral[600]}
         />
       )}
-      {isFiltered &&
-        (selectedList.every((z) => counts[z] === 0) ? (
-          <ThemedText
-            type="captionSmall"
-            style={[styles.zoneInlineNote, { color: colors.neutral[600] }]}
-          >
-            {globalEmptyMessage}
-          </ThemedText>
-        ) : (
-          !activeHasMatches && (
-            <ThemedText
-              type="captionSmall"
-              style={[styles.zoneInlineNote, { color: colors.neutral[600] }]}
-            >
-              No concerns here in this check-in
-            </ThemedText>
-          )
-        ))}
       {showChrome && (
         <FlatList
           ref={filmRef}
