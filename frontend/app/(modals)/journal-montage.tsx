@@ -344,30 +344,14 @@ const ZoneFilterBar = memo(function ZoneFilterBar({
     a11yLabel: string,
     dimmed: boolean,
   ) => (
-    <Pressable
+    <ThemedButton
       key={key}
+      text={label}
+      textType="captionSmall"
+      color={isSelected ? accent : dimmedText}
+      outlined={!isSelected}
       onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={a11yLabel}
-      accessibilityState={{ selected: isSelected }}
-      style={[
-        styles.zoneChip,
-        {
-          backgroundColor: isSelected ? accent : "rgba(255,255,255,0.12)",
-          borderColor: isSelected ? accent : "rgba(255,255,255,0.24)",
-          opacity: dimmed && !isSelected ? 0.45 : 1,
-        },
-      ]}
-    >
-      <ThemedText
-        type="captionSmall"
-        weight="semiBold"
-        style={{ color: isSelected ? "#FFFFFF" : dimmedText }}
-        numberOfLines={1}
-      >
-        {label}
-      </ThemedText>
-    </Pressable>
+    />
   );
   return (
     <ScrollView
@@ -452,7 +436,12 @@ export default function JournalMontageScreen() {
   const counts = useMemo(() => zoneCounts(concerns), [concerns]);
   // TEMP-DEBUG 12G: what anchors came back + what the filter computed.
   useEffect(() => {
-    console.log("[12G] sessions:", sessions.length, "concerns:", concerns.length);
+    console.log(
+      "[12G] sessions:",
+      sessions.length,
+      "concerns:",
+      concerns.length,
+    );
     for (const s of sorted.slice(0, 5)) {
       console.log(
         "[12G] session",
@@ -478,7 +467,10 @@ export default function JournalMontageScreen() {
     );
   }, [sessions, concerns, counts, zoneMap, sorted]);
   const isFiltered = selectedZones.size > 0;
-  const selectedList = useMemo(() => Array.from(selectedZones), [selectedZones]);
+  const selectedList = useMemo(
+    () => Array.from(selectedZones),
+    [selectedZones],
+  );
   // Positive empty-state line shared by the inline row and the details list.
   const globalEmptyMessage = useMemo(
     () => (isFiltered ? noConcernsMessage(selectedList) : null),
@@ -490,7 +482,11 @@ export default function JournalMontageScreen() {
   // `dayEntries()` so each concern's number stays stable (gaps are fine).
   const filteredDayEntries = useCallback(
     (sessionId: number): SkinDayEntry[] =>
-      filterEntriesByZones(dayEntries(sessionId, concerns), selectedZones, zoneMap),
+      filterEntriesByZones(
+        dayEntries(sessionId, concerns),
+        selectedZones,
+        zoneMap,
+      ),
     [concerns, selectedZones, zoneMap],
   );
 
@@ -1548,14 +1544,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 4,
     alignItems: "center",
-  },
-  zoneChip: {
-    minHeight: 44,
-    justifyContent: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
   },
   zoneInlineNote: {
     textAlign: "center",
