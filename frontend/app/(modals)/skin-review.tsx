@@ -21,6 +21,7 @@ import StarRating from "@/components/ui/star-rating";
 import EntrySteps from "@/components/journal/entry-steps";
 import { Colors, getTheme } from "@/constants/theme";
 import { useSkinCapture } from "@/contexts/SkinCaptureContext";
+import { useSkinSessions } from "@/contexts/SkinSessionsContext";
 import { submitSkinCheckIn } from "@/api/skin";
 
 const NOTES_MAX_LENGTH = 500;
@@ -35,6 +36,7 @@ export default function SkinReviewScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const { draft, circles, review, setReview, clearEntry } = useSkinCapture();
+  const { noteCheckInSaved } = useSkinSessions();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +79,9 @@ export default function SkinReviewScreen() {
         position: "bottom",
       });
       clearEntry();
+      // Publish the new check-in to every subscribed screen immediately
+      // instead of waiting for the next focus refetch.
+      void noteCheckInSaved();
       router.back();
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);

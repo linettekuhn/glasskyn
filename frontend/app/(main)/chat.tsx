@@ -28,7 +28,7 @@ import {
 import { useChatSession } from "@/contexts/ChatSessionContext";
 import { getRoutine, getActiveRoutine } from "@/api/routines";
 import { getProducts } from "@/api/products";
-import { getSkinSessions } from "@/api/skin";
+import { useSkinSessions } from "@/contexts/SkinSessionsContext";
 import GlassSurface from "@/components/ui/glass-surface";
 import ChatIcon from "@/components/icons/chat-icon";
 import ThemedButton from "@/components/ui/themed-button";
@@ -65,7 +65,17 @@ export default function ChatScreen() {
   const [hydrated, setHydrated] = useState(false);
   const [hasProducts, setHasProducts] = useState<boolean | null>(null);
   const [hasRoutine, setHasRoutine] = useState<boolean | null>(null);
-  const [hasSkinCheckins, setHasSkinCheckins] = useState<boolean | null>(null);
+  // Skin quick-action gate, derived from the shared store (deletes/wipes
+  // hide it without a dedicated fetch; null until the first load lands).
+  const {
+    sessions: skinSessions,
+    loading: skinSessionsLoading,
+    refresh: refreshSkinSessions,
+  } = useSkinSessions();
+  const hasSkinCheckins =
+    skinSessionsLoading && skinSessions.length === 0
+      ? null
+      : skinSessions.length > 0;
   const flatListRef = useRef<FlatList>(null);
   const routineSavedRef = useRef(false);
   const sendingRef = useRef(false);
@@ -193,18 +203,12 @@ export default function ChatScreen() {
           if (!cancelled) setHasRoutine(false);
         });
 
-      getSkinSessions()
-        .then((sessions) => {
-          if (!cancelled) setHasSkinCheckins(sessions.length > 0);
-        })
-        .catch(() => {
-          if (!cancelled) setHasSkinCheckins(false);
-        });
+      refreshSkinSessions().catch(() => {});
 
       return () => {
         cancelled = true;
       };
-    }, []),
+    }, [refreshSkinSessions]),
   );
 
   const handleSend = async (text?: string) => {

@@ -12,6 +12,7 @@ import { router, useFocusEffect } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { useAuth } from "../../src/contexts/AuthContext";
+import { useSkinSessions } from "../../src/contexts/SkinSessionsContext";
 import NotificationSettings from "../../src/components/ui/notification-settings";
 import HomeRoutineSetting from "../../src/components/ui/home-routine-setting";
 import UnitsSetting from "../../src/components/ui/units-setting";
@@ -87,6 +88,7 @@ function SettingsRow({
 
 export default function ProfileScreen() {
   const { user, logout, deleteAccount } = useAuth();
+  const { clearAll: clearSkinSessions } = useSkinSessions();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const [skinProfile, setSkinProfile] = useState<SkinProfile | null>(null);
@@ -155,6 +157,8 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               await deleteSkinData();
+              // Empty every subscribed screen + evict cached photos now.
+              clearSkinSessions();
               Toast.show({
                 type: "success",
                 text1: "Skin data deleted",

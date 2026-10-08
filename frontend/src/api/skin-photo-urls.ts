@@ -111,6 +111,19 @@ export async function getCachedSkinPhotoUrl(fileKey: string): Promise<string> {
   return request;
 }
 
+/** Drop one file key (URL + dims + in-flight) — call when its entry is deleted. */
+export function evictSkinPhotoUrl(fileKey: string): void {
+  if (!fileKey) return;
+  cache.delete(fileKey);
+  inflight.delete(fileKey);
+}
+
+/** Drop everything — call after a full backend wipe. */
+export function clearSkinPhotoCache(): void {
+  cache.clear();
+  inflight.clear();
+}
+
 /** Best-effort warm of upcoming keys; never rejects. */
 export function prefetchSkinPhotoUrls(fileKeys: string[]): Promise<void> {
   const unique = [...new Set(fileKeys)].filter(

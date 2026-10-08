@@ -48,7 +48,8 @@ import {
   type SkinLandmarkRefs,
   type SkinPose,
 } from "@/contexts/SkinCaptureContext";
-import { getSkinPhotoUrl, getSkinSessions } from "@/api/skin";
+import { getSkinPhotoUrl } from "@/api/skin";
+import { useSkinSessions } from "@/contexts/SkinSessionsContext";
 import { Colors } from "@/constants/theme";
 
 const HOLD_MS = 2000;
@@ -261,13 +262,25 @@ export default function SkinCaptureScreen() {
     return () => sub.remove();
   }, []);
 
+  const { sessions: skinSessions, refresh: refreshSkinSessions } =
+    useSkinSessions();
+
   useEffect(() => {
+    refreshSkinSessions().catch(() => {});
+  }, [refreshSkinSessions]);
+
+  // Ghost overlay resolves from the shared store: if the latest session is
+  // deleted elsewhere the overlay clears instead of going stale.
+  const latestSession = skinSessions[0] ?? null;
+  useEffect(() => {
+    if (!latestSession) {
+      setGhostUri(null);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
-        const sessions = await getSkinSessions();
-        if (cancelled || sessions.length === 0) return;
-        const url = await getSkinPhotoUrl(sessions[0].image_url);
+        const url = await getSkinPhotoUrl(latestSession.image_url);
         if (cancelled) return;
         setGhostUri(url);
         if (__DEV__)
@@ -282,7 +295,7 @@ export default function SkinCaptureScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [latestSession]);
 
   const incGhostOpacity = () =>
     setGhostOpacity((o) =>

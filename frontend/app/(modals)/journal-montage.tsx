@@ -12,7 +12,7 @@ import {
   type LayoutChangeEvent,
   type ViewToken,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
@@ -26,7 +26,7 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import Toast from "react-native-toast-message";
-import { deleteSkinSession, getSkinSessions } from "@/api/skin";
+import { useSkinSessions } from "@/contexts/SkinSessionsContext";
 import {
   getCachedSkinPhotoDimsSync,
   getCachedSkinPhotoUrl,
@@ -397,8 +397,14 @@ export default function JournalMontageScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
 
-  const [sessions, setSessions] = useState<SkinSessionOut[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Sessions live in the shared store (single source of truth) — deletes
+  // and concern patches anywhere propagate here without a refetch.
+  const {
+    sessions,
+    loading,
+    refresh: refreshSessions,
+    removeSession,
+  } = useSkinSessions();
   const [displayUrls, setDisplayUrls] = useState<Record<number, string>>({});
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -527,106 +533,131 @@ export default function JournalMontageScreen() {
     return i >= 0 ? i : sorted.length - 1;
   }, [sorted, startId]);
 
+  // Refresh on mount and whenever this modal regains focus (e.g.
+  // returning from the stacked progression modal after a patch).
+  useFocusEffect(
+    useCallback(() => {
+      refreshSessions();
+    }, [refreshSessions]),
+  );
+
+  // Seed + resolve photos as the shared session set changes. Idempotent:
+  // ids already resolved are skipped, deleted ids are pruned, and the
+  // start position is chosen once per mount.
+  const initializedRef = useRef(false);
   useEffect(() => {
+    if (sessions.length === 0) return;
     let cancelled = false;
-    // Pass-through photo from the journal card (its file key is resolved
-    // below once sessions arrive) so the tapped frame paints instantly.
+    const ordered = [...sessions].reverse();
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      const i = ordered.findIndex((s) => String(s.id) === startId);
+      const startIdx = i >= 0 ? i : Math.max(ordered.length - 1, 0);
+      setActiveIndex(startIdx);
+      activeRef.current = startIdx;
+    }
+    // Seed instantly from the shared cache (warmed by the journal card
+    // and any previous montage visit) so the first frame + aspects are
+    // ready without waiting on the network.
+    const seedUrls: Record<number, string> = {};
+    const seedAspects: Record<number, number> = {};
+    for (const s of ordered) {
+      const cached =
+        s.image_url != null ? getCachedSkinPhotoUrlSync(s.image_url) : null;
+      if (cached) seedUrls[s.id] = cached;
+      const dims =
+        s.image_url != null ? getCachedSkinPhotoDimsSync(s.image_url) : null;
+      if (dims) seedAspects[s.id] = dims.width / dims.height;
+    }
+    // Fold in the pending pass-through URL once its file key is known.
+    // (First mount only — the journal card's fresh resolve for this entry.)
     const seedId = initialId != null ? Number(initialId) : NaN;
     const seedW = initialW != null ? Number(initialW) : NaN;
     const seedH = initialH != null ? Number(initialH) : NaN;
-    getSkinSessions()
-      .then((data) => {
-        if (cancelled) return;
-        setSessions(data);
-        const ordered = [...data].reverse();
-        const i = ordered.findIndex((s) => String(s.id) === startId);
-        const startIdx = i >= 0 ? i : Math.max(ordered.length - 1, 0);
-        setActiveIndex(startIdx);
-        activeRef.current = startIdx;
+    if (initialUrl && Number.isFinite(seedId)) {
+      const match = ordered.find((s) => s.id === seedId);
+      if (match) {
+        seedUrls[seedId] = initialUrl;
+        primeSkinPhotoUrlCache(match.image_url, initialUrl);
+        if (Number.isFinite(seedW) && Number.isFinite(seedH) && seedH) {
+          seedAspects[seedId] = (seedW as number) / (seedH as number);
+          primeSkinPhotoUrlCache(
+            match.image_url,
+            initialUrl,
+            seedW as number,
+            seedH as number,
+          );
+        }
+      }
+    }
+    setDisplayUrls((prev) => {
+      const next: Record<number, string> = {};
+      for (const s of ordered) {
+        if (prev[s.id]) next[s.id] = prev[s.id];
+        else if (seedUrls[s.id]) next[s.id] = seedUrls[s.id];
+      }
+      return next;
+    });
+    setAspects((prev) => {
+      const next: Record<number, number> = {};
+      for (const s of ordered) {
+        if (prev[s.id]) next[s.id] = prev[s.id];
+        else if (seedAspects[s.id]) next[s.id] = seedAspects[s.id];
+      }
+      return next;
+    });
 
-        // Seed instantly from the shared cache (warmed by the journal card
-        // and any previous montage visit) so the first frame + aspects are
-        // ready without waiting on the network.
-        const seedUrls: Record<number, string> = {};
-        const seedAspects: Record<number, number> = {};
-        for (const s of ordered) {
-          const cached =
-            s.image_url != null ? getCachedSkinPhotoUrlSync(s.image_url) : null;
-          if (cached) seedUrls[s.id] = cached;
-          const dims =
-            s.image_url != null
-              ? getCachedSkinPhotoDimsSync(s.image_url)
-              : null;
-          if (dims) seedAspects[s.id] = dims.width / dims.height;
+    // Resolve the rest in viewing-priority order (start, ±1, ±2, …)
+    // with bounded concurrency, painting each URL as it arrives instead
+    // of blocking on the slowest of all N presigns.
+    const startIdx = activeRef.current;
+    const queue: SkinSessionOut[] = [];
+    for (let o = 0; o < ordered.length; o += 1) {
+      const fwd = ordered[startIdx + o];
+      const back = o === 0 ? undefined : ordered[startIdx - o];
+      if (fwd && seedUrls[fwd.id] == null) queue.push(fwd);
+      if (back && seedUrls[back.id] == null) queue.push(back);
+    }
+    if (queue.length === 0) return () => {};
+    let cursor = 0;
+    const worker = async (): Promise<void> => {
+      while (!cancelled) {
+        const next = queue[cursor];
+        cursor += 1;
+        if (!next) return;
+        try {
+          const url = await getCachedSkinPhotoUrl(next.image_url);
+          if (cancelled) return;
+          setDisplayUrls((prev) =>
+            prev[next.id] ? prev : { ...prev, [next.id]: url },
+          );
+        } catch {
+          // Per-frame spinner stays; a retry happens on remount.
         }
-        // Fold in the pending pass-through URL once its file key is known.
-        if (initialUrl && Number.isFinite(seedId)) {
-          const match = ordered.find((s) => s.id === seedId);
-          if (match) {
-            seedUrls[seedId] = initialUrl;
-            primeSkinPhotoUrlCache(match.image_url, initialUrl);
-            if (Number.isFinite(seedW) && Number.isFinite(seedH) && seedH) {
-              seedAspects[seedId] = (seedW as number) / (seedH as number);
-              primeSkinPhotoUrlCache(
-                match.image_url,
-                initialUrl,
-                seedW as number,
-                seedH as number,
-              );
-            }
-          }
-        }
-        setDisplayUrls(seedUrls);
-        setAspects((prev) => ({ ...seedAspects, ...prev }));
-        setLoading(false);
-
-        // Resolve the rest in viewing-priority order (start, ±1, ±2, …)
-        // with bounded concurrency, painting each URL as it arrives instead
-        // of blocking on the slowest of all N presigns.
-        const queue: SkinSessionOut[] = [];
-        for (let o = 0; o < ordered.length; o += 1) {
-          const fwd = ordered[startIdx + o];
-          const back = o === 0 ? undefined : ordered[startIdx - o];
-          if (fwd && seedUrls[fwd.id] == null) queue.push(fwd);
-          if (back && seedUrls[back.id] == null) queue.push(back);
-        }
-        if (queue.length === 0) return;
-        let cursor = 0;
-        const worker = async (): Promise<void> => {
-          while (!cancelled) {
-            const next = queue[cursor];
-            cursor += 1;
-            if (!next) return;
-            try {
-              const url = await getCachedSkinPhotoUrl(next.image_url);
-              if (cancelled) return;
-              setDisplayUrls((prev) =>
-                prev[next.id] ? prev : { ...prev, [next.id]: url },
-              );
-            } catch {
-              // Per-frame spinner stays; a retry happens on remount.
-            }
-          }
-        };
-        void Promise.all(
-          Array.from(
-            { length: Math.min(URL_RESOLVE_CONCURRENCY, queue.length) },
-            () => worker(),
-          ),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setSessions([]);
-          setLoading(false);
-        }
-      });
+      }
+    };
+    void Promise.all(
+      Array.from(
+        { length: Math.min(URL_RESOLVE_CONCURRENCY, queue.length) },
+        () => worker(),
+      ),
+    );
     return () => {
       cancelled = true;
     };
-    // initial* params seed first paint only; sessions load once per mount.
+    // initial* params seed first paint only; sessions arrive from the store.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startId]);
+  }, [sessions, startId]);
+
+  // Clamp the active index when the list shrinks underneath (delete).
+  useEffect(() => {
+    if (sorted.length === 0) return;
+    if (activeIndex >= sorted.length) {
+      const clamped = Math.max(sorted.length - 1, 0);
+      setActiveIndex(clamped);
+      activeRef.current = clamped;
+    }
+  }, [sorted.length, activeIndex]);
 
   // Stable viewability callback (settle-based sync is fine for v1).
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
@@ -869,14 +900,15 @@ export default function JournalMontageScreen() {
           onPress: () => {
             if (deletingRef.current) return;
             deletingRef.current = true;
-            deleteSkinSession(target.id)
+            // Published through the shared store: journal, progression and
+            // chat update without a refetch, and the photo cache is evicted.
+            removeSession(target.id)
               .then(() => {
                 Toast.show({
                   type: "success",
                   text1: "Journal entry deleted",
                   position: "bottom",
                 });
-                setSessions((prev) => prev.filter((s) => s.id !== target.id));
                 const sortedIndex = sorted.findIndex((s) => s.id === target.id);
                 const remaining = sorted.length - 1;
                 if (remaining <= 0) {
@@ -895,7 +927,7 @@ export default function JournalMontageScreen() {
         },
       ],
     );
-  }, [activeSession, sorted, stopPlaying, goToIndex]);
+  }, [activeSession, sorted, stopPlaying, goToIndex, removeSession]);
 
   // Starts the fade once the incoming play layer has decoded. Falls back to
   // the timer armed in the interval if onLoad never fires.

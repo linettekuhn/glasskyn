@@ -7,11 +7,11 @@ import {
 } from "react-native";
 import { useFocusEffect, router } from "expo-router";
 import { listRoutines, localToday } from "@/api/routines";
-import { getSkinSessions } from "@/api/skin";
+import { useSkinSessions } from "@/contexts/SkinSessionsContext";
 import { useProducts } from "@/hooks/use-products";
 import { useRoutineCompletionDots } from "@/hooks/use-routine-completion-dots";
 import { groupSessionsByDay } from "@/utils/skin-sessions";
-import type { Routine, SkinSessionOut } from "@/types";
+import type { Routine } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { CREATE_ROUTINE_OPTIONS } from "@/constants/routine";
 import { ThemedText } from "@/components/ui/themed-text";
@@ -51,8 +51,10 @@ export default function JournalScreen() {
   const [currentRoutineIndex, setCurrentRoutineIndex] = useState(0);
   const [completionVersion, setCompletionVersion] = useState(0);
   const [tab, setTab] = useState<JournalTab>("routines");
-  const [sessions, setSessions] = useState<SkinSessionOut[]>([]);
-  const [sessionsLoading, setSessionsLoading] = useState(true);
+  // Skin sessions come from the shared store (single source of truth) —
+  // deletes/updates anywhere propagate here without a refetch.
+  const { sessions, loading: sessionsLoading, refresh: refreshSessions } =
+    useSkinSessions();
   const [selected, setSelected] = useState<string | null>(null);
   const [dayOffset, setDayOffset] = useState(0);
   const [dotsVersion, setDotsVersion] = useState(0);
@@ -78,24 +80,13 @@ export default function JournalScreen() {
     }
   }, []);
 
-  const fetchSessions = useCallback(async () => {
-    try {
-      const data = await getSkinSessions();
-      setSessions(data);
-    } catch {
-      setSessions([]);
-    } finally {
-      setSessionsLoading(false);
-    }
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       fetchRoutines();
-      fetchSessions();
+      refreshSessions();
       // Refresh routine dots too: steps may have been toggled elsewhere.
       setDotsVersion((v) => v + 1);
-    }, [fetchRoutines, fetchSessions]),
+    }, [fetchRoutines, refreshSessions]),
   );
 
   const routineIds = useMemo(() => routines.map((r) => r.id), [routines]);
@@ -217,7 +208,6 @@ export default function JournalScreen() {
           dayOffset={dayOffset}
           onSelect={handleSelect}
           onDayOffsetChange={setDayOffset}
-          onSessionsChange={setSessions}
         />
       )}
 

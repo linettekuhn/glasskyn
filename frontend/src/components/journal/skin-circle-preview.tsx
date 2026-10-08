@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
+  getCachedSkinPhotoDimsSync,
   getCachedSkinPhotoUrl,
   primeSkinPhotoDims,
   primeSkinPhotoUrlCache,
@@ -19,9 +20,6 @@ import type { SkinDayEntry } from "@/utils/skin-sessions";
 
 const DOT_SIZE = 16;
 const DOT_RADIUS = DOT_SIZE / 2;
-
-/** Intrinsic image sizes, keyed by S3 file key, so re-renders don't re-measure. */
-const sizeCache = new Map<string, { width: number; height: number }>();
 
 function measure(uri: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
@@ -45,7 +43,9 @@ export default function SkinCirclePreview({
   size = 150,
 }: SkinCirclePreviewProps) {
   const fileKey = session.image_url;
-  const cached = sizeCache.get(fileKey);
+  // Intrinsic dims live in the shared photo cache (single eviction point
+  // when an entry is deleted) so re-renders don't re-measure.
+  const cached = getCachedSkinPhotoDimsSync(fileKey);
   const [uri, setUri] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [aspect, setAspect] = useState<number | null>(() =>
@@ -55,7 +55,7 @@ export default function SkinCirclePreview({
   const colors = Colors[getTheme(colorScheme)];
 
   useEffect(() => {
-    const known = sizeCache.get(fileKey);
+    const known = getCachedSkinPhotoDimsSync(fileKey);
     if (known) {
       setAspect(known.height / known.width);
     }
@@ -75,7 +75,7 @@ export default function SkinCirclePreview({
           .then((dims) => {
             if (cancelled) return;
             if (!dims.width || !dims.height) return;
-            sizeCache.set(fileKey, dims);
+            primeSkinPhotoDims(fileKey, dims.width, dims.height);
             primeSkinPhotoUrlCache(fileKey, url, dims.width, dims.height);
             setAspect(dims.height / dims.width);
           })

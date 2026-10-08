@@ -20,7 +20,7 @@ import {
 } from "@/utils/skin-sessions";
 
 interface ProgressSegmentProps {
-  /** All skin sessions, owned and fetched by the journal screen. */
+  /** All skin sessions, from the shared store via the journal screen. */
   sessions: SkinSessionOut[];
   /** True until the first sessions fetch completes (avoids empty flash). */
   sessionsLoading: boolean;
@@ -30,7 +30,6 @@ interface ProgressSegmentProps {
   dayOffset: number;
   onSelect: (day: string | null) => void;
   onDayOffsetChange: (offset: number) => void;
-  onSessionsChange: (sessions: SkinSessionOut[]) => void;
 }
 
 export default function ProgressSegment({
@@ -40,7 +39,6 @@ export default function ProgressSegment({
   dayOffset,
   onSelect,
   onDayOffsetChange,
-  onSessionsChange,
 }: ProgressSegmentProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];

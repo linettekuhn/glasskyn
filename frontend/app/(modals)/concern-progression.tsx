@@ -17,7 +17,8 @@ import * as Haptics from "expo-haptics";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import { getSkinSessions, patchConcernPosition } from "@/api/skin";
+import { patchConcernPosition } from "@/api/skin";
+import { useSkinSessions } from "@/contexts/SkinSessionsContext";
 import {
   getCachedSkinPhotoDimsSync,
   getCachedSkinPhotoUrl,
@@ -25,7 +26,6 @@ import {
   prefetchSkinPhotoUrls,
   primeSkinPhotoDims,
 } from "@/api/skin-photo-urls";
-import type { SkinSessionOut } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
@@ -52,8 +52,13 @@ export default function ConcernProgressionScreen() {
   const colors = Colors[getTheme(colorScheme)];
   const txtColor = colors.text;
 
-  const [sessions, setSessions] = useState<SkinSessionOut[] | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const {
+    sessions,
+    loading: sessionsLoading,
+    error: sessionsError,
+    refresh: refreshSessions,
+    applyConcernPatch,
+  } = useSkinSessions();
   const [displayUrls, setDisplayUrls] = useState<Record<number, string>>({});
   const [aspects, setAspects] = useState<Record<number, number>>({});
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -75,7 +80,7 @@ export default function ConcernProgressionScreen() {
   const handlePhotoLoad = useCallback(
     (loadedUri: string, w: number, h: number) => {
       if (!w || !h) return;
-      const match = (sessions ?? []).find(
+      const match = sessions.find(
         (s) => displayUrls[s.id] === loadedUri,
       );
       if (!match) return;
@@ -93,56 +98,71 @@ export default function ConcernProgressionScreen() {
       .catch(() => {});
   }, []);
 
-  const load = useCallback(() => {
-    setLoadError(false);
-    getSkinSessions()
-      .then((data) => {
-        setSessions(data);
-        const seed: Record<number, string> = {};
-        for (const s of data) {
-          const cached = getCachedSkinPhotoUrlSync(s.image_url);
-          if (cached) seed[s.id] = cached;
-        }
-        setDisplayUrls(seed);
-        const seedAspects: Record<number, number> = {};
-        for (const s of data) {
-          const dims = getCachedSkinPhotoDimsSync(s.image_url);
-          if (dims) seedAspects[s.id] = dims.width / dims.height;
-        }
-        setAspects(seedAspects);
-        const missing = data
-          .filter((s) => seed[s.id] == null)
-          .map((s) => s.image_url);
-        if (missing.length > 0) {
-          void prefetchSkinPhotoUrls(missing).then(() => {
-            setDisplayUrls((prev) => {
-              const next = { ...prev };
-              for (const s of data) {
-                const cached = getCachedSkinPhotoUrlSync(s.image_url);
-                if (cached && !next[s.id]) next[s.id] = cached;
-              }
-              return next;
-            });
-          });
-        }
-      })
-      .catch(() => {
-        setSessions((prev) => prev);
-        setLoadError(true);
-      });
-  }, []);
+  // Sessions come from the shared store; seed/resolve photos locally as
+  // the shared set changes (deletes included — stale ids are pruned).
+  useEffect(() => {
+    refreshSessions();
+  }, [refreshSessions]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    const seed: Record<number, string> = {};
+    for (const s of sessions) {
+      const cached = getCachedSkinPhotoUrlSync(s.image_url);
+      if (cached) seed[s.id] = cached;
+    }
+    setDisplayUrls((prev) => {
+      const next: Record<number, string> = {};
+      for (const s of sessions) {
+        if (prev[s.id]) next[s.id] = prev[s.id];
+        else if (seed[s.id]) next[s.id] = seed[s.id];
+      }
+      return next;
+    });
+    const seedAspects: Record<number, number> = {};
+    for (const s of sessions) {
+      const dims = getCachedSkinPhotoDimsSync(s.image_url);
+      if (dims) seedAspects[s.id] = dims.width / dims.height;
+    }
+    setAspects((prev) => {
+      const next: Record<number, number> = {};
+      for (const s of sessions) {
+        if (prev[s.id]) next[s.id] = prev[s.id];
+        else if (seedAspects[s.id]) next[s.id] = seedAspects[s.id];
+      }
+      return next;
+    });
+    const missing = sessions
+      .filter((s) => seed[s.id] == null)
+      .map((s) => s.image_url);
+    if (missing.length > 0) {
+      void prefetchSkinPhotoUrls(missing).then(() => {
+        setDisplayUrls((prev) => {
+          const next = { ...prev };
+          for (const s of sessions) {
+            const cached = getCachedSkinPhotoUrlSync(s.image_url);
+            if (cached && !next[s.id]) next[s.id] = cached;
+          }
+          return next;
+        });
+      });
+    }
+  }, [sessions]);
 
   const timeline = useMemo(
-    () =>
-      sessions != null
-        ? buildConcernTimeline(sessions, concernUuid ?? null)
-        : null,
+    () => buildConcernTimeline(sessions, concernUuid ?? null),
     [sessions, concernUuid],
   );
+
+  // Clamp the selection when the frame list shrinks (e.g. an entry deleted
+  // in the montage underneath this stacked modal).
+  useEffect(() => {
+    if (!timeline) return;
+    setSelectedIndex((prev) =>
+      prev >= timeline.frames.length
+        ? Math.max(timeline.frames.length - 1, 0)
+        : prev,
+    );
+  }, [timeline]);
 
   // Default selection: requested session, else latest appearance.
   useEffect(() => {
@@ -263,21 +283,9 @@ export default function ConcernProgressionScreen() {
         },
       );
       const updated = result.concern;
-      // Write into the same sessions data the montage/cards read shape so
-      // they don't show the old position on next mount within this session.
-      setSessions((prev) => {
-        if (!prev) return prev;
-        const createdId = updated.created_session_id;
-        return prev.map((s) => {
-          if (s.id !== createdId) return s;
-          return {
-            ...s,
-            concerns: (s.concerns ?? []).map((c) =>
-              c.id === updated.id ? updated : c,
-            ),
-          };
-        });
-      });
+      // Publish through the shared store so the montage/cards show the new
+      // position immediately, no remount needed.
+      applyConcernPatch(updated);
       setAdjusting(false);
       setAdjustValue(null);
       Toast.show({
@@ -301,11 +309,11 @@ export default function ConcernProgressionScreen() {
     } finally {
       setSaving(false);
     }
-  }, [timeline, frame, adjustValue, saving, concernUuid]);
+  }, [timeline, frame, adjustValue, saving, concernUuid, applyConcernPatch]);
 
   const scrollRef = useRef(null);
 
-  if (sessions == null) {
+  if (sessionsLoading && sessions.length === 0) {
     return (
       <View
         style={[
@@ -318,13 +326,13 @@ export default function ConcernProgressionScreen() {
         ]}
       >
         <StatusBar style="light" />
-        {loadError ? (
+        {sessionsError && sessions.length === 0 ? (
           <View style={styles.centered}>
             <ThemedText type="h3">Couldn't load progress</ThemedText>
             <ThemedText type="bodySmall">
               Check your connection and try again.
             </ThemedText>
-            <ThemedButton text="Retry" onPress={load} />
+            <ThemedButton text="Retry" onPress={() => void refreshSessions()} />
           </View>
         ) : (
           <View style={styles.centered}>
