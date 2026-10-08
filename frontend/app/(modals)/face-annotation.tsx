@@ -45,7 +45,12 @@ import {
   renumber,
   reverseAction,
 } from "@/utils/annotation";
-import { computeAnchor, lastSeenCoords, projectConcern } from "@/utils/anchor";
+import {
+  computeAnchor,
+  lastSeenCoords,
+  projectConcern,
+  type ConcernAnchor,
+} from "@/utils/anchor";
 import {
   useSkinCapture,
   type SkinLandmarkRefs,
@@ -102,6 +107,9 @@ interface CarryResult {
   skipped: CarrySkip[];
   /** True when no landmark ref could be used, so coords were carried as-is. */
   usedFallbackCoords: boolean;
+  /** Per-concern projection source counts (original-truth observability). */
+  storedAnchorCount: number;
+  freshAnchorCount: number;
 }
 
 function carryConcernsFrom(
@@ -113,6 +121,8 @@ function carryConcernsFrom(
   const skipped: CarrySkip[] = [];
   const prevLandmarks = prev.face_landmarks ?? null;
   let usedFallbackCoords = false;
+  let storedAnchorCount = 0;
+  let freshAnchorCount = 0;
 
   // Default source preserves the old behavior; callers pass history-aware
   // sources so concerns carried *through* prev (not originated there) are
@@ -150,22 +160,44 @@ function carryConcernsFrom(
       skip("no-coords");
       continue;
     }
-    // With landmarks on either side the concern is re-projected onto the new
-    // capture; without them it carries at its last known coordinates.
-    if (!prevLandmarks || !newLandmarks) {
-      usedFallbackCoords = true;
+    // Narrowed to string by the no-uuid skip above; hoisted so the
+    // pushCarried closure keeps the narrow type.
+    const uuid: string = concern.uuid;
+    const pushCarried = (x: number, y: number) => {
       carried.push({
-        uuid: concern.uuid,
+        uuid,
         number: 0,
-        x: coords.x,
-        y: coords.y,
+        x,
+        y,
         concernId: concern.label,
         status: "labeled",
         createdOrder: 0,
         carriedFrom: concern.uuid,
         carriedCreatedAt: concern.created_at,
         isResolved: false,
+        wasDragged: false,
       });
+    };
+    // Original mark is truth: project the stored anchor (computed at first
+    // appearance) onto the new photo, so error can't compound generation
+    // after generation. Fresh-anchor chaining below is fallback only.
+    // NOTE: projectConcern is not scale-aware (plain offsets) — verify with
+    // a close-up + far photo pair before trusting this at mixed distances.
+    const storedAnchor = concern.anchor as ConcernAnchor | null;
+    const storedUsable =
+      newLandmarks != null &&
+      (storedAnchor?.refs ?? []).some((r) => newLandmarks[r.key] != null);
+    if (storedUsable) {
+      const projected = projectConcern(storedAnchor, newLandmarks, coords);
+      storedAnchorCount += 1;
+      pushCarried(projected.x, projected.y);
+      continue;
+    }
+    // With landmarks on either side the concern is re-projected onto the new
+    // capture; without them it carries at its last known coordinates.
+    if (!prevLandmarks || !newLandmarks) {
+      usedFallbackCoords = true;
+      pushCarried(coords.x, coords.y);
       continue;
     }
     const anchor = computeAnchor(coords, prevLandmarks);
@@ -173,20 +205,16 @@ function carryConcernsFrom(
     if (projected.x === coords.x && projected.y === coords.y) {
       usedFallbackCoords = true;
     }
-    carried.push({
-      uuid: concern.uuid,
-      number: 0,
-      x: projected.x,
-      y: projected.y,
-      concernId: concern.label,
-      status: "labeled",
-      createdOrder: 0,
-      carriedFrom: concern.uuid,
-      carriedCreatedAt: concern.created_at,
-      isResolved: false,
-    });
+    freshAnchorCount += 1;
+    pushCarried(projected.x, projected.y);
   }
-  return { carried, skipped, usedFallbackCoords };
+  return {
+    carried,
+    skipped,
+    usedFallbackCoords,
+    storedAnchorCount,
+    freshAnchorCount,
+  };
 }
 
 const btnColor = Colors["light"].primary[400];
@@ -370,6 +398,7 @@ export default function FaceAnnotationScreen() {
       carriedFrom: null,
       carriedCreatedAt: null,
       isResolved: false,
+      wasDragged: false,
     };
     setCircles((prev) => renumber([...prev, circle]));
     pushHistory({ type: "place", circle });
@@ -417,7 +446,13 @@ export default function FaceAnnotationScreen() {
         // each session, so concerns carried *through* prev would be missed
         // if we read prev.concerns alone (e.g. 3rd photo of the day).
         const present = dayEntries(prev.id, allConcerns(sessions));
-        const { carried, skipped, usedFallbackCoords } = carryConcernsFrom(
+        const {
+          carried,
+          skipped,
+          usedFallbackCoords,
+          storedAnchorCount,
+          freshAnchorCount,
+        } = carryConcernsFrom(
           prev,
           landmarkRefs,
           present.map((e) => ({ concern: e.concern, coords: e.coords })),
@@ -441,6 +476,7 @@ export default function FaceAnnotationScreen() {
             `present_on_prev=${present.length}`,
             `skipped=${skipped.length}`,
             `fallback_coords=${usedFallbackCoords}`,
+            `anchor=stored:${storedAnchorCount}/fresh:${freshAnchorCount}`,
             `new_landmarks=${landmarkRefs ? "yes" : "no"}`,
             `prev_landmarks=${prev.face_landmarks ? "yes" : "no"}`,
             skipped.length ? `skipped_detail=${JSON.stringify(skipped)}` : "",
@@ -555,6 +591,13 @@ export default function FaceAnnotationScreen() {
         uuid: start.uuid,
         prev: { x: start.x, y: start.y },
       });
+      // A user drag is a deliberate correction: flag it so the submitted
+      // history entry is stored user_corrected and never flagged for Adjust.
+      setCircles((prev) =>
+        prev.map((x) =>
+          x.uuid === start.uuid ? { ...x, wasDragged: true } : x,
+        ),
+      );
     }
   };
 

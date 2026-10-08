@@ -10,6 +10,7 @@ from app.schemas.skin import (
     CheckInRequest,
     CheckInResponse,
     ConcernOut,
+    ConcernPositionResponse,
     ConcernPositionUpdate,
     DeleteSessionResponse,
     DeleteSkinDataResponse,
@@ -101,7 +102,12 @@ def submit_check_in(
             # an in-place append would not be flagged as a change.
             history = list(existing.history or [])
             history.append(
-                {"session_id": session.id, "coords": coords, "size_estimate": None}
+                {
+                    "session_id": session.id,
+                    "coords": coords,
+                    "size_estimate": None,
+                    "user_corrected": bool(c.moved),
+                }
             )
             existing.history = history
             if c.resolved:
@@ -278,7 +284,7 @@ def delete_session(
 
 @router.patch(
     "/concerns/{concern_uuid}/sessions/{session_id}",
-    response_model=ConcernOut,
+    response_model=ConcernPositionResponse,
 )
 def update_concern_position(
     concern_uuid: str,
@@ -290,12 +296,14 @@ def update_concern_position(
     """Save a user-dragged correction for one session appearance.
 
     Always rewrites that history entry's coords and flags it
-    `user_corrected`. Recomputes the concern-level `anchor` from the
-    corrected coords ONLY when the corrected session is the most recent
-    appearance and that session has finite landmarks; otherwise the anchor
-    is left alone (an older photo must not poison earlier frames).
-    Later sessions already stored keep their old carried coords — the fix
-    helps future captures only. No migration: history is JSONB.
+    `user_corrected`. The original mark is truth: the concern-level
+    `anchor` is recomputed from the corrected coords ONLY when the
+    corrected session is the FIRST appearance (`created_session_id`, or
+    the earliest surviving history entry if the creation session was
+    deleted) and that session has finite landmarks. Later-frame
+    corrections fix just that entry — the anchor stays pinned to the
+    original. Already-stored later sessions keep their coords (forward
+    only). No migration: history is JSONB.
     """
     if not (0 <= body.x <= 1 and 0 <= body.y <= 1):
         raise HTTPException(
@@ -347,22 +355,58 @@ def update_concern_position(
     # in-place mutation would not be flagged as a change.
     concern.history = history
 
-    is_latest = all(
-        (h.get("session_id") or 0) <= session_id for h in history
+    # First appearance by creation id; if the creation session was deleted,
+    # fall back to the earliest surviving history entry (history is appended
+    # chronologically, so the first surviving entry is the earliest).
+    created_exists = (
+        db.query(SkinSession.id)
+        .filter(
+            SkinSession.id == concern.created_session_id,
+            SkinSession.user_id == current_user.id,
+        )
+        .first()
+        is not None
     )
-    if is_latest and finite_landmarks(session.face_landmarks or {}):
+    if created_exists:
+        is_first = session_id == concern.created_session_id
+    else:
+        history_ids = [
+            h.get("session_id") for h in history if h.get("session_id")
+        ]
+        existing_ids = {
+            row[0]
+            for row in db.query(SkinSession.id)
+            .filter(
+                SkinSession.user_id == current_user.id,
+                SkinSession.id.in_(history_ids or [session_id]),
+            )
+            .all()
+        }
+        earliest = next(
+            (i for i in history_ids if i in existing_ids), None
+        )
+        is_first = earliest is not None and session_id == earliest
+
+    anchor_updated = is_first and bool(
+        finite_landmarks(session.face_landmarks or {})
+    )
+    if anchor_updated:
         concern.anchor = compute_anchor(corrected, session.face_landmarks)
 
     db.commit()
     db.refresh(concern)
     logger.info(
-        "Corrected concern position: user=%s uuid=%s session=%s latest=%s",
+        "Corrected concern position: user=%s uuid=%s session=%s first=%s anchor=%s",
         current_user.id,
         concern_uuid,
         session_id,
-        is_latest,
+        is_first,
+        anchor_updated,
     )
-    return concern
+    return ConcernPositionResponse(
+        concern=ConcernOut.model_validate(concern, from_attributes=True),
+        anchor_updated=anchor_updated,
+    )
 
 
 @router.delete("/data", response_model=DeleteSkinDataResponse)

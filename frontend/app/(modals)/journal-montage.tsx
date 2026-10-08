@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -64,6 +64,61 @@ const DOT_RADIUS = DOT_SIZE / 2;
 const LINE_GAP = 15.13 * 1.65;
 const LINE_THICKNESS = 1;
 const txtColor = Colors["light"].neutral[100];
+
+import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
+
+const VIGNETTE_CENTER_Y = 0.5; // fraction of screen height
+const VIGNETTE_RX = 0.5; // oval half-width, fraction of screen width
+const VIGNETTE_RY = 0.4; // oval half-height, fraction of screen height
+const VIGNETTE_CLEAR_UNTIL = 0.65; // 0 to 1, how much of the oval stays clear
+const VIGNETTE_EDGE_OPACITY = 0.6;
+
+const FaceVignette = memo(function FaceVignette({
+  width,
+  height,
+}: {
+  width: number;
+  height: number;
+}) {
+  const cx = width / 2;
+  const cy = height * VIGNETTE_CENTER_Y;
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Svg width={width} height={height}>
+        <Defs>
+          <RadialGradient
+            id="faceVignette"
+            gradientUnits="userSpaceOnUse"
+            cx={cx}
+            cy={cy}
+            fx={cx}
+            fy={cy}
+            rx={width * VIGNETTE_RX}
+            ry={height * VIGNETTE_RY}
+          >
+            <Stop
+              offset={VIGNETTE_CLEAR_UNTIL}
+              stopColor="#000"
+              stopOpacity={0}
+            />
+            <Stop
+              offset={1}
+              stopColor="#000"
+              stopOpacity={VIGNETTE_EDGE_OPACITY}
+            />
+          </RadialGradient>
+        </Defs>
+        <Rect
+          x={0}
+          y={0}
+          width={width}
+          height={height}
+          fill="url(#faceVignette)"
+        />
+      </Svg>
+    </View>
+  );
+});
 
 /**
  * Displayed rect of a `contentFit="contain"` image inside a container, so
@@ -136,9 +191,7 @@ function MontageFrame({
         markers.map((entry) => (
           <Pressable
             key={entry.concern.id}
-            onPress={() =>
-              onMarkerPress?.(entry.concern.uuid, sessionId)
-            }
+            onPress={() => onMarkerPress?.(entry.concern.uuid, sessionId)}
             accessibilityRole="button"
             accessibilityLabel={`Open progress for ${entry.number}`}
             hitSlop={12}
@@ -1127,6 +1180,10 @@ export default function JournalMontageScreen() {
           onFrameLoad={onFrameLoad}
           onStop={stopPlaying}
         />
+      )}
+
+      {showMarkers && (
+        <FaceVignette width={windowWidth} height={windowHeight} />
       )}
 
       {/* Floating top chrome. box-none lets swipes reach the pager. */}

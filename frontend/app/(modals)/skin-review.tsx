@@ -64,6 +64,7 @@ export default function SkinReviewScreen() {
           status: c.status,
           carried_uuid: c.carriedFrom,
           resolved: c.isResolved,
+          moved: c.wasDragged ?? false,
         })),
         moisture_rating: review.moisture,
         texture_rating: review.texture,

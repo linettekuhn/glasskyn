@@ -18,6 +18,11 @@ class ConcernIn(BaseModel):
     status: str
     carried_uuid: str | None = None
     resolved: bool = False
+    # Client-set when the user dragged this carried circle during marking:
+    # the appended history entry is stored user_corrected so it is never
+    # flagged for Adjust. (Cross-photo coords can't be diffed server-side —
+    # each photo is its own coordinate space — so the client must say so.)
+    moved: bool = False
 
 
 class CheckInRequest(BaseModel):
@@ -83,3 +88,11 @@ class DeleteSessionResponse(BaseModel):
 class ConcernPositionUpdate(BaseModel):
     x: float
     y: float
+
+
+class ConcernPositionResponse(BaseModel):
+    concern: ConcernOut
+    # True only when the correction rewrote the concern-level anchor (first
+    # appearance + finite landmarks). The client picks its toast copy and
+    # future-capture expectations from this — it cannot infer it locally.
+    anchor_updated: bool

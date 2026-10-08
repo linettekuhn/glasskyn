@@ -56,11 +56,17 @@ export async function deleteSkinSession(sessionId: number): Promise<void> {
   await apiClient.delete(`/skin/sessions/${sessionId}`);
 }
 
+export interface ConcernPositionResult {
+  concern: SkinConcernOut;
+  /** True only when the correction rewrote the concern-level anchor. */
+  anchor_updated: boolean;
+}
+
 export async function patchConcernPosition(
   concernUuid: string,
   sessionId: number,
   coords: { x: number; y: number },
-): Promise<SkinConcernOut> {
+): Promise<ConcernPositionResult> {
   const response = await apiClient.patch(
     `/skin/concerns/${encodeURIComponent(concernUuid)}/sessions/${sessionId}`,
     { x: coords.x, y: coords.y },

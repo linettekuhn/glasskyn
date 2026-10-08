@@ -1,12 +1,14 @@
 import { useMemo } from "react";
 import type { SkinConcernOut, SkinSessionOut } from "@/types";
 import { allConcerns, concernLabel } from "@/utils/skin-sessions";
+import { projectConcern } from "@/utils/anchor";
 import { dayNumber, healedInDays } from "@/utils/skin-days";
 
 // Heuristic thresholds for the alignment-confidence fallback. Guesses — tune
-// against real sessions (see 12G plan).
+// against real sessions (see 12G plan). In particular LOW_CONF_DIVERGENCE
+// must survive framing variance: verify with a close-up + far photo pair.
 export const LOW_CONF_REF_DIST = 0.09;
-export const LOW_CONF_DISPLACEMENT = 0.15;
+export const LOW_CONF_DIVERGENCE = 0.15;
 
 export interface ConcernFrame {
   session: SkinSessionOut;
@@ -66,9 +68,14 @@ export function buildConcernTimeline(
   const ordered = [...sessions].sort(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );
+  // First appearance is the creation session by definition. If it was
+  // deleted, fall back to the earliest surviving history entry (history is
+  // appended chronologically, so the first surviving entry is the earliest).
   const firstSession =
-    sessionById(ordered, concern.history?.[0]?.session_id) ??
     sessionById(ordered, concern.created_session_id) ??
+    (concern.history ?? [])
+      .map((h) => sessionById(ordered, h.session_id))
+      .find((s): s is SkinSessionOut => s != null) ??
     ordered[0]!;
   const resolvedSession = sessionById(ordered, concern.resolved_session_id);
   const firstIso = firstSession.timestamp;
@@ -107,14 +114,20 @@ export function buildConcernTimeline(
       coords,
       isGap: coords == null,
       userCorrected: entry?.user_corrected === true,
-      lowConfidence: false, // filled below (needs previous-frame context)
+      lowConfidence: false, // filled by the confidence pass below
       dayN: dayNumber(firstIso, session.timestamp),
       dateIso: session.timestamp,
     });
   }
-
-  // Confidence pass: user-corrected frames are always high confidence.
-  let prevCoords: { x: number; y: number } | null = null;
+  // Confidence pass: the original mark is truth. Each frame's stored coords
+  // are compared against the pinned anchor projected onto THAT session's
+  // landmarks, so slow drift accumulates against one fixed reference instead
+  // of chaining frame-to-frame. Raw-coord displacement is deliberately not
+  // used: framing (distance/tilt/position) moves correctly placed concerns in
+  // raw image coordinates. User-corrected frames bypass (deliberate intent).
+  const anchorRefs: Array<{ key: string }> =
+    (concern.anchor as unknown as { refs?: Array<{ key: string }> } | null)
+      ?.refs ?? [];
   const refDist = nearestRefDist(concern);
   for (const frame of frames) {
     if (frame.isGap || frame.coords == null) {
@@ -122,27 +135,35 @@ export function buildConcernTimeline(
     }
     if (frame.userCorrected) {
       frame.lowConfidence = false;
-      prevCoords = frame.coords;
       continue;
     }
+    const landmarks = frame.session.face_landmarks;
     const noLandmarks =
-      frame.session.face_landmarks == null ||
-      Object.keys(frame.session.face_landmarks ?? {}).length === 0;
+      landmarks == null || Object.keys(landmarks).length === 0;
     const noRefs = refDist == null;
     const farRef = refDist != null && refDist > LOW_CONF_REF_DIST;
-    const displacement =
-      prevCoords != null
-        ? Math.hypot(
-            frame.coords.x - prevCoords.x,
-            frame.coords.y - prevCoords.y,
-          )
-        : 0;
-    const jumped = prevCoords != null && displacement > LOW_CONF_DISPLACEMENT;
-    // Note: projected-vs-stored divergence is intentionally NOT a signal
-    // here — stored coords were already projected at capture time so they
-    // mostly match. Landmark / ref-distance / displacement do the real work.
-    frame.lowConfidence = noLandmarks || noRefs || farRef || jumped;
-    prevCoords = frame.coords;
+    // Skip divergence when projection is impossible: no landmarks (covered
+    // by noLandmarks) or no ref-key overlap with this session (projection
+    // would fall back and report a meaningless 0). Never pass anchor.point
+    // as the fallback — it would mask real divergence.
+    let diverged = false;
+    if (
+      !noLandmarks &&
+      !noRefs &&
+      anchorRefs.some((r) => landmarks?.[r.key] != null)
+    ) {
+      const projected = projectConcern(
+        concern.anchor as unknown as Parameters<typeof projectConcern>[0],
+        landmarks,
+        frame.coords,
+      );
+      diverged =
+        Math.hypot(
+          frame.coords.x - projected.x,
+          frame.coords.y - projected.y,
+        ) > LOW_CONF_DIVERGENCE;
+    }
+    frame.lowConfidence = noLandmarks || noRefs || farRef || diverged;
   }
 
   return {

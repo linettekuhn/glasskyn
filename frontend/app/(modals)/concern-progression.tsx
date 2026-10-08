@@ -25,7 +25,7 @@ import {
   prefetchSkinPhotoUrls,
   primeSkinPhotoDims,
 } from "@/api/skin-photo-urls";
-import type { SkinConcernOut, SkinSessionOut } from "@/types";
+import type { SkinSessionOut } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import ThemedButton from "@/components/ui/themed-button";
@@ -254,7 +254,7 @@ export default function ConcernProgressionScreen() {
     }
     setSaving(true);
     try {
-      const updated: SkinConcernOut = await patchConcernPosition(
+      const result = await patchConcernPosition(
         concernUuid,
         frame.session.id,
         {
@@ -262,6 +262,7 @@ export default function ConcernProgressionScreen() {
           y: clamp01(adjustValue.y),
         },
       );
+      const updated = result.concern;
       // Write into the same sessions data the montage/cards read shape so
       // they don't show the old position on next mount within this session.
       setSessions((prev) => {
@@ -282,7 +283,12 @@ export default function ConcernProgressionScreen() {
       Toast.show({
         type: "success",
         text1: "Position updated",
-        text2: "Future check-ins will use this as reference.",
+        // "Reference" copy only when the endpoint actually rewrote the
+        // anchor (first appearance + landmarks); a landmark-less first
+        // frame corrects just that entry.
+        text2: result.anchor_updated
+          ? "Future check-ins will use this as reference."
+          : "Saved for this check-in.",
         position: "bottom",
       });
     } catch {

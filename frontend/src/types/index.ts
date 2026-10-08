@@ -236,6 +236,9 @@ export interface CircleAnnotation {
   carriedCreatedAt: string | null;
   /** carried circle dropped on the trash to be marked resolved this session. */
   isResolved: boolean;
+  /** Set when the user drags this circle; submitted as `moved` so the
+   * backend can flag the history entry user_corrected. */
+  wasDragged?: boolean;
 }
 
 export type AnnotationAction =
@@ -253,6 +256,7 @@ export interface SkinCheckInConcernPayload {
   status: CircleStatus;
   carried_uuid?: string | null;
   resolved?: boolean;
+  moved?: boolean;
 }
 
 export interface SkinCheckInPayload {
