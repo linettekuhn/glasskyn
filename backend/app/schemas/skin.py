@@ -96,3 +96,14 @@ class ConcernPositionResponse(BaseModel):
     # appearance + finite landmarks). The client picks its toast copy and
     # future-capture expectations from this — it cannot infer it locally.
     anchor_updated: bool
+
+
+class SkinNudgeOut(BaseModel):
+    id: int
+    session_id: int
+    text: str
+    created_at: datetime | None = None
+    seen_at: datetime | None = None
+    dismissed_at: datetime | None = None
+
+    model_config = {"from_attributes": True}

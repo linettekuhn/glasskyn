@@ -11,3 +11,4 @@ from .user_preference import UserPreference
 from .water_intake import WaterIntake
 from .chat import ChatMessage, ChatSession
 from .skin import SkinSession, SkinConcern
+from .skin_nudge import SkinNudge

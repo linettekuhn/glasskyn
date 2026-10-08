@@ -17,5 +17,6 @@ class UserPreference(Base):
     water_climate = Column(String, nullable=True)
     routine_digest_am_time = Column(String, default="08:00", nullable=True)
     routine_digest_pm_time = Column(String, default="20:00", nullable=True)
+    skin_nudge_enabled = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

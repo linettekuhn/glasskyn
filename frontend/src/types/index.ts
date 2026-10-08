@@ -149,6 +149,7 @@ export interface UserPreference {
   water_climate: string | null;
   routine_digest_am_time: string | null;
   routine_digest_pm_time: string | null;
+  skin_nudge_enabled: boolean;
 }
 
 export interface WaterIntake {
@@ -317,4 +318,13 @@ export interface SkinSessionOut {
 export interface SkinCheckInResponse {
   session_id: number;
   concerns: SkinConcernOut[];
+}
+
+export interface SkinNudge {
+  id: number;
+  session_id: number;
+  text: string;
+  created_at: string | null;
+  seen_at: string | null;
+  dismissed_at: string | null;
 }

@@ -1,10 +1,13 @@
 import logging
+from datetime import datetime, timezone
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.middleware.auth import get_db, get_current_user
 from app.models.skin import SkinConcern, SkinSession
+from app.models.skin_nudge import SkinNudge
 from app.models.user import User
 from app.schemas.skin import (
     CheckInRequest,
@@ -15,6 +18,7 @@ from app.schemas.skin import (
     DeleteSessionResponse,
     DeleteSkinDataResponse,
     SessionOut,
+    SkinNudgeOut,
 )
 from app.services import storage
 from app.services.skin_anchor import compute_anchor, finite_landmarks
@@ -50,9 +54,18 @@ def _assert_owned_file_key(file_key: str, user_id: int) -> None:
         )
 
 
+def _schedule_skin_nudge(user_id: int, session_id: int) -> None:
+    # Local import keeps router import time light; the task owns its
+    # DB session and never raises, so check-in is unaffected.
+    from app.services.skin_nudge import create_nudge_for_session
+
+    create_nudge_for_session(user_id, session_id)
+
+
 @router.post("/check-in", response_model=CheckInResponse, status_code=201)
 def submit_check_in(
     body: CheckInRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -148,6 +161,12 @@ def submit_check_in(
         len(concerns) - carried_count,
         carried_count,
         "yes" if face_landmarks_dict else "no",
+    )
+
+    # The nudge runs after the response is sent and never blocks it;
+    # create_nudge_for_session owns its DB session and never raises.
+    background_tasks.add_task(
+        _schedule_skin_nudge, current_user.id, session.id
     )
 
     return CheckInResponse(
@@ -447,3 +466,56 @@ def delete_skin_data(
         deleted_sessions=deleted_sessions,
         deleted_concerns=deleted_concerns,
     )
+
+
+@router.get("/nudge/latest", response_model=Optional[SkinNudgeOut])
+def get_latest_nudge(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Most recent nudge that is not dismissed, or 204 when there is none.
+
+    Marks the nudge seen on first fetch.
+    """
+    nudge = (
+        db.query(SkinNudge)
+        .filter(
+            SkinNudge.user_id == current_user.id,
+            SkinNudge.dismissed_at.is_(None),
+        )
+        .order_by(SkinNudge.created_at.desc(), SkinNudge.id.desc())
+        .first()
+    )
+    if nudge is None:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    if nudge.seen_at is None:
+        nudge.seen_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(nudge)
+    return nudge
+
+
+@router.post("/nudge/{nudge_id}/dismiss", response_model=SkinNudgeOut)
+def dismiss_nudge(
+    nudge_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    nudge = (
+        db.query(SkinNudge)
+        .filter(
+            SkinNudge.id == nudge_id,
+            SkinNudge.user_id == current_user.id,
+        )
+        .first()
+    )
+    if nudge is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nudge not found",
+        )
+    if nudge.dismissed_at is None:
+        nudge.dismissed_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(nudge)
+    return nudge

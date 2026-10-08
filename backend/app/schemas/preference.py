@@ -13,6 +13,7 @@ class PreferenceUpdate(BaseModel):
     water_climate: Optional[str] = None
     routine_digest_am_time: Optional[str] = None
     routine_digest_pm_time: Optional[str] = None
+    skin_nudge_enabled: Optional[bool] = None
 
 
 class PreferenceOut(BaseModel):
@@ -26,5 +27,6 @@ class PreferenceOut(BaseModel):
     water_climate: Optional[str]
     routine_digest_am_time: Optional[str]
     routine_digest_pm_time: Optional[str]
+    skin_nudge_enabled: bool
 
     model_config = {"from_attributes": True}

@@ -4,8 +4,29 @@ import type {
   SkinCheckInPayload,
   SkinCheckInResponse,
   SkinConcernOut,
+  SkinNudge,
   SkinSessionOut,
 } from "@/types";
+
+/** Listeners refetch the home nudge card after a check-in completes. */
+const checkInListeners = new Set<() => void>();
+
+export function onSkinCheckInSaved(listener: () => void): () => void {
+  checkInListeners.add(listener);
+  return () => {
+    checkInListeners.delete(listener);
+  };
+}
+
+function notifySkinCheckInSaved() {
+  checkInListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch {
+      // Best-effort: a nudge refetch must never break the save flow.
+    }
+  });
+}
 
 async function uploadSkinPhoto(uri: string): Promise<string> {
   const fileName = `skin_${Date.now()}.jpg`;
@@ -36,7 +57,18 @@ export async function submitSkinCheckIn(
     tone_rating: payload.tone_rating,
     notes: payload.notes,
   });
+  notifySkinCheckInSaved();
   return response.data;
+}
+
+export async function getLatestSkinNudge(): Promise<SkinNudge | null> {
+  const response = await apiClient.get("/skin/nudge/latest");
+  if (response.status === 204 || !response.data) return null;
+  return response.data as SkinNudge;
+}
+
+export async function dismissSkinNudge(nudgeId: number): Promise<void> {
+  await apiClient.post(`/skin/nudge/${nudgeId}/dismiss`);
 }
 
 export async function getSkinSessions(): Promise<SkinSessionOut[]> {
