@@ -28,6 +28,7 @@ import {
 import { useChatSession } from "@/contexts/ChatSessionContext";
 import { getRoutine, getActiveRoutine } from "@/api/routines";
 import { getProducts } from "@/api/products";
+import { getSkinSessions } from "@/api/skin";
 import GlassSurface from "@/components/ui/glass-surface";
 import ChatIcon from "@/components/icons/chat-icon";
 import ThemedButton from "@/components/ui/themed-button";
@@ -45,6 +46,10 @@ const QUICK_ACTIONS = {
     label: "Check My Vanity for Risks",
     message: "Check my saved products for any risky or concerning ingredients",
   },
+  skinProgress: {
+    label: "How's My Skin Doing?",
+    message: "How is my skin progress?",
+  },
 } as const;
 
 export default function ChatScreen() {
@@ -60,6 +65,7 @@ export default function ChatScreen() {
   const [hydrated, setHydrated] = useState(false);
   const [hasProducts, setHasProducts] = useState<boolean | null>(null);
   const [hasRoutine, setHasRoutine] = useState<boolean | null>(null);
+  const [hasSkinCheckins, setHasSkinCheckins] = useState<boolean | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const routineSavedRef = useRef(false);
   const sendingRef = useRef(false);
@@ -185,6 +191,14 @@ export default function ChatScreen() {
         })
         .catch(() => {
           if (!cancelled) setHasRoutine(false);
+        });
+
+      getSkinSessions()
+        .then((sessions) => {
+          if (!cancelled) setHasSkinCheckins(sessions.length > 0);
+        })
+        .catch(() => {
+          if (!cancelled) setHasSkinCheckins(false);
         });
 
       return () => {
@@ -363,7 +377,8 @@ export default function ChatScreen() {
       !loading &&
       messages.length === 0 &&
       hasProducts !== null &&
-      hasRoutine !== null;
+      hasRoutine !== null &&
+      hasSkinCheckins !== null;
     if (!ready) return null;
 
     const actions = [
@@ -371,6 +386,7 @@ export default function ChatScreen() {
         ? [QUICK_ACTIONS.missingFromRoutine]
         : [QUICK_ACTIONS.buildRoutine]),
       ...(hasProducts ? [QUICK_ACTIONS.vanityRisks] : []),
+      ...(hasSkinCheckins ? [QUICK_ACTIONS.skinProgress] : []),
     ];
     if (actions.length === 0) return null;
 
