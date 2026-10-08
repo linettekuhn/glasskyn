@@ -78,3 +78,8 @@ class DeleteSessionResponse(BaseModel):
     deleted_concerns: int
     """ Concerns whose resolution pointer or history was trimmed. """
     updated_concerns: int
+
+
+class ConcernPositionUpdate(BaseModel):
+    x: float
+    y: float

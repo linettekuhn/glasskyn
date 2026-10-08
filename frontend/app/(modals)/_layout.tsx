@@ -15,7 +15,8 @@ export default function ModalLayout() {
     lastSegment === "scan" ||
     lastSegment === "skin-capture" ||
     lastSegment === "face-annotation" ||
-    lastSegment === "journal-montage";
+    lastSegment === "journal-montage" ||
+    lastSegment === "concern-progression";
 
   return (
     <SafeAreaView
@@ -67,6 +68,15 @@ export default function ModalLayout() {
                   animation: "slide_from_bottom",
                   gestureDirection: "vertical",
                   contentStyle: { backgroundColor: "#000000" },
+                }}
+              />
+              <Stack.Screen
+                name="concern-progression"
+                options={{
+                  presentation: "fullScreenModal",
+                  animation: "slide_from_bottom",
+                  gestureDirection: "vertical",
+                  contentStyle: { backgroundColor: "#10201D" },
                 }}
               />
               <Stack.Screen name="browse-templates" />

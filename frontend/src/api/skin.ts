@@ -3,6 +3,7 @@ import { getPresignedDownloadUrl, getPresignedUrl, uploadToS3 } from "./uploads"
 import type {
   SkinCheckInPayload,
   SkinCheckInResponse,
+  SkinConcernOut,
   SkinSessionOut,
 } from "@/types";
 
@@ -53,4 +54,16 @@ export async function deleteSkinData(): Promise<void> {
 
 export async function deleteSkinSession(sessionId: number): Promise<void> {
   await apiClient.delete(`/skin/sessions/${sessionId}`);
+}
+
+export async function patchConcernPosition(
+  concernUuid: string,
+  sessionId: number,
+  coords: { x: number; y: number },
+): Promise<SkinConcernOut> {
+  const response = await apiClient.patch(
+    `/skin/concerns/${encodeURIComponent(concernUuid)}/sessions/${sessionId}`,
+    { x: coords.x, y: coords.y },
+  );
+  return response.data;
 }

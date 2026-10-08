@@ -100,6 +100,7 @@ interface MontageFrameProps {
   width: number;
   height: number;
   onLoad: (sessionId: number, w: number, h: number) => void;
+  onMarkerPress?: (concernUuid: string | null, sessionId: number) => void;
 }
 
 /** One check-in photo with its numbered concern markers. */
@@ -111,6 +112,7 @@ function MontageFrame({
   width,
   height,
   onLoad,
+  onMarkerPress,
 }: MontageFrameProps) {
   const { dispW, dispH, offX, offY } = containedRect(width, height, aspect);
   return (
@@ -132,9 +134,14 @@ function MontageFrame({
       )}
       {aspect != null &&
         markers.map((entry) => (
-          <View
+          <Pressable
             key={entry.concern.id}
-            pointerEvents="none"
+            onPress={() =>
+              onMarkerPress?.(entry.concern.uuid, sessionId)
+            }
+            accessibilityRole="button"
+            accessibilityLabel={`Open progress for ${entry.number}`}
+            hitSlop={12}
             style={{
               position: "absolute",
               left: offX + entry.coords.x * dispW - DOT_RADIUS,
@@ -158,7 +165,7 @@ function MontageFrame({
                 {entry.number}
               </ThemedText>
             </View>
-          </View>
+          </Pressable>
         ))}
     </View>
   );
@@ -587,6 +594,21 @@ export default function JournalMontageScreen() {
 
   const stopPlaying = useCallback(() => setPlaying(false), []);
 
+  // 12G entry points: tap a circle in session detail, or long-press a
+  // timeline thumb (opens the session's first concern — thumbs are
+  // per-session, not per-concern). Pause autoplay before pushing.
+  const openProgression = useCallback(
+    (concernUuid: string | null, sessionId: number) => {
+      if (!concernUuid) return;
+      stopPlaying();
+      router.push({
+        pathname: "/(modals)/concern-progression",
+        params: { concernUuid, sessionId: String(sessionId) },
+      });
+    },
+    [stopPlaying],
+  );
+
   const goToIndex = useCallback(
     (index: number) => {
       stopPlaying();
@@ -700,6 +722,7 @@ export default function JournalMontageScreen() {
         width={windowWidth}
         height={windowHeight}
         onLoad={onImageLoad}
+        onMarkerPress={(uuid, sid) => openProgression(uuid, sid)}
       />
     ),
     [
@@ -707,6 +730,7 @@ export default function JournalMontageScreen() {
       concerns,
       displayUrls,
       onImageLoad,
+      openProgression,
       showMarkers,
       windowHeight,
       windowWidth,
@@ -717,9 +741,14 @@ export default function JournalMontageScreen() {
     ({ item, index }: { item: SkinSessionOut; index: number }) => {
       const uri = displayUrls[item.id];
       const isActive = index === activeIndex;
+      const entries = dayEntries(item.id, concerns);
       return (
         <Pressable
           onPress={() => goToIndex(index)}
+          onLongPress={() => {
+            const first = entries[0];
+            if (first) openProgression(first.concern.uuid, item.id);
+          }}
           accessibilityRole="button"
           accessibilityLabel={`Go to check-in ${index + 1}`}
           style={[
@@ -747,7 +776,14 @@ export default function JournalMontageScreen() {
         </Pressable>
       );
     },
-    [activeIndex, colors.primary, displayUrls, goToIndex],
+    [
+      activeIndex,
+      colors.primary,
+      concerns,
+      displayUrls,
+      goToIndex,
+      openProgression,
+    ],
   );
 
   if (loading) {

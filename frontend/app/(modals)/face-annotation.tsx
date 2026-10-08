@@ -70,13 +70,15 @@ const PEEK_HEIGHT_CIRCLING = 178;
 // the sheet handle, with breathing room.
 const PEEK_HEIGHT_LABELING = 220;
 
-const MS_PER_DAY = 86400000;
+import { daysSince } from "@/utils/skin-days";
 
+// Legacy name kept at call sites; now calendar-day based and shared with the
+// progression view (12G) so both screens agree. Previously
+// max(1, floor(elapsed/24h)); now max(0, calendar-day diff). Values can shift
+// by ±1 for sub-24h spans (e.g. 11pm -> 8am next day is now 1, was 0->1).
 function daysBetween(fromIso: string | null | undefined): number | null {
-  if (!fromIso) return null;
-  const start = new Date(fromIso).getTime();
-  if (!Number.isFinite(start)) return null;
-  return Math.max(1, Math.floor((Date.now() - start) / MS_PER_DAY));
+  const d = daysSince(fromIso);
+  return d == null ? null : Math.max(1, d);
 }
 
 interface CarrySkip {

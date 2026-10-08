@@ -10,12 +10,13 @@ from app.schemas.skin import (
     CheckInRequest,
     CheckInResponse,
     ConcernOut,
+    ConcernPositionUpdate,
     DeleteSessionResponse,
     DeleteSkinDataResponse,
     SessionOut,
 )
 from app.services import storage
-from app.services.skin_anchor import compute_anchor
+from app.services.skin_anchor import compute_anchor, finite_landmarks
 
 logger = logging.getLogger(__name__)
 
@@ -273,6 +274,95 @@ def delete_session(
         deleted_concerns=deleted_concerns,
         updated_concerns=updated_concerns,
     )
+
+
+@router.patch(
+    "/concerns/{concern_uuid}/sessions/{session_id}",
+    response_model=ConcernOut,
+)
+def update_concern_position(
+    concern_uuid: str,
+    session_id: int,
+    body: ConcernPositionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save a user-dragged correction for one session appearance.
+
+    Always rewrites that history entry's coords and flags it
+    `user_corrected`. Recomputes the concern-level `anchor` from the
+    corrected coords ONLY when the corrected session is the most recent
+    appearance and that session has finite landmarks; otherwise the anchor
+    is left alone (an older photo must not poison earlier frames).
+    Later sessions already stored keep their old carried coords — the fix
+    helps future captures only. No migration: history is JSONB.
+    """
+    if not (0 <= body.x <= 1 and 0 <= body.y <= 1):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Coordinates must be in [0, 1]",
+        )
+    concern = (
+        db.query(SkinConcern)
+        .filter(
+            SkinConcern.user_id == current_user.id,
+            SkinConcern.uuid == concern_uuid,
+        )
+        .first()
+    )
+    if concern is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Concern not found",
+        )
+    session = (
+        db.query(SkinSession)
+        .filter(
+            SkinSession.id == session_id,
+            SkinSession.user_id == current_user.id,
+        )
+        .first()
+    )
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found",
+        )
+    history = list(concern.history or [])
+    idx = next(
+        (i for i, h in enumerate(history) if h.get("session_id") == session_id),
+        None,
+    )
+    if idx is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Concern not marked in this session",
+        )
+    corrected = {"x": body.x, "y": body.y}
+    updated = dict(history[idx])
+    updated["coords"] = corrected
+    updated["user_corrected"] = True
+    history[idx] = updated
+    # Reassign a NEW list: the column has no MutableList wrapper, so an
+    # in-place mutation would not be flagged as a change.
+    concern.history = history
+
+    is_latest = all(
+        (h.get("session_id") or 0) <= session_id for h in history
+    )
+    if is_latest and finite_landmarks(session.face_landmarks or {}):
+        concern.anchor = compute_anchor(corrected, session.face_landmarks)
+
+    db.commit()
+    db.refresh(concern)
+    logger.info(
+        "Corrected concern position: user=%s uuid=%s session=%s latest=%s",
+        current_user.id,
+        concern_uuid,
+        session_id,
+        is_latest,
+    )
+    return concern
 
 
 @router.delete("/data", response_model=DeleteSkinDataResponse)
