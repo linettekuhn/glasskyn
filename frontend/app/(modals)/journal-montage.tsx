@@ -51,6 +51,15 @@ import {
   formatSessionTime,
   type SkinDayEntry,
 } from "@/utils/skin-sessions";
+import {
+  filterEntriesByZones,
+  noConcernsMessage,
+  zoneByConcernId,
+  zoneCounts,
+  ZONE_LABELS,
+  ZONE_ORDER,
+  type SkinZone,
+} from "@/utils/skin-regions";
 import ThemedButton from "@/components/ui/themed-button";
 
 const THUMB_SIZE = 56;
@@ -300,6 +309,95 @@ function PlayOverlay({
 // `GET /skin/sessions`.
 const URL_RESOLVE_CONCURRENCY = 4;
 
+// Peek grows to fit the 12G region filter bar above the filmstrip so the
+// bar + playback controls stay visible on small devices.
+const PEEK_BASE_HEIGHT = 214;
+
+interface ZoneFilterBarProps {
+  counts: { all: number } & Record<SkinZone, number>;
+  selected: ReadonlySet<SkinZone>;
+  onToggle: (zone: SkinZone) => void;
+  onSelectAll: () => void;
+  accent: string;
+  dimmedText: string;
+}
+
+/**
+ * 12G region filter chips. Always visible (no modal), one tap applies
+ * instantly. Zero-count zones stay visible but dimmed so layout is stable.
+ * "Other" only renders when at least one concern maps to it.
+ */
+const ZoneFilterBar = memo(function ZoneFilterBar({
+  counts,
+  selected,
+  onToggle,
+  onSelectAll,
+  accent,
+  dimmedText,
+}: ZoneFilterBarProps) {
+  const allSelected = selected.size === 0;
+  const renderChip = (
+    key: string,
+    label: string,
+    isSelected: boolean,
+    onPress: () => void,
+    a11yLabel: string,
+    dimmed: boolean,
+  ) => (
+    <Pressable
+      key={key}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      accessibilityState={{ selected: isSelected }}
+      style={[
+        styles.zoneChip,
+        {
+          backgroundColor: isSelected ? accent : "rgba(255,255,255,0.12)",
+          borderColor: isSelected ? accent : "rgba(255,255,255,0.24)",
+          opacity: dimmed && !isSelected ? 0.45 : 1,
+        },
+      ]}
+    >
+      <ThemedText
+        type="captionSmall"
+        weight="semiBold"
+        style={{ color: isSelected ? "#FFFFFF" : dimmedText }}
+        numberOfLines={1}
+      >
+        {label}
+      </ThemedText>
+    </Pressable>
+  );
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.zoneBarContent}
+      style={styles.zoneBar}
+    >
+      {renderChip(
+        "all",
+        `All ${counts.all}`,
+        allSelected,
+        onSelectAll,
+        `All, ${counts.all} concerns${allSelected ? ", selected" : ""}`,
+        false,
+      )}
+      {ZONE_ORDER.filter((z) => z !== "other" || counts.other > 0).map((zone) =>
+        renderChip(
+          zone,
+          `${ZONE_LABELS[zone]} ${counts[zone]}`,
+          selected.has(zone),
+          () => onToggle(zone),
+          `${ZONE_LABELS[zone]}, ${counts[zone]} concerns${selected.has(zone) ? ", selected" : ""}`,
+          counts[zone] === 0,
+        ),
+      )}
+    </ScrollView>
+  );
+});
+
 export default function JournalMontageScreen() {
   const { startId, initialId, initialUrl, initialW, initialH, expandDetails } =
     useLocalSearchParams<{
@@ -335,6 +433,39 @@ export default function JournalMontageScreen() {
   // `getSkinSessions()` returns sessions newest first.
   const sorted = useMemo(() => [...sessions].reverse(), [sessions]);
   const concerns = useMemo(() => allConcerns(sessions), [sessions]);
+
+  // 12G region filter: local-only state, resets on close. Empty set = All.
+  const [selectedZones, setSelectedZones] = useState<Set<SkinZone>>(new Set());
+  const toggleZone = useCallback((zone: SkinZone) => {
+    setSelectedZones((prev) => {
+      const next = new Set(prev);
+      if (next.has(zone)) next.delete(zone);
+      else next.add(zone);
+      return next;
+    });
+  }, []);
+  const selectAllZones = useCallback(() => setSelectedZones(new Set()), []);
+
+  // Zone per concern + distinct-concern counts, recomputed only when the
+  // session set changes (deletes included). No network or image work here.
+  const zoneMap = useMemo(() => zoneByConcernId(concerns), [concerns]);
+  const counts = useMemo(() => zoneCounts(concerns), [concerns]);
+  const isFiltered = selectedZones.size > 0;
+  const selectedList = useMemo(() => Array.from(selectedZones), [selectedZones]);
+  // Positive empty-state line shared by the inline row and the details list.
+  const globalEmptyMessage = useMemo(
+    () => (isFiltered ? noConcernsMessage(selectedList) : null),
+    [isFiltered, selectedList],
+  );
+  const hasAnyConcerns = concerns.length > 0;
+
+  // Apply once at the data layer: filter numbered entries after
+  // `dayEntries()` so each concern's number stays stable (gaps are fine).
+  const filteredDayEntries = useCallback(
+    (sessionId: number): SkinDayEntry[] =>
+      filterEntriesByZones(dayEntries(sessionId, concerns), selectedZones, zoneMap),
+    [concerns, selectedZones, zoneMap],
+  );
 
   // Repeating ruled-lines background for the expanded details, same
   // pattern as the routine card: the gradient measures its own laid-out
@@ -691,9 +822,12 @@ export default function JournalMontageScreen() {
   const activeSession = sorted[activeIndex] ?? null;
 
   const activeEntries = useMemo(
-    () => (activeSession ? dayEntries(activeSession.id, concerns) : []),
-    [activeSession, concerns],
+    () => (activeSession ? filteredDayEntries(activeSession.id) : []),
+    [activeSession, filteredDayEntries],
   );
+  // Sessions keep their place in the timeline; thumbs with no matching
+  // concerns are dimmed as polish (photo + pager page always stay).
+  const activeHasMatches = activeEntries.length > 0;
 
   const deletingRef = useRef(false);
 
@@ -758,9 +892,9 @@ export default function JournalMontageScreen() {
             id,
             uri: displayUrls[id],
             aspect: aspects[id],
-            markers: showMarkers ? dayEntries(id, concerns) : [],
+            markers: showMarkers ? filteredDayEntries(id) : [],
           },
-    [displayUrls, aspects, showMarkers, concerns],
+    [displayUrls, aspects, showMarkers, filteredDayEntries],
   );
   const slotA = useMemo(() => buildFrame(slotAId), [buildFrame, slotAId]);
   const slotB = useMemo(() => buildFrame(slotBId), [buildFrame, slotBId]);
@@ -771,7 +905,7 @@ export default function JournalMontageScreen() {
         sessionId={item.id}
         uri={displayUrls[item.id]}
         aspect={aspects[item.id]}
-        markers={showMarkers ? dayEntries(item.id, concerns) : []}
+        markers={showMarkers ? filteredDayEntries(item.id) : []}
         width={windowWidth}
         height={windowHeight}
         onLoad={onImageLoad}
@@ -780,7 +914,7 @@ export default function JournalMontageScreen() {
     ),
     [
       aspects,
-      concerns,
+      filteredDayEntries,
       displayUrls,
       onImageLoad,
       openProgression,
@@ -794,7 +928,8 @@ export default function JournalMontageScreen() {
     ({ item, index }: { item: SkinSessionOut; index: number }) => {
       const uri = displayUrls[item.id];
       const isActive = index === activeIndex;
-      const entries = dayEntries(item.id, concerns);
+      const entries = filteredDayEntries(item.id);
+      const hasMatches = !isFiltered || entries.length > 0;
       return (
         <Pressable
           onPress={() => goToIndex(index)}
@@ -807,7 +942,7 @@ export default function JournalMontageScreen() {
           style={[
             styles.thumb,
             {
-              opacity: isActive ? 1 : 0.45,
+              opacity: isActive ? 1 : hasMatches ? 0.45 : 0.25,
               borderColor: isActive ? colors.primary[500] : "transparent",
             },
           ]}
@@ -832,7 +967,8 @@ export default function JournalMontageScreen() {
     [
       activeIndex,
       colors.primary,
-      concerns,
+      filteredDayEntries,
+      isFiltered,
       displayUrls,
       goToIndex,
       openProgression,
@@ -877,6 +1013,34 @@ export default function JournalMontageScreen() {
 
   const collapsedContent = (
     <View>
+      {hasAnyConcerns && (
+        <ZoneFilterBar
+          counts={counts}
+          selected={selectedZones}
+          onToggle={toggleZone}
+          onSelectAll={selectAllZones}
+          accent={colors.primary[500]}
+          dimmedText={colors.neutral[600]}
+        />
+      )}
+      {isFiltered &&
+        (selectedList.every((z) => counts[z] === 0) ? (
+          <ThemedText
+            type="captionSmall"
+            style={[styles.zoneInlineNote, { color: colors.neutral[600] }]}
+          >
+            {globalEmptyMessage}
+          </ThemedText>
+        ) : (
+          !activeHasMatches && (
+            <ThemedText
+              type="captionSmall"
+              style={[styles.zoneInlineNote, { color: colors.neutral[600] }]}
+            >
+              No concerns here in this check-in
+            </ThemedText>
+          )
+        ))}
       {showChrome && (
         <FlatList
           ref={filmRef}
@@ -971,6 +1135,34 @@ export default function JournalMontageScreen() {
   const expandedContent = activeSession ? (
     <View style={[styles.expandedWrap, { paddingBottom: insets.bottom + 16 }]}>
       <View style={styles.expandedHeader}>
+        {hasAnyConcerns && (
+          <ZoneFilterBar
+            counts={counts}
+            selected={selectedZones}
+            onToggle={toggleZone}
+            onSelectAll={selectAllZones}
+            accent={colors.primary[500]}
+            dimmedText={colors.neutral[600]}
+          />
+        )}
+        {isFiltered &&
+          (selectedList.every((z) => counts[z] === 0) ? (
+            <ThemedText
+              type="captionSmall"
+              style={[styles.zoneInlineNote, { color: colors.neutral[600] }]}
+            >
+              {globalEmptyMessage}
+            </ThemedText>
+          ) : (
+            !activeHasMatches && (
+              <ThemedText
+                type="captionSmall"
+                style={[styles.zoneInlineNote, { color: colors.neutral[600] }]}
+              >
+                No concerns here in this check-in
+              </ThemedText>
+            )
+          ))}
         {showChrome && (
           <FlatList
             ref={filmRef}
@@ -1080,7 +1272,11 @@ export default function JournalMontageScreen() {
                 type="bodySmall"
                 style={{ color: colors.neutral[600] }}
               >
-                No concerns marked on this check-in
+                {!isFiltered
+                  ? "No concerns marked on this check-in"
+                  : selectedList.every((z) => counts[z] === 0)
+                    ? (globalEmptyMessage ?? "No concerns here")
+                    : "No concerns here in this check-in"}
               </ThemedText>
             ) : (
               activeEntries.map((entry) => {
@@ -1231,7 +1427,7 @@ export default function JournalMontageScreen() {
       <BottomSheet
         snap={sheetSnap}
         onSnapChange={setSheetSnap}
-        peekHeight={150 + insets.bottom}
+        peekHeight={PEEK_BASE_HEIGHT + insets.bottom}
         collapsedContent={collapsedContent}
         expandedContent={expandedContent}
         expandedVisibleRatio={0.6}
@@ -1316,6 +1512,27 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: 16,
     paddingTop: 4,
+  },
+  zoneBar: {
+    maxHeight: 48,
+    marginBottom: 4,
+  },
+  zoneBarContent: {
+    gap: 8,
+    paddingHorizontal: 4,
+    alignItems: "center",
+  },
+  zoneChip: {
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  zoneInlineNote: {
+    textAlign: "center",
+    paddingBottom: 4,
   },
   expandedWrap: {
     flex: 1,

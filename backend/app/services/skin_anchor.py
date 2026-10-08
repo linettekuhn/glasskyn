@@ -28,6 +28,16 @@ LANDMARK_KEYS: tuple[str, ...] = (
 MAX_REF_DIST = 0.4
 MAX_REFS = 3
 
+# Fallback geometry for classify_region when the ideal trio
+# (LEFT_EYE + RIGHT_EYE + NOSE_BASE) is incomplete. The on-device detector
+# often emits cheeks/ears/mouth without NOSE_BASE, which used to force every
+# such concern to "unknown". Offsets are in normalized (0..1) coords, y down.
+_DEFAULT_SPACING = 0.12
+_CHEEK_TO_EYE_DY = 0.07
+_NOSE_TO_EYE_DY = 0.06
+_MOUTH_TO_EYE_DY = 0.12
+_CHEEK_TO_MOUTH_DY = 0.05
+
 
 def finite_landmarks(landmarks: Any) -> dict[str, tuple[float, float]]:
     out: dict[str, tuple[float, float]] = {}
@@ -61,24 +71,107 @@ def classify_region(
         return "unknown"
 
     lm = finite_landmarks(landmarks)
+    # Need at least 2 landmarks for any meaningful face geometry; a single
+    # point plus defaults would classify against invented axes.
+    if len(lm) < 2:
+        return "unknown"
     left_eye = lm.get("LEFT_EYE")
     right_eye = lm.get("RIGHT_EYE")
     nose = lm.get("NOSE_BASE")
     mouth_l = lm.get("MOUTH_LEFT")
     mouth_r = lm.get("MOUTH_RIGHT")
     mouth_b = lm.get("MOUTH_BOTTOM")
+    cheek_l = lm.get("LEFT_CHEEK")
+    cheek_r = lm.get("RIGHT_CHEEK")
+    ear_l = lm.get("LEFT_EAR")
+    ear_r = lm.get("RIGHT_EAR")
 
-    if not left_eye or not right_eye or not nose:
+    def mean_y(pts: list[tuple[float, float] | None]) -> float | None:
+        ys = [p[1] for p in pts if p is not None]
+        return sum(ys) / len(ys) if ys else None
+
+    def mean_x(pts: list[tuple[float, float] | None]) -> float | None:
+        xs = [p[0] for p in pts if p is not None]
+        return sum(xs) / len(xs) if xs else None
+
+    # Vertical eye line: exact when eyes exist, estimated otherwise.
+    # Identical to the old behavior when both eyes are present.
+    if left_eye and right_eye:
+        eye_y = (left_eye[1] + right_eye[1]) / 2.0
+    elif left_eye:
+        eye_y = left_eye[1]
+    elif right_eye:
+        eye_y = right_eye[1]
+    elif (cheek_y := mean_y([cheek_l, cheek_r])) is not None:
+        eye_y = cheek_y - _CHEEK_TO_EYE_DY
+    elif (ear_y := mean_y([ear_l, ear_r])) is not None:
+        eye_y = ear_y
+    elif nose is not None:
+        eye_y = nose[1] - _NOSE_TO_EYE_DY
+    elif (mouth_y0 := mean_y([mouth_l, mouth_r, mouth_b])) is not None:
+        eye_y = mouth_y0 - _MOUTH_TO_EYE_DY
+    else:
         return "unknown"
 
-    eye_y = (left_eye[1] + right_eye[1]) / 2.0
-    eye_spacing = abs(right_eye[0] - left_eye[0])
+    # Horizontal scale: exact eye spacing when possible, else proportional
+    # estimates from cheek / ear span or mouth width, else a generic default.
+    if left_eye and right_eye:
+        eye_spacing = abs(right_eye[0] - left_eye[0])
+    elif cheek_l and cheek_r:
+        eye_spacing = abs(cheek_r[0] - cheek_l[0]) * 0.55
+    elif ear_l and ear_r:
+        eye_spacing = abs(ear_r[0] - ear_l[0]) * 0.4
+    elif mouth_l and mouth_r:
+        eye_spacing = abs(mouth_r[0] - mouth_l[0]) * 1.6
+    else:
+        eye_spacing = _DEFAULT_SPACING
+    if not math.isfinite(eye_spacing) or eye_spacing <= 0:
+        eye_spacing = _DEFAULT_SPACING
+
+    # Face center x: nose when present, else symmetric pair midpoints, else
+    # singletons corrected toward the midline (a lone cheek/ear/eye sits
+    # lateral to the center, so using its x directly would make every nearby
+    # point look "central"). Side-aware offsets use the resolved spacing.
+    if nose is not None:
+        nose_x = nose[0]
+    elif mouth_l and mouth_r:
+        nose_x = (mouth_l[0] + mouth_r[0]) / 2.0
+    elif mouth_b is not None:
+        nose_x = mouth_b[0]
+    elif cheek_l and cheek_r:
+        nose_x = (cheek_l[0] + cheek_r[0]) / 2.0
+    elif left_eye and right_eye:
+        nose_x = (left_eye[0] + right_eye[0]) / 2.0
+    elif ear_l and ear_r:
+        nose_x = (ear_l[0] + ear_r[0]) / 2.0
+    elif left_eye is not None:
+        nose_x = left_eye[0] + eye_spacing * 0.5
+    elif right_eye is not None:
+        nose_x = right_eye[0] - eye_spacing * 0.5
+    elif mouth_l is not None:
+        nose_x = mouth_l[0] + eye_spacing * 0.3
+    elif mouth_r is not None:
+        nose_x = mouth_r[0] - eye_spacing * 0.3
+    elif cheek_l is not None:
+        nose_x = cheek_l[0] + eye_spacing * 0.8
+    elif cheek_r is not None:
+        nose_x = cheek_r[0] - eye_spacing * 0.8
+    elif ear_l is not None:
+        nose_x = ear_l[0] + eye_spacing * 1.2
+    elif ear_r is not None:
+        nose_x = ear_r[0] - eye_spacing * 1.2
+    else:
+        nose_x = None
+    if nose_x is None or not math.isfinite(nose_x):
+        return "unknown"
+
     mouth_ys = [m[1] for m in (mouth_b, mouth_l, mouth_r) if m is not None]
     if mouth_ys:
         mouth_y = sum(mouth_ys) / len(mouth_ys)
+    elif (cheek_y2 := mean_y([cheek_l, cheek_r])) is not None:
+        mouth_y = cheek_y2 + _CHEEK_TO_MOUTH_DY
     else:
         mouth_y = eye_y + max(eye_spacing, 0.05)
-    nose_x = nose[0]
     mouth_x = (mouth_l[0] + mouth_r[0]) / 2.0 if mouth_l and mouth_r else nose_x
     tol = max(eye_spacing * 0.35, 0.03)
 
