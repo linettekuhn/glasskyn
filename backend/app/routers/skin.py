@@ -230,6 +230,9 @@ def delete_session(
         )
 
     image_url = session.image_url
+    # Capture the id up front: the bulk DELETE + commit below expire the
+    # ORM instance, so any later `session.id` access raises ObjectDeletedError.
+    doomed_session_id = session.id
 
     # 1. Concerns that originated in this session die with it. A concern is only
     #    ever listed under the session that created it, so keeping them would
@@ -289,13 +292,13 @@ def delete_session(
     logger.info(
         "Deleted skin session: user=%s session=%s deleted_concerns=%d updated_concerns=%d",
         current_user.id,
-        session.id,
+        doomed_session_id,
         deleted_concerns,
         updated_concerns,
     )
 
     return DeleteSessionResponse(
-        session_id=session.id,
+        session_id=doomed_session_id,
         deleted_concerns=deleted_concerns,
         updated_concerns=updated_concerns,
     )
