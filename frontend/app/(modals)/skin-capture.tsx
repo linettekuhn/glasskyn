@@ -27,7 +27,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
-import * as Updates from "expo-updates";
 import * as Brightness from "expo-brightness";
 
 import { ThemedText } from "@/components/ui/themed-text";
@@ -54,7 +53,33 @@ import { Colors } from "@/constants/theme";
 
 const HOLD_MS = 2000;
 const CAPTURE_TIMEOUT_MS = 8000;
+// First still pays the native init cost (session/photo-output warmup,
+// distortion/exposure settle) — give it longer before timing out.
+const FIRST_CAPTURE_TIMEOUT_MS = 12000;
 const POST_TIMEOUT_MS = 5000;
+// Warmup gate: shutter stays disabled with a visible "Getting ready" state
+// until the native session can actually deliver a still.
+const WARMUP_MIN_MS = 1500;
+const WARMUP_LUMA_SAMPLES = 3;
+// Fallback so a dead sampler or missing started-callback can never brick the
+// shutter forever — after this long we trust live face freshness instead.
+const WARMUP_FALLBACK_MS = 5000;
+// Ring-light settle: no shutter while the screen-brightness change is still
+// re-metering exposure.
+const RING_SETTLE_MS = 1000;
+// Hysteresis band for the auto ring-light trigger. ON below the brightness
+// gate, debounce reset above OFF so luma hovering at the threshold can't
+// flicker the tip. Once on it latches for the session (baseline lighting
+// must stay consistent across captures); the user can still toggle manually.
+const RING_ON_LUMA = GATE_CONSTANTS.lumaMin;
+const RING_OFF_LUMA = GATE_CONSTANTS.lumaMin + 10;
+const LOW_LIGHT_DEBOUNCE_MS = 800;
+// Manual shutter follows the same readiness rules as auto-hold: gates must
+// hold continuously this long before a tap is accepted.
+const MANUAL_STABLE_MS = 500;
+// Delay before the single soft auto-retry so a leaked native capture can
+// settle instead of colliding with the retry.
+const RETRY_DELAY_MS = 1200;
 const SHUTTER_SIZE = 84;
 const GHOST_MIN_OPACITY = 0.15;
 const GHOST_MAX_OPACITY = 0.6;
@@ -101,6 +126,14 @@ function normalizeLandmarks(
   return refs;
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTimeoutError(e: unknown): boolean {
+  return e instanceof Error && e.message.includes("timed out after");
+}
+
 function withTimeout<T>(
   promise: Promise<T>,
   ms: number,
@@ -126,21 +159,9 @@ export default function SkinCaptureScreen() {
   const { hasPermission, requestPermission } = useCameraPermission();
   const { setDraft } = useSkinCapture();
 
-  const maxPhotoResolution = useMemo(() => {
-    if (!device) return null;
-    try {
-      const sizes = device.getSupportedResolutions("photo");
-      let best: { width: number; height: number } | null = null;
-      for (const s of sizes) {
-        if (!best || s.width * s.height > best.width * best.height) {
-          best = s;
-        }
-      }
-      return best;
-    } catch {
-      return null;
-    }
-  }, [device]);
+  // NOTE: capture resolution is intentionally fixed at UHD_4_3 below (4:3
+  // must match the ghost overlay, crop geometry and landmark reprojection of
+  // every existing session). Do not pick per-device "best" resolution here.
 
   const [ready, setReady] = useState(false);
   const [faces, setFaces] = useState<Face[]>([]);
@@ -173,6 +194,8 @@ export default function SkinCaptureScreen() {
   }, []);
 
   const [capturing, setCapturing] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [warmedUp, setWarmedUp] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
   const [quality, setQuality] = useState<CaptureQualityResult | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -203,6 +226,18 @@ export default function SkinCaptureScreen() {
   // perception (e.g. a frozen passing face after a shutter cycle).
   const lastFaceAtRef = useRef<number | null>(null);
   const lastLumaAtRef = useRef<number | null>(null);
+  // Warmup tracking: mount time, native started callbacks, luma sample
+  // count, ring-light settle, and continuous-pass time for the manual
+  // shutter stability rule.
+  const mountedAtRef = useRef(Date.now());
+  const cameraStartedRef = useRef(false);
+  const previewStartedRef = useRef(false);
+  const lumaCountRef = useRef(0);
+  const ringChangedAtRef = useRef<number | null>(null);
+  const passSinceRef = useRef<number | null>(null);
+  const lowSinceRef = useRef<number | null>(null);
+  const hasCapturedRef = useRef(false);
+  const warmedUpRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -308,7 +343,10 @@ export default function SkinCaptureScreen() {
     targetResolution: CommonResolutions.UHD_4_3,
     containerFormat: "jpeg",
     quality: 0.9,
-    qualityPrioritization: "quality",
+    // "balanced" keeps UHD detail for comedones/milia while avoiding the
+    // worst-case still latency of "quality" on the first cold capture.
+    // Keep fixed for all sessions so baselines stay comparable.
+    qualityPrioritization: "balanced",
   });
 
   const { luma, sampling, frameOutput } = useLiveLuma({
@@ -332,25 +370,101 @@ export default function SkinCaptureScreen() {
   }, [allPass]);
 
   useEffect(() => {
-    if (luma != null) lastLumaAtRef.current = Date.now();
+    if (luma != null) {
+      lastLumaAtRef.current = Date.now();
+      lumaCountRef.current += 1;
+    }
   }, [luma]);
 
-  const lowLight = luma != null && luma < GATE_CONSTANTS.lumaMin;
-  const wasLowLightRef = useRef(false);
+  // Track ring-light changes so the warmup gate can wait out the exposure
+  // settle instead of enabling the shutter mid re-meter.
+  useEffect(() => {
+    ringChangedAtRef.current = Date.now();
+  }, [ringLight]);
+
+  // Track how long the gates have held continuously — the manual shutter
+  // follows the same readiness rules as auto-hold (shorter hold).
+  useEffect(() => {
+    if (allPass) {
+      if (passSinceRef.current == null) passSinceRef.current = Date.now();
+    } else {
+      passSinceRef.current = null;
+    }
+  }, [allPass]);
+
   useEffect(() => {
     if (phase !== "camera") return;
-    if (lowLight && !wasLowLightRef.current) {
-      setRingLight(true);
-      if (__DEV__)
-        console.log("[skin-capture] low light detected, ring flash on");
+    // Freeze auto lighting while a shutter is in-flight, holding, or
+    // retrying — brightness must not change mid-shot.
+    if (busyRef.current || holdStartRef.current != null) return;
+    if (ringLight) return; // latched for the session (see constants)
+    if (luma == null) return;
+    const now = Date.now();
+    if (luma < RING_ON_LUMA) {
+      if (lowSinceRef.current == null) lowSinceRef.current = now;
+      if (now - lowSinceRef.current >= LOW_LIGHT_DEBOUNCE_MS) {
+        setRingLight(true);
+        lowSinceRef.current = null;
+        if (__DEV__)
+          console.log("[skin-capture] low light detected, ring flash on");
+      }
+    } else if (luma > RING_OFF_LUMA) {
+      // Well above the band — cancel a pending trigger so threshold hover
+      // can't flicker the light/tip. Inside the band: change nothing.
+      lowSinceRef.current = null;
     }
-    wasLowLightRef.current = lowLight;
-  }, [lowLight, phase]);
+  }, [luma, phase, ringLight, capturing, retrying]);
 
   // Stable JS-thread copy of luma for logging inside the shutter pipeline
   // without recreating triggerCapture (and re-rendering) on every sample.
   const lumaRef = useRef<number | null>(null);
   lumaRef.current = luma;
+
+  // Warmup gate: poll readiness so the shutter can't fire before the native
+  // session can deliver a still (cold-start race = first-tap timeout).
+  // Falls back after WARMUP_FALLBACK_MS so a dead sampler or missing
+  // started-callback can never brick the shutter.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (phaseRef.current !== "camera") {
+        if (warmedUpRef.current) {
+          warmedUpRef.current = false;
+          setWarmedUp(false);
+        }
+        return;
+      }
+      const now = Date.now();
+      const elapsed = now - mountedAtRef.current;
+      const sessionReady =
+        (cameraStartedRef.current && previewStartedRef.current) ||
+        elapsed >= WARMUP_FALLBACK_MS;
+      const sampled = lumaCountRef.current >= WARMUP_LUMA_SAMPLES;
+      const samplerDead =
+        lumaRef.current == null && elapsed >= WARMUP_FALLBACK_MS;
+      const faceOk =
+        lastFaceAtRef.current != null && now - lastFaceAtRef.current < 1500;
+      const lumaFresh =
+        lumaRef.current != null &&
+        lastLumaAtRef.current != null &&
+        now - lastLumaAtRef.current < 1500;
+      const signalsOk = faceOk && ((sampled && lumaFresh) || samplerDead);
+      const ringOk =
+        ringChangedAtRef.current == null ||
+        now - ringChangedAtRef.current >= RING_SETTLE_MS;
+      const ready =
+        elapsed >= WARMUP_MIN_MS &&
+        sessionReady &&
+        signalsOk &&
+        ringOk;
+      if (ready !== warmedUpRef.current) {
+        warmedUpRef.current = ready;
+        setWarmedUp(ready);
+        if (__DEV__ && ready)
+          console.log("[skin-capture] warmed up, shutter ready");
+      }
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
 
   // Memoized so face/luma re-renders don't reconfigure the native pipeline
   // while a capture is in-flight (which previously hung capturePhotoToFile).
@@ -361,55 +475,87 @@ export default function SkinCaptureScreen() {
     [faceDetectorOutput, frameOutput, photoOutput],
   );
 
-  const triggerCapture = useCallback(async () => {
-    if (busyRef.current || phaseRef.current !== "camera") return;
-    busyRef.current = true;
-    setCapturing(true);
-    // Snapshot shutter-time perception: face moves after this point must not
-    // corrupt the draft, and a lost gate means discard-and-retry.
-    const snapshotLandmarks = landmarkRefsRef.current;
-    const snapshotPose = poseRef.current ? { ...poseRef.current } : null;
-    try {
-      const result = await withTimeout(
-        photoOutput.capturePhotoToFile(
+  const triggerCapture = useCallback(
+    async (isRetry = false): Promise<void> => {
+      if (busyRef.current || phaseRef.current !== "camera") return;
+      // Manual taps follow the same readiness rules as auto-hold: the
+      // native session must be warmed up and the gates must hold
+      // continuously. (Auto-hold enforces this via its 2s loop; the retry
+      // path bypasses it because it already verified readiness.)
+      if (
+        !isRetry &&
+        (!warmedUpRef.current ||
+          passSinceRef.current == null ||
+          Date.now() - passSinceRef.current < MANUAL_STABLE_MS)
+      ) {
+        if (__DEV__)
+          console.log("[skin-capture] shutter not ready, ignoring tap");
+        return;
+      }
+      busyRef.current = true;
+      if (isRetry) {
+        setRetrying(true);
+      } else {
+        setCapturing(true);
+      }
+      // Snapshot shutter-time perception: face moves after this point must not
+      // corrupt the draft, and a lost gate means discard-and-retry.
+      const snapshotLandmarks = landmarkRefsRef.current;
+      const snapshotPose = poseRef.current ? { ...poseRef.current } : null;
+      // First still pays the native init cost — give it a longer timeout.
+      const timeoutMs = hasCapturedRef.current
+        ? CAPTURE_TIMEOUT_MS
+        : FIRST_CAPTURE_TIMEOUT_MS;
+      const startedAt = Date.now();
+      // Settle tracker for the leaked native op: on timeout the raw promise
+      // keeps holding the camera, so the soft retry must wait for it (or a
+      // short delay) instead of firing a colliding second capture.
+      let rawSettled: Promise<void> | null = null;
+      try {
+        const raw = photoOutput.capturePhotoToFile(
           {
             flashMode: "off",
             enableShutterSound: true,
-            enableDistortionCorrection: true,
+            // Fixed off for front selfies: keeps still latency down and
+            // identical for every session (comparisons stay consistent).
+            enableDistortionCorrection: false,
           },
           {},
-        ),
-        CAPTURE_TIMEOUT_MS,
-        "capture",
-      );
-      if (phaseRef.current !== "camera") return;
-      // Discard-and-retry: the photo is frozen at shutter time, but if the
-      // live gates failed while the shutter was processing the user moved —
-      // stay in camera and require a fresh hold instead of showing a photo
-      // that no longer matches the preview.
-      if (!allPassRef.current) {
-        if (__DEV__)
-          console.log(
-            "[skin-capture] discarded capture — face moved during shutter, retrying",
-          );
-        holdStartRef.current = null;
-        setHoldProgress(0);
-        Toast.show({
-          type: "info",
-          text1: "Moved during capture",
-          text2: "Hold still to retry",
-          position: "bottom",
-        });
-        return;
-      }
-      const path = result.filePath;
-      const uri = `file://${path}`;
-      Vibration.vibrate(40);
-      if (__DEV__) {
-        console.log(
-          `[skin-capture] captured ${path} luma=${lumaRef.current?.toFixed(1)} pass=${allPassRef.current}`,
         );
-      }
+        rawSettled = raw.then(
+          () => undefined,
+          () => undefined,
+        );
+        const result = await withTimeout(raw, timeoutMs, "capture");
+        if (phaseRef.current !== "camera") return;
+        // Discard-and-retry: the photo is frozen at shutter time, but if the
+        // live gates failed while the shutter was processing the user moved —
+        // stay in camera and require a fresh hold instead of showing a photo
+        // that no longer matches the preview.
+        if (!allPassRef.current) {
+          if (__DEV__)
+            console.log(
+              "[skin-capture] discarded capture — face moved during shutter, retrying",
+            );
+          holdStartRef.current = null;
+          setHoldProgress(0);
+          Toast.show({
+            type: "info",
+            text1: "Moved during capture",
+            text2: "Hold still to retry",
+            position: "bottom",
+          });
+          return;
+        }
+        const path = result.filePath;
+        const uri = `file://${path}`;
+        Vibration.vibrate(40);
+        if (__DEV__) {
+          console.log(
+            `[skin-capture] captured ${path} in ${Date.now() - startedAt}ms ` +
+              `luma=${lumaRef.current?.toFixed(1)} pass=${allPassRef.current}`,
+          );
+        }
       let outUri = uri;
       let outPath = path;
       let photoW = 0;
@@ -461,6 +607,7 @@ export default function SkinCaptureScreen() {
       }
       capturedLandmarksRef.current = snapshotLandmarks;
       capturedPoseRef.current = snapshotPose;
+      hasCapturedRef.current = true;
       setCaptureInfo({
         width: photoW,
         height: photoH,
@@ -472,18 +619,56 @@ export default function SkinCaptureScreen() {
       setRingLight(false);
       setPhase("preview");
     } catch (e) {
-      if (__DEV__) console.log("[skin-capture] capture error:", e);
+      const timedOut = isTimeoutError(e);
+      if (__DEV__)
+        console.log(
+          `[skin-capture] capture ${isRetry ? "retry" : "attempt"} failed ` +
+            `after ${Date.now() - startedAt}ms:`,
+          e,
+        );
+      // Soft single auto-retry on timeout: keep the busy lock so no manual
+      // tap or second native capture can collide with the leaked op, wait
+      // for it to settle (or a short delay), then retry once with a calm
+      // message — never a dead end or an error toast.
+      if (timedOut && !isRetry && phaseRef.current === "camera") {
+        setCapturing(false);
+        setRetrying(true);
+        Toast.show({
+          type: "info",
+          text1: "Hold still",
+          text2: "Retrying capture…",
+          position: "bottom",
+        });
+        try {
+          await Promise.race([
+            rawSettled ?? Promise.resolve(),
+            delay(RETRY_DELAY_MS),
+          ]);
+        } catch {
+          // Settle tracker never rejects (mapped above) — defensive only.
+        }
+        if (phaseRef.current !== "camera") return;
+        holdStartRef.current = null;
+        setHoldProgress(0);
+        // Release the lock before re-entering: the retry re-acquires it.
+        // (finally below re-clears — harmless no-op.)
+        busyRef.current = false;
+        setCapturing(false);
+        setRetrying(false);
+        return triggerCaptureRef.current(true);
+      }
       holdStartRef.current = null;
       setHoldProgress(0);
       Toast.show({
-        type: "error",
-        text1: "Capture failed",
-        text2: e instanceof Error ? e.message : String(e),
+        type: "info",
+        text1: "Couldn't capture",
+        text2: "Hold still and try again",
         position: "bottom",
       });
     } finally {
       busyRef.current = false;
       setCapturing(false);
+      setRetrying(false);
     }
   }, [photoOutput, device, width, height]);
 
@@ -500,7 +685,8 @@ export default function SkinCaptureScreen() {
       if (
         busyRef.current ||
         phaseRef.current !== "camera" ||
-        !autoHoldRef.current
+        !autoHoldRef.current ||
+        !warmedUpRef.current
       ) {
         holdStartRef.current = null;
         setHoldProgress(0);
@@ -578,6 +764,8 @@ export default function SkinCaptureScreen() {
     allPassRef.current = false;
     lastFaceAtRef.current = null;
     lastLumaAtRef.current = null;
+    passSinceRef.current = null;
+    lowSinceRef.current = null;
     autoHoldRef.current = false;
     holdStartRef.current = null;
     setHoldProgress(0);
@@ -612,16 +800,27 @@ export default function SkinCaptureScreen() {
       ? "green"
       : "amber";
 
-  const statusLine = capturing
-    ? ""
-    : allPass
-      ? holdProgress > 0 && holdProgress < 1
-        ? "Hold steady…"
-        : "Ready! Hold still"
-      : "Align your face with the oval";
+  // Session state fed to the oval tooltip — the pill is the single place
+  // for user guidance, so the screen never renders its own second line.
+  // Priority: shutter in-flight → warmup → hold progress → gate tip.
+  const tipOverride =
+    capturing || retrying
+      ? { message: "Hold still…", tone: "success" as const }
+      : !warmedUp
+        ? { message: "Getting ready…", tone: "neutral" as const }
+        : allPass && holdProgress > 0 && holdProgress < 1
+          ? { message: "Hold steady…", tone: "success" as const }
+          : null;
 
-  const shutterColor = allPass ? btnColor : disabledColor;
-  const shutterDisabled = capturing || !allPass;
+  // Manual shutter follows the same readiness rules as auto-hold.
+  // Read at render; face detections re-render continuously so this stays
+  // fresh without extra state.
+  const stablePass =
+    passSinceRef.current != null &&
+    Date.now() - passSinceRef.current >= MANUAL_STABLE_MS;
+  const shutterReady = allPass && warmedUp && stablePass;
+  const shutterColor = shutterReady ? btnColor : disabledColor;
+  const shutterDisabled = capturing || retrying || !shutterReady;
   const ringRadius = SHUTTER_SIZE / 2 + 8;
   const ringCircumference = 2 * Math.PI * ringRadius;
 
@@ -642,9 +841,11 @@ export default function SkinCaptureScreen() {
               setError(String(e?.message ?? e));
             }}
             onStarted={() => {
+              cameraStartedRef.current = true;
               if (__DEV__) console.log("[skin-capture] camera started");
             }}
             onPreviewStarted={() => {
+              previewStartedRef.current = true;
               if (__DEV__) console.log("[skin-capture] preview started");
             }}
           />
@@ -665,6 +866,7 @@ export default function SkinCaptureScreen() {
                 mode={mode}
                 width={width}
                 height={height}
+                statusOverride={tipOverride}
               />
               <SkinRingFlash active={ringLight} />
             </>
@@ -725,7 +927,20 @@ export default function SkinCaptureScreen() {
                   active={ringLight}
                   iconColor={txtColor}
                   activeColor={btnColor}
-                  onPress={() => setRingLight((p) => !p)}
+                  onPress={() => {
+                    // Never change brightness mid-shot: it re-meters
+                    // exposure and stalls the still.
+                    if (
+                      busyRef.current ||
+                      holdStartRef.current != null ||
+                      capturing ||
+                      retrying
+                    ) {
+                      return;
+                    }
+                    setRingLight((p) => !p);
+                  }}
+                  disabled={capturing || retrying}
                   IconComponent={MaterialCommunityIcons}
                   iconName="flashlight"
                 />
@@ -741,7 +956,7 @@ export default function SkinCaptureScreen() {
                 style={{ width: SHUTTER_SIZE + 26, height: SHUTTER_SIZE + 24 }}
               >
                 <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
-                  {allPass && !capturing && (
+                  {shutterReady && !capturing && !retrying && (
                     <Circle
                       cx={SHUTTER_SIZE / 2 + 12}
                       cy={SHUTTER_SIZE / 2 + 12}
@@ -762,18 +977,24 @@ export default function SkinCaptureScreen() {
                     { borderColor: shutterColor },
                     shutterDisabled && styles.shutterDisabled,
                   ]}
-                  onPress={allPass ? triggerCapture : undefined}
+                  onPress={
+                    shutterReady
+                      ? () => void triggerCaptureRef.current(false)
+                      : undefined
+                  }
                   activeOpacity={0.85}
                   disabled={shutterDisabled}
                 >
-                  {capturing ? (
+                  {capturing || retrying ? (
                     <ActivityIndicator size="large" color={btnColor} />
                   ) : (
                     <View
                       style={[
                         styles.shutterInner,
                         {
-                          backgroundColor: allPass ? btnColor : disabledColor,
+                          backgroundColor: shutterReady
+                            ? btnColor
+                            : disabledColor,
                         },
                       ]}
                     />

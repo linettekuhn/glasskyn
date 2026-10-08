@@ -49,6 +49,12 @@ interface GuideOvalProps {
   mode: OvalMode;
   width: number;
   height: number;
+  /**
+   * Session state from the capture screen (warmup, shutter in-flight,
+   * hold progress). When set it replaces the gate tip so exactly one line
+   * is ever shown — the pill is the single place for user guidance.
+   */
+  statusOverride?: { message: string; tone: "success" | "neutral" } | null;
 }
 
 export default function GuideOval({
@@ -57,6 +63,7 @@ export default function GuideOval({
   mode,
   width,
   height,
+  statusOverride = null,
 }: GuideOvalProps) {
   const greenOpacity = useRef(new Animated.Value(0)).current;
 
@@ -96,6 +103,17 @@ export default function GuideOval({
   } = useGuideTip(gates.tip);
   const tipIsSuccess = tipCategory === "success";
   const tipColor = tipIsSuccess ? OVAL_COLORS.green : OVAL_COLORS.amber;
+
+  // Session override wins over the gate tip — one line at a time.
+  const overrideText = statusOverride?.message ?? null;
+  const overrideIsSuccess = statusOverride?.tone === "success";
+  const shownText = overrideText ?? tipText;
+  const shownIsSuccess = overrideText != null ? overrideIsSuccess : tipIsSuccess;
+  const shownColor = overrideText != null
+    ? overrideIsSuccess
+      ? OVAL_COLORS.green
+      : OVAL_COLORS.gray
+    : tipColor;
 
   const baseColor = OVAL_COLORS[mode];
   const cutout = buildCutoutPath(
@@ -167,29 +185,29 @@ export default function GuideOval({
         })}
       </View>
 
-      {tipText && (
+      {shownText && (
         <View
           style={[
             styles.tipPill,
             {
-              borderColor: tipIsSuccess ? OVAL_COLORS.green : OVAL_COLORS.amber,
+              borderColor: shownColor,
               top: inner.top + inner.height + 36,
             },
           ]}
         >
           <MaterialCommunityIcons
             name={
-              tipIsSuccess ? "check-circle-outline" : "lightbulb-on-outline"
+              shownIsSuccess ? "check-circle-outline" : "lightbulb-on-outline"
             }
             size={14}
-            color={tipColor}
+            color={shownColor}
           />
           <Animated.View style={{ opacity: tipOpacity, flex: 1 }}>
             <ThemedText
-              style={{ color: tipColor, fontSize: 13, flex: 1 }}
+              style={{ color: shownColor, fontSize: 13, flex: 1 }}
               weight="medium"
             >
-              {tipText}
+              {shownText}
             </ThemedText>
           </Animated.View>
         </View>
