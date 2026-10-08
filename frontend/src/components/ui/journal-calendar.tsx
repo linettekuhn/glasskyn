@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -10,6 +13,9 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "@/components/ui/themed-text";
 import GlassSurface from "@/components/ui/glass-surface";
+
+/** Used only if measuring the inline calendar's position fails. */
+const FALLBACK_MODAL_TOP = 120;
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 const MONTHS = [
@@ -84,7 +90,9 @@ export default function JournalCalendar({
     d.setHours(0, 0, 0, 0);
     return d;
   });
-  const [viewMode, setViewMode] = useState<"week" | "month">("week");
+  const [monthModalOpen, setMonthModalOpen] = useState(false);
+  const [modalTop, setModalTop] = useState(FALLBACK_MODAL_TOP);
+  const anchorRef = useRef<View>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
 
@@ -108,7 +116,7 @@ export default function JournalCalendar({
 
   const monthsNeeded = useMemo(() => {
     const months = new Map<string, { year: number; month: number }>();
-    const targets = viewMode === "week" ? [weekStart, weekEnd] : [anchor];
+    const targets = monthModalOpen ? [anchor] : [weekStart, weekEnd];
     for (const d of targets) {
       months.set(`${d.getFullYear()}-${d.getMonth()}`, {
         year: d.getFullYear(),
@@ -116,7 +124,7 @@ export default function JournalCalendar({
       });
     }
     return Array.from(months.values());
-  }, [anchor, viewMode, weekStart, weekEnd]);
+  }, [anchor, monthModalOpen, weekStart, weekEnd]);
 
   const monthsKey = monthsNeeded
     .map(({ year, month }) => `${year}-${month}`)
@@ -152,8 +160,32 @@ export default function JournalCalendar({
     });
   };
 
-  const toggleViewMode = () =>
-    setViewMode((prev) => (prev === "week" ? "month" : "week"));
+  const openMonthModal = () => {
+    // Anchor the modal where the inline calendar sits: measure its absolute
+    // screen Y before opening. Falls back to a fixed offset if measuring
+    // fails (e.g. view not laid out yet).
+    const node = anchorRef.current as
+      | (View & {
+          measureInWindow?: (
+            cb: (x: number, y: number, width: number, height: number) => void,
+          ) => void;
+        })
+      | null;
+    if (node?.measureInWindow) {
+      node.measureInWindow((_x, y) => {
+        if (Number.isFinite(y) && y >= 0) setModalTop(y);
+        setMonthModalOpen(true);
+      });
+    } else {
+      setMonthModalOpen(true);
+    }
+  };
+  const closeMonthModal = () => setMonthModalOpen(false);
+
+  const handleModalSelect = (day: string | null) => {
+    onSelect(day);
+    setMonthModalOpen(false);
+  };
 
   const weekTitle = useMemo(() => {
     const sameMonth =
@@ -207,11 +239,16 @@ export default function JournalCalendar({
     });
   }
 
-  const renderCell = (cell: CalendarCell | null, key: string) => {
+  const renderCell = (
+    cell: CalendarCell | null,
+    key: string,
+    onDayPress?: (day: string | null) => void,
+  ) => {
     if (!cell) return <View key={key} style={styles.cell} />;
     const isComplete = completedDays.has(cell.key);
     const hasCheckIn = checkInDays.has(cell.key);
     const isSelected = cell.key === selected;
+    const handlePress = onDayPress ?? onSelect;
     const descriptors = [
       isComplete ? "routine complete" : "",
       hasCheckIn ? "has a journal entry" : "",
@@ -222,7 +259,7 @@ export default function JournalCalendar({
       <TouchableOpacity
         key={key}
         style={styles.cell}
-        onPress={() => onSelect(isSelected ? null : cell.key)}
+        onPress={() => handlePress(isSelected ? null : cell.key)}
         accessibilityRole="button"
         accessibilityState={{ selected: isSelected }}
         accessibilityLabel={`${cell.key}${descriptors ? `, ${descriptors}` : ""}`}
@@ -271,130 +308,216 @@ export default function JournalCalendar({
     );
   };
 
-  return (
-    <GlassSurface style={styles.container} color={colors.tertiary[200]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() =>
-            viewMode === "week" ? changeWeek(-1) : changeMonth(-1)
-          }
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          disabled={loading}
-        >
-          <MaterialCommunityIcons
-            name="chevron-left"
-            size={22}
-            color={colors.primary[600]}
-          />
-        </TouchableOpacity>
-        <ThemedText
-          type="overline"
-          weight="semiBold"
-          numberOfLines={1}
-          style={styles.headerTitle}
-        >
-          {viewMode === "week"
-            ? weekTitle
-            : `${MONTHS[anchor.getMonth()]} ${anchor.getFullYear()}`}
-        </ThemedText>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            onPress={toggleViewMode}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <MaterialCommunityIcons
-              name={
-                viewMode === "week"
-                  ? "chevron-double-down"
-                  : "chevron-double-up"
-              }
-              size={20}
-              color={colors.primary[600]}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() =>
-              viewMode === "week" ? changeWeek(1) : changeMonth(1)
-            }
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            disabled={loading}
-          >
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={22}
-              color={colors.primary[600]}
-            />
-          </TouchableOpacity>
+  const renderWeekdayRow = () => (
+    <View style={styles.weekRow}>
+      {WEEKDAYS.map((w, i) => (
+        <View key={i} style={styles.cell}>
+          <ThemedText type="overline" style={{ color: colors.neutral[500] }}>
+            {w}
+          </ThemedText>
         </View>
-      </View>
+      ))}
+    </View>
+  );
 
-      <View style={styles.weekRow}>
-        {WEEKDAYS.map((w, i) => (
-          <View key={i} style={styles.cell}>
-            <ThemedText type="overline" style={{ color: colors.neutral[500] }}>
-              {w}
-            </ThemedText>
-          </View>
-        ))}
-      </View>
-
-      {loading ? (
+  const renderLegend = () => (
+    <View style={styles.legend}>
+      <View style={styles.legendItem}>
         <View
-          style={[
-            styles.loadingRow,
-            viewMode === "week" && styles.loadingRowWeek,
-          ]}
+          style={[styles.legendDot, { backgroundColor: colors.primary[500] }]}
+        />
+        <ThemedText
+          type="captionSmall"
+          style={{ color: colors.neutral[600] }}
+          numberOfLines={1}
         >
-          <ActivityIndicator color={colors.neutral[700]} />
-        </View>
-      ) : viewMode === "week" ? (
-        <View style={styles.weekRow}>
-          {weekCells.map((cell) => renderCell(cell, cell.key))}
-        </View>
-      ) : (
-        <View>
-          {Array.from({ length: totalCells / 7 }, (_, week) => (
-            <View key={week} style={styles.weekRow}>
-              {monthCells
-                .slice(week * 7, week * 7 + 7)
-                .map((cell, i) =>
-                  renderCell(cell, cell ? cell.key : `blank-${i}`),
-                )}
-            </View>
-          ))}
-        </View>
-      )}
-
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View
-            style={[styles.legendDot, { backgroundColor: colors.primary[500] }]}
-          />
-          <ThemedText
-            type="captionSmall"
-            style={{ color: colors.neutral[600] }}
-            numberOfLines={1}
-          >
-            Routine Complete
-          </ThemedText>
-        </View>
-        <View style={styles.legendItem}>
-          <View
-            style={[
-              styles.legendDot,
-              { backgroundColor: colors.secondary[500] },
-            ]}
-          />
-          <ThemedText
-            type="captionSmall"
-            style={{ color: colors.neutral[600] }}
-            numberOfLines={1}
-          >
-            Journal Entry
-          </ThemedText>
-        </View>
+          Routine Complete
+        </ThemedText>
       </View>
-    </GlassSurface>
+      <View style={styles.legendItem}>
+        <View
+          style={[styles.legendDot, { backgroundColor: colors.secondary[500] }]}
+        />
+        <ThemedText
+          type="captionSmall"
+          style={{ color: colors.neutral[600] }}
+          numberOfLines={1}
+        >
+          Journal Entry
+        </ThemedText>
+      </View>
+    </View>
+  );
+
+  return (
+    <>
+      <View ref={anchorRef} collapsable={false}>
+        <GlassSurface style={styles.container} color={colors.tertiary[200]}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => changeWeek(-1)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              disabled={loading}
+              accessibilityLabel="Previous week"
+            >
+              <MaterialCommunityIcons
+                name="chevron-left"
+                size={22}
+                color={colors.primary[600]}
+              />
+            </TouchableOpacity>
+            <ThemedText
+              type="overline"
+              weight="semiBold"
+              numberOfLines={1}
+              style={styles.headerTitle}
+            >
+              {weekTitle}
+            </ThemedText>
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                onPress={openMonthModal}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Open month calendar"
+                accessibilityRole="button"
+              >
+                <MaterialCommunityIcons
+                  name="chevron-double-down"
+                  size={20}
+                  color={colors.primary[600]}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => changeWeek(1)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                disabled={loading}
+                accessibilityLabel="Next week"
+              >
+                <MaterialCommunityIcons
+                  name="chevron-right"
+                  size={22}
+                  color={colors.primary[600]}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {renderWeekdayRow()}
+
+          {loading ? (
+            <View style={[styles.loadingRow, styles.loadingRowWeek]}>
+              <ActivityIndicator color={colors.neutral[700]} />
+            </View>
+          ) : (
+            <View style={styles.weekRow}>
+              {weekCells.map((cell) => renderCell(cell, cell.key))}
+            </View>
+          )}
+
+          {renderLegend()}
+        </GlassSurface>
+      </View>
+
+      <Modal
+        visible={monthModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeMonthModal}
+      >
+        <Pressable
+          style={[styles.modalBackdrop, { paddingTop: modalTop }]}
+          onPress={closeMonthModal}
+        >
+          <GlassSurface
+            style={styles.modalCard}
+            radius={16}
+            border={false}
+            color={colors.tertiary[200]}
+            onPress={() => {}}
+          >
+            <View style={styles.header}>
+              <TouchableOpacity
+                onPress={() => changeMonth(-1)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                disabled={loading}
+                accessibilityLabel="Previous month"
+              >
+                <MaterialCommunityIcons
+                  name="chevron-left"
+                  size={22}
+                  color={colors.primary[600]}
+                />
+              </TouchableOpacity>
+              <ThemedText
+                type="overline"
+                weight="semiBold"
+                numberOfLines={1}
+                style={styles.headerTitle}
+              >
+                {`${MONTHS[anchor.getMonth()]} ${anchor.getFullYear()}`}
+              </ThemedText>
+              <View style={styles.headerRight}>
+                <TouchableOpacity
+                  onPress={closeMonthModal}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Close month calendar"
+                  accessibilityRole="button"
+                >
+                  <MaterialCommunityIcons
+                    name="close"
+                    size={20}
+                    color={colors.primary[600]}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => changeMonth(1)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  disabled={loading}
+                  accessibilityLabel="Next month"
+                >
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={22}
+                    color={colors.primary[600]}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {renderWeekdayRow()}
+
+              {loading ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator color={colors.neutral[700]} />
+                </View>
+              ) : (
+                <View>
+                  {Array.from({ length: totalCells / 7 }, (_, week) => (
+                    <View key={week} style={styles.weekRow}>
+                      {monthCells
+                        .slice(week * 7, week * 7 + 7)
+                        .map((cell, i) =>
+                          renderCell(
+                            cell,
+                            cell ? cell.key : `blank-${i}`,
+                            handleModalSelect,
+                          ),
+                        )}
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {renderLegend()}
+            </ScrollView>
+          </GlassSurface>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -449,6 +572,21 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  modalCard: {
+    width: "100%",
+    maxHeight: "85%",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    overflow: "hidden",
   },
   loadingRow: {
     height: 210,
