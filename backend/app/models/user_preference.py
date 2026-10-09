@@ -15,6 +15,7 @@ class UserPreference(Base):
     water_weight_lb = Column(Float, nullable=True)
     water_activity_level = Column(String, nullable=True)
     water_climate = Column(String, nullable=True)
+    water_increment_ml = Column(Integer, nullable=True)
     routine_digest_am_time = Column(String, default="08:00", nullable=True)
     routine_digest_pm_time = Column(String, default="20:00", nullable=True)
     skin_nudge_enabled = Column(Boolean, default=True, nullable=False)

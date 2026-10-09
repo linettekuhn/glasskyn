@@ -147,6 +147,7 @@ export interface UserPreference {
   water_weight_lb: number | null;
   water_activity_level: string | null;
   water_climate: string | null;
+  water_increment_ml: number | null;
   routine_digest_am_time: string | null;
   routine_digest_pm_time: string | null;
   skin_nudge_enabled: boolean;

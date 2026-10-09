@@ -75,7 +75,13 @@ export default function HomeScreen() {
           />
         ) : null}
         <MirrorAffirmationCard />
-        <WaterIntakeCard />
+        <View style={styles.tileRow}>
+          <View style={{ flex: 1 }}>
+            <WaterIntakeCard />
+          </View>
+          {/* SPF tile slot: second column reserved for the SPF tile. */}
+          <View style={{ flex: 1 }} />
+        </View>
         <EntryCards />
       </ScrollView>
     </View>
@@ -93,6 +99,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   body: {
+    gap: 12,
+  },
+  tileRow: {
+    flexDirection: "row",
     gap: 12,
   },
   loadingRow: {
