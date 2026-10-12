@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useHomeRoutine } from "@/hooks/use-home-routine";
 import RoutineStatusCard from "@/components/routine/routine-status-card";
 import WaterIntakeCard from "@/components/water-intake-card";
+import SpfTile from "@/components/spf-tile";
 import ExpiringSoonCard from "@/components/expiring/expiring-soon-card";
 import SkinNudgeCard from "@/components/skin/skin-nudge-card";
 import EntryCards from "@/components/entry-cards";
@@ -79,8 +80,9 @@ export default function HomeScreen() {
           <View style={{ flex: 1 }}>
             <WaterIntakeCard />
           </View>
-          {/* SPF tile slot: second column reserved for the SPF tile. */}
-          <View style={{ flex: 1 }} />
+          <View style={{ flex: 1 }}>
+            <SpfTile />
+          </View>
         </View>
         <EntryCards />
       </ScrollView>

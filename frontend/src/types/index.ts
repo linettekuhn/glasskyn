@@ -148,6 +148,12 @@ export interface UserPreference {
   water_activity_level: string | null;
   water_climate: string | null;
   water_increment_ml: number | null;
+  spf_last_applied_at: string | null;
+  spf_interval_min: number | null;
+  spf_window_start: string | null;
+  spf_window_end: string | null;
+  spf_reminder_enabled: boolean;
+  spf_indoors_date: string | null;
   routine_digest_am_time: string | null;
   routine_digest_pm_time: string | null;
   skin_nudge_enabled: boolean;
@@ -156,6 +162,11 @@ export interface UserPreference {
 export interface WaterIntake {
   date: string;
   ml: number;
+}
+
+export interface SpfStatus {
+  last_applied_at: string | null;
+  recent_applied_at: string[];
 }
 
 export interface RoutineTemplate {
