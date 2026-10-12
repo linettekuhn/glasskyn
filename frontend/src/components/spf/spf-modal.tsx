@@ -22,9 +22,10 @@ import ThemedButton from "@/components/ui/themed-button";
 import Divider from "@/components/ui/divider";
 import { Colors, getTheme } from "@/constants/theme";
 import {
-  DEFAULT_INTERVAL_MIN,
+  computeTodayTotal,
   formatRemaining,
   formatTime,
+  localDateString,
   type SpfState,
 } from "@/lib/spf-state";
 
@@ -46,7 +47,6 @@ export interface SpfModalProps {
 }
 
 const INTERVAL_PRESETS = [
-  { label: "5m", min: 5 },
   { label: "1.5h", min: 90 },
   { label: "2h", min: 120 },
   { label: "3h", min: 180 },
@@ -107,38 +107,41 @@ export default function SpfModal({
 
   const accent = colors.tertiary[600];
 
-  const effectiveInterval =
-    intervalMin > 0 ? intervalMin : DEFAULT_INTERVAL_MIN;
-  const todayTotal =
-    firstAppliedAt != null
-      ? Math.max(
-          1,
-          Math.ceil(
-            (windowEndMin -
-              (firstAppliedAt.getHours() * 60 + firstAppliedAt.getMinutes())) /
-              effectiveInterval,
-          ),
-        )
-      : 0;
+  const todayTotal = computeTodayTotal(
+    firstAppliedAt,
+    windowEndMin,
+    intervalMin,
+  );
   const percent =
     firstAppliedAt != null
       ? Math.min(100, Math.round((todayCount / todayTotal) * 100))
       : 0;
 
-  const statusText =
+  const appliedToday =
+    lastAppliedAt != null &&
+    localDateString(lastAppliedAt) === localDateString(new Date());
+
+  const baseText =
     state === "fresh" && remainingMs != null
-      ? `Protected. Reapply in ${formatRemaining(remainingMs)}`
+      ? `Protected for ${formatRemaining(remainingMs)}`
       : state === "due"
-        ? "Protection has worn off. Reapply now"
+        ? "Unprotected. Reapply"
         : state === "idle"
-          ? "No application logged yet today"
+          ? "No application today"
           : state === "resting"
-            ? "Outside sun hours. Done for today"
+            ? appliedToday
+              ? "No more needed today"
+              : "Past sun hours"
             : state === "indoors"
-              ? "Marked as staying indoors"
-              : lastAppliedAt != null
-                ? `Last applied ${formatTime(lastAppliedAt)}`
-                : "Sunscreen";
+              ? "Indoors today"
+              : "Sunscreen";
+
+  const statusText =
+    appliedToday && lastAppliedAt != null
+      ? state === "lapsed"
+        ? `Last applied ${formatTime(lastAppliedAt)}`
+        : `${baseText}. Applied ${formatTime(lastAppliedAt)}`
+      : baseText;
 
   const confirmReset = () => {
     Alert.alert(

@@ -11,7 +11,7 @@ import SpfTile from "@/components/spf-tile";
 import ExpiringSoonCard from "@/components/expiring/expiring-soon-card";
 import SkinNudgeCard from "@/components/skin/skin-nudge-card";
 import EntryCards from "@/components/entry-cards";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   View,
   ScrollView,
@@ -19,6 +19,7 @@ import {
   ActivityIndicator,
   useColorScheme,
 } from "react-native";
+import { useEffect, useState } from "react";
 
 function getGreeting(hour: number, firstName: string): string {
   if (hour >= 5 && hour < 12) return `Morning, ${firstName}`;
@@ -38,6 +39,17 @@ export default function HomeScreen() {
     : "Welcome";
 
   const openRoutine = () => router.navigate("/(main)/journal");
+
+  // Notification deep-link: pulse the SPF tile once, then consume the param
+  // so returning to the tab later doesn't re-pulse.
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
+  const [spfHighlight, setSpfHighlight] = useState(false);
+  useEffect(() => {
+    if (focus === "spf") {
+      setSpfHighlight(true);
+      router.setParams({ focus: undefined });
+    }
+  }, [focus]);
 
   return (
     <View style={styles.container}>
@@ -81,7 +93,7 @@ export default function HomeScreen() {
             <WaterIntakeCard />
           </View>
           <View style={{ flex: 1 }}>
-            <SpfTile />
+            <SpfTile highlight={spfHighlight} />
           </View>
         </View>
         <EntryCards />

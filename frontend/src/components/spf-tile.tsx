@@ -18,6 +18,8 @@ export default function SpfTile({ highlight }: { highlight?: boolean }) {
         lastAppliedAt={spf.lastAppliedAt}
         todayCount={spf.todayCount}
         canUndo={spf.canUndo}
+        burstActive={spf.burstActive}
+        goalMet={spf.dayComplete}
         apply={spf.apply}
         undo={spf.undo}
         onPress={() => setOpen(true)}

@@ -12,6 +12,7 @@ import type { Routine, Product, RoutineStep } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { FREQUENCY_LABELS } from "@/constants/routine";
 import { markStepComplete } from "@/api/routines";
+import { applySpf } from "@/api/spf";
 import { ThemedText } from "./themed-text";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import DayNightToggle from "./day-night-toggle";
@@ -96,6 +97,14 @@ export default function RoutineCard({
         else next.delete(id);
         return next;
       });
+      if (
+        nowCompleted &&
+        routine.steps.find((s) => s.id === id)?.step_type === "spf"
+      ) {
+        // Checking an SPF step logs a sunscreen application (one-way:
+        // unchecking never removes it). Tile picks it up on focus refetch.
+        applySpf(new Date().toISOString()).catch(() => {});
+      }
       markStepComplete(routine.id, id, nowCompleted)
         .catch(() => {
           setCompletedSteps((prev) => {
@@ -115,6 +124,15 @@ export default function RoutineCard({
       filteredSteps.length > 0 &&
       filteredSteps.every((s) => completedSteps.has(s.id));
     const desired = !allChecked;
+    if (
+      desired &&
+      filteredSteps.some(
+        (s) => s.step_type === "spf" && !completedSteps.has(s.id),
+      )
+    ) {
+      // "Check all" including an SPF step logs one application per gesture.
+      applySpf(new Date().toISOString()).catch(() => {});
+    }
     setCompletedSteps((prev) => {
       const next = new Set(prev);
       for (const s of filteredSteps) {
@@ -124,8 +142,7 @@ export default function RoutineCard({
       return next;
     });
     const ops = filteredSteps.map((s) =>
-      markStepComplete(routine.id, s.id, desired).catch(() => {
-        setCompletedSteps((prev) => {
+      markStepComplete(routine.id, s.id, desired).catch(() => {        setCompletedSteps((prev) => {
           const next = new Set(prev);
           if (desired) next.delete(s.id);
           else next.add(s.id);

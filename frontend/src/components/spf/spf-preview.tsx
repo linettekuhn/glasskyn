@@ -17,8 +17,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import GlassSurface, { withAlpha } from "@/components/ui/glass-surface";
 import { ThemedText } from "@/components/ui/themed-text";
+import CelebrationBurst from "@/components/routine/celebration-burst";
 import { Colors, getTheme } from "@/constants/theme";
 import { formatRemaining, formatTime, type SpfState } from "@/lib/spf-state";
 
@@ -30,6 +32,8 @@ export interface SpfPreviewProps {
   lastAppliedAt: Date | null;
   todayCount: number;
   canUndo: boolean;
+  burstActive: boolean;
+  goalMet: boolean;
   apply: () => Promise<void>;
   undo: () => Promise<void>;
   onPress: () => void;
@@ -48,6 +52,8 @@ export default function SpfPreview({
   lastAppliedAt,
   todayCount,
   canUndo,
+  burstActive,
+  goalMet,
   apply,
   undo,
   onPress,
@@ -108,8 +114,8 @@ export default function SpfPreview({
     transform: [{ scale: pulse.value }],
   }));
 
-  const accent = colors.tertiary[600];
-  const quiet = state === "resting" || state === "indoors";
+  const accent = goalMet ? colors.tertiary[600] : colors.secondary[600];
+  const quiet = state === "indoors";
 
   const centerText =
     state === "fresh" && remainingMs != null
@@ -119,7 +125,7 @@ export default function SpfPreview({
         : state === "idle"
           ? "Tap + to apply"
           : state === "resting"
-            ? "Done for today"
+            ? "SPF done today"
             : state === "indoors"
               ? "Staying indoors"
               : lastAppliedAt != null
@@ -128,12 +134,14 @@ export default function SpfPreview({
 
   const iconName =
     state === "resting"
-      ? "weather-night"
+      ? "star-check"
       : state === "indoors"
         ? "home-outline"
-        : state === "due"
-          ? "sun-clock"
-          : "shield-sun";
+        : goalMet
+          ? "shield-check"
+          : state === "due"
+            ? "sun-clock"
+            : "shield-sun";
 
   const handleAdd = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -160,12 +168,23 @@ export default function SpfPreview({
             style={styles.fill}
           >
             <GlassSurface style={styles.fill}>
+              {goalMet && (
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={[colors.neutral[100], colors.neutral[200]]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              )}
               <Animated.View
                 pointerEvents="none"
                 style={[
                   styles.sunFill,
                   {
-                    backgroundColor: withAlpha(colors.tertiary[500], 0.4),
+                    backgroundColor: goalMet
+                      ? withAlpha(colors.tertiary[600], 0.5)
+                      : withAlpha(colors.tertiary[500], 0.4),
                   },
                   fillStyle,
                 ]}
@@ -255,6 +274,8 @@ export default function SpfPreview({
               />
             </View>
           </Pressable>
+
+          {burstActive && <CelebrationBurst color={colors.tertiary[600]} />}
         </Animated.View>
       )}
     </View>

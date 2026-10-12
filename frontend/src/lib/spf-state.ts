@@ -69,15 +69,26 @@ export function deriveSpfState(input: {
   const appliedToday =
     lastAppliedAt != null && localDateString(lastAppliedAt) === today;
 
-  // Logging an application clears "staying in", so an Indoors flag never
-  // survives alongside today's application.
-  if (indoorsDate === today && !appliedToday)
-    return { state: "indoors", remainingMs: null };
+  // "Staying in" wins whenever the flag is set for today, even if
+  // applications were already logged: history and count are preserved,
+  // the tile just stops nagging and reminders are cancelled.
+  if (indoorsDate === today) return { state: "indoors", remainingMs: null };
   if (!inWindow) return { state: "resting", remainingMs: null };
   if (!appliedToday) return { state: "idle", remainingMs: null };
 
-  const remaining =
-    (lastAppliedAt as Date).getTime() + intervalMs - now.getTime();
+  // The next predicted application falls outside today's window: there is
+  // nothing left worth counting down to, so the day is done even though
+  // right now is still inside sun hours.
+  const dueAt = (lastAppliedAt as Date).getTime() + intervalMs;
+  const dueDate = new Date(dueAt);
+  const dueMin = dueDate.getHours() * 60 + dueDate.getMinutes();
+  const dueInWindow =
+    localDateString(dueDate) === today &&
+    dueMin >= windowStartMin &&
+    dueMin < windowEndMin;
+  if (!dueInWindow) return { state: "resting", remainingMs: null };
+
+  const remaining = dueAt - now.getTime();
   if (remaining > 0) return { state: "fresh", remainingMs: remaining };
   return {
     state: -remaining > lapseAfterMs ? "lapsed" : "due",
@@ -88,6 +99,27 @@ export function deriveSpfState(input: {
 /** Start of the local day containing `d`, as a Date. */
 export function startOfLocalDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/**
+ * Applications needed before the window closes, anchored at the first
+ * application today. 0 when nothing logged yet (no total exists).
+ */
+export function computeTodayTotal(
+  firstAppliedAt: Date | null,
+  windowEndMin: number,
+  intervalMin: number,
+): number {
+  if (firstAppliedAt == null) return 0;
+  const effective = intervalMin > 0 ? intervalMin : DEFAULT_INTERVAL_MIN;
+  return Math.max(
+    1,
+    Math.ceil(
+      (windowEndMin -
+        (firstAppliedAt.getHours() * 60 + firstAppliedAt.getMinutes())) /
+        effective,
+    ),
+  );
 }
 
 /** "1h 20m" / "45m". Caller guarantees ms > 0. */

@@ -3,12 +3,14 @@ import { AppState } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { getPreferences, savePreferences } from "@/api/preferences";
 import { applySpf, getSpfStatus, undoSpf } from "@/api/spf";
+import { resyncSpfReminder } from "@/services/spf-reminders";
 import type { UserPreference } from "@/types";
 import {
   DEFAULT_INTERVAL_MIN,
   DEFAULT_WINDOW_END_MIN,
   DEFAULT_WINDOW_START_MIN,
   LAPSE_AFTER_MS,
+  computeTodayTotal,
   deriveSpfState,
   localDateString,
   parseWindowTime,
@@ -35,10 +37,15 @@ export interface UseSpfResult {
   todayCount: number;
   indoorsToday: boolean;
   canUndo: boolean;
+  burstActive: boolean;
+  loadTick: number;
+  dayComplete: boolean;
   apply: () => Promise<void>;
   undo: () => Promise<void>;
   resetToday: () => Promise<void>;
   saveInterval: (min: number) => Promise<void>;
+  saveReminderEnabled: (enabled: boolean) => Promise<void>;
+  saveWindow: (start: string, end: string) => Promise<void>;
   setIndoors: () => Promise<void>;
   clearIndoors: () => Promise<void>;
 }
@@ -53,12 +60,15 @@ export function useSpf(): UseSpfResult {
   const [undoStack, setUndoStack] = useState<SpfUndoEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [, setTick] = useState(0);
+  const [burstActive, setBurstActive] = useState(false);
+  const [loadTick, setLoadTick] = useState(0);
 
   const lastAppliedRef = useRef<string | null>(null);
   const recentRef = useRef<string[]>([]);
   const undoStackRef = useRef<SpfUndoEntry[]>([]);
   const prefsRef = useRef<UserPreference | null>(null);
   const requestIdRef = useRef(0);
+  const celebratedRef = useRef(false);
 
   useEffect(() => {
     prefsRef.current = prefs;
@@ -77,10 +87,14 @@ export function useSpf(): UseSpfResult {
           setRecent(status.recent_applied_at);
           undoStackRef.current = [];
           setUndoStack([]);
+          celebratedRef.current = false;
         })
         .catch(() => {})
         .finally(() => {
-          if (active) setLoaded(true);
+          if (active) {
+            setLoaded(true);
+            setLoadTick((t) => t + 1);
+          }
         });
       return () => {
         active = false;
@@ -153,6 +167,27 @@ export function useSpf(): UseSpfResult {
     const timer = setTimeout(() => setTick((t) => t + 1), delay);
     return () => clearTimeout(timer);
   }, [loaded, dueAt]);
+
+  const todayTotal = computeTodayTotal(
+    firstAppliedAt,
+    windowEndMin,
+    intervalMin,
+  );
+  const dayComplete = todayTotal > 0 && todayCount >= todayTotal;
+
+  useEffect(() => {
+    if (!loaded) return;
+    if (!dayComplete) {
+      celebratedRef.current = false;
+      setBurstActive(false);
+      return;
+    }
+    if (celebratedRef.current) return;
+    celebratedRef.current = true;
+    setBurstActive(true);
+    const timer = setTimeout(() => setBurstActive(false), 1600);
+    return () => clearTimeout(timer);
+  }, [dayComplete, loadTick, loaded]);
 
   const syncFromStatus = useCallback(
     (status: { last_applied_at: string | null; recent_applied_at: string[] }) => {
@@ -353,6 +388,93 @@ export function useSpf(): UseSpfResult {
     }
   }, []);
 
+  const saveReminderEnabled = useCallback(
+    async (enabled: boolean): Promise<void> => {
+      let previous = true;
+      let hadPrefs = false;
+      setPrefs((prev) => {
+        if (!prev) return prev;
+        hadPrefs = true;
+        previous = prev.spf_reminder_enabled;
+        return { ...prev, spf_reminder_enabled: enabled };
+      });
+      if (!hadPrefs) return;
+      try {
+        const updated = await savePreferences({
+          spf_reminder_enabled: enabled,
+        });
+        setPrefs(updated);
+      } catch {
+        const rollback = previous;
+        setPrefs((prev) =>
+          prev ? { ...prev, spf_reminder_enabled: rollback } : prev,
+        );
+      }
+    },
+    [],
+  );
+
+  const saveWindow = useCallback(
+    async (start: string, end: string): Promise<void> => {
+      let previous: { start: string | null; end: string | null } = {
+        start: null,
+        end: null,
+      };
+      let hadPrefs = false;
+      setPrefs((prev) => {
+        if (!prev) return prev;
+        hadPrefs = true;
+        previous = {
+          start: prev.spf_window_start,
+          end: prev.spf_window_end,
+        };
+        return { ...prev, spf_window_start: start, spf_window_end: end };
+      });
+      if (!hadPrefs) return;
+      try {
+        const updated = await savePreferences({
+          spf_window_start: start,
+          spf_window_end: end,
+        });
+        setPrefs(updated);
+      } catch {
+        const rollback = previous;
+        setPrefs((prev) =>
+          prev
+            ? {
+                ...prev,
+                spf_window_start: rollback.start,
+                spf_window_end: rollback.end,
+              }
+            : prev,
+        );
+      }
+    },
+    [],
+  );
+
+  // Keep the one pending local reminder in sync with state. Covers every
+  // mutation (all flow through prefs/lastApplied) plus refetch loads and
+  // foreground returns (via the AppState tick). Deps are raw state only:
+  // derived Dates would refire this every render.
+  useEffect(() => {
+    if (!loaded) return;
+    void resyncSpfReminder({
+      lastAppliedAt: lastApplied ? new Date(lastApplied) : null,
+      intervalMin: prefs?.spf_interval_min ?? DEFAULT_INTERVAL_MIN,
+      windowStartMin: parseWindowTime(
+        prefs?.spf_window_start,
+        DEFAULT_WINDOW_START_MIN,
+      ),
+      windowEndMin: parseWindowTime(
+        prefs?.spf_window_end,
+        DEFAULT_WINDOW_END_MIN,
+      ),
+      indoorsDate: prefs?.spf_indoors_date ?? null,
+      remindersEnabled: prefs?.spf_reminder_enabled ?? true,
+    });
+  }, [loaded, lastApplied, prefs]);
+
   return {
     loaded,
     prefs,
@@ -365,10 +487,15 @@ export function useSpf(): UseSpfResult {
     todayCount,
     indoorsToday,
     canUndo: undoStack.length > 0,
+    burstActive,
+    loadTick,
+    dayComplete,
     apply,
     undo,
     resetToday,
     saveInterval,
+    saveReminderEnabled,
+    saveWindow,
     setIndoors,
     clearIndoors,
   };

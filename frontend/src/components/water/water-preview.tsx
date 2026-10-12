@@ -69,13 +69,15 @@ export default function WaterPreview({
 
   const fillH = useSharedValue(0);
   const pulse = useSharedValue(1);
+  const sheen = useSharedValue(0);
 
   useEffect(() => {
-    fillH.value = withTiming(clamp01(progress) * tileH, {
+    fillH.value = withTiming((goalMet ? 0 : clamp01(progress)) * tileH, {
       duration: 600,
       easing: Easing.out(Easing.cubic),
     });
-  }, [progress, tileH, fillH]);
+    sheen.value = withTiming(goalMet ? 1 : 0, { duration: 300 });
+  }, [progress, goalMet, tileH, fillH, sheen]);
 
   useEffect(() => {
     if (highlight) {
@@ -90,6 +92,7 @@ export default function WaterPreview({
   }, [highlight, pulse]);
 
   const fillStyle = useAnimatedStyle(() => ({ height: fillH.value }));
+  const sheenStyle = useAnimatedStyle(() => ({ opacity: sheen.value }));
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
   }));
@@ -129,7 +132,10 @@ export default function WaterPreview({
             style={styles.fill}
           >
             <GlassSurface style={styles.fill}>
-              {goalMet && (
+              <Animated.View
+                pointerEvents="none"
+                style={[StyleSheet.absoluteFill, sheenStyle]}
+              >
                 <LinearGradient
                   pointerEvents="none"
                   colors={[colors.neutral[100], colors.neutral[200]]}
@@ -137,7 +143,7 @@ export default function WaterPreview({
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
                 />
-              )}
+              </Animated.View>
               <Animated.View
                 pointerEvents="none"
                 style={[
