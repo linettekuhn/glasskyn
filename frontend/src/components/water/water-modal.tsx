@@ -64,6 +64,8 @@ const CLIMATE_OPTIONS = [
 ];
 
 const EXIT_MS = 220;
+const HOLD_DELAY_MS = 400;
+const HOLD_TICK_MS = 80;
 
 const panelEnter = new Keyframe({
   0: { opacity: 0, transform: [{ translateY: -16 }, { scale: 0.96 }] },
@@ -107,7 +109,13 @@ export default function WaterModal({
   const [goalDraft, setGoalDraft] = useState("");
   const [goalAutoTracked, setGoalAutoTracked] = useState(false);
   const [incrementDraft, setIncrementDraft] = useState(incrementMl);
+  const [incrementText, setIncrementText] = useState<string | null>(null);
   const incrementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const incrementDraftRef = useRef(incrementDraft);
+  const holdTimers = useRef<{
+    delay: ReturnType<typeof setTimeout> | null;
+    tick: ReturnType<typeof setInterval> | null;
+  }>({ delay: null, tick: null });
 
   useEffect(() => {
     if (visible) {
@@ -121,8 +129,13 @@ export default function WaterModal({
   useEffect(() => {
     return () => {
       if (incrementTimer.current) clearTimeout(incrementTimer.current);
+      clearHoldTimers();
     };
   }, []);
+
+  useEffect(() => {
+    incrementDraftRef.current = incrementDraft;
+  }, [incrementDraft]);
 
   useEffect(() => {
     if (!visible) return;
@@ -142,6 +155,7 @@ export default function WaterModal({
     setActivity(storedActivity);
     setClimate(storedClimate);
     setIncrementDraft(incrementMl);
+    setIncrementText(null);
     if (expandCalculator) {
       setGoalOpen(true);
       const storedGoal = prefs?.water_goal_ml ?? 0;
@@ -241,7 +255,7 @@ export default function WaterModal({
 
   const incrementStep = isMetric ? 50 : ozToMl(1);
   const incrementMin = isMetric ? 50 : ozToMl(1);
-  const incrementMax = 1000;
+  const incrementMax = ozToMl(50);
   const incrementPresets = isMetric
     ? [
         { label: "250ml", ml: 250 },
@@ -260,6 +274,42 @@ export default function WaterModal({
     incrementTimer.current = setTimeout(() => {
       void saveIncrement(clamped);
     }, 400);
+  };
+
+  const clearHoldTimers = () => {
+    if (holdTimers.current.delay) clearTimeout(holdTimers.current.delay);
+    if (holdTimers.current.tick) clearInterval(holdTimers.current.tick);
+    holdTimers.current = { delay: null, tick: null };
+  };
+
+  const startHold = (dir: 1 | -1) => {
+    setIncrementText(null);
+    commitIncrement(incrementDraftRef.current + dir * incrementStep);
+    holdTimers.current.delay = setTimeout(() => {
+      holdTimers.current.tick = setInterval(() => {
+        commitIncrement(incrementDraftRef.current + dir * incrementStep);
+      }, HOLD_TICK_MS);
+    }, HOLD_DELAY_MS);
+  };
+
+  const stopHold = () => {
+    clearHoldTimers();
+  };
+
+  const incrementUnitLabel = isMetric ? "ml" : "oz";
+  const rawIncrementNumber = isMetric
+    ? String(incrementDraft)
+    : String(Math.round(mlToOz(incrementDraft)));
+
+  const commitTypedIncrement = () => {
+    if (incrementText == null) return;
+    const parsed = parseFloat(incrementText);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setIncrementText(null);
+      return;
+    }
+    commitIncrement(isMetric ? Math.round(parsed) : ozToMl(parsed));
+    setIncrementText(null);
   };
 
   const confirmReset = () => {
@@ -343,23 +393,23 @@ export default function WaterModal({
 
                   {isFirstTime ? (
                     !goalOpen && (
-                    <View style={styles.firstTimeRow}>
-                      <ThemedText type="bodyLarge" weight="semiBold">
-                        Set a daily water goal
-                      </ThemedText>
-                      <ThemedText
-                        type="caption"
-                        style={{ color: colors.neutral[600] }}
-                      >
-                        Get a personalized target in under a minute
-                      </ThemedText>
-                      <ThemedButton
-                        text="Set goal"
-                        onPress={openCalculator}
-                        alignment="flex-start"
-                        color={colors.primary[500]}
-                      />
-                    </View>
+                      <View style={styles.firstTimeRow}>
+                        <ThemedText type="bodyLarge" weight="semiBold">
+                          Set a daily water goal
+                        </ThemedText>
+                        <ThemedText
+                          type="caption"
+                          style={{ color: colors.neutral[600] }}
+                        >
+                          Get a personalized target in under a minute
+                        </ThemedText>
+                        <ThemedButton
+                          text="Set goal"
+                          onPress={openCalculator}
+                          alignment="flex-start"
+                          color={colors.primary[500]}
+                        />
+                      </View>
                     )
                   ) : (
                     <>
@@ -542,29 +592,22 @@ export default function WaterModal({
                             key={preset.label}
                             text={preset.label}
                             textType="caption"
-                            onPress={() => commitIncrement(preset.ml)}
+                            onPress={() => {
+                              setIncrementText(null);
+                              commitIncrement(preset.ml);
+                            }}
                             outlined={incrementDraft !== preset.ml}
                             color={colors.primary[500]}
                           />
                         ))}
                       </View>
-                      <View
-                        style={[
-                          styles.stepperRow,
-                          {
-                            backgroundColor: withAlpha(
-                              colors.neutral[100],
-                              0.5,
-                            ),
-                            borderColor: colors.neutral[200],
-                          },
-                        ]}
-                      >
+                      <View style={[styles.stepperRow]}>
                         <TouchableOpacity
-                          onPress={() =>
-                            commitIncrement(incrementDraft - incrementStep)
-                          }
+                          onPressIn={() => startHold(-1)}
+                          onPressOut={stopHold}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Decrease amount per tap"
                         >
                           <MaterialCommunityIcons
                             name="minus"
@@ -572,14 +615,38 @@ export default function WaterModal({
                             color={colors.primary[600]}
                           />
                         </TouchableOpacity>
-                        <ThemedText type="bodyLarge" weight="semiBold">
-                          {displayMl(incrementDraft)}
-                        </ThemedText>
+                        <ThemedTextInput
+                          value={incrementText ?? rawIncrementNumber}
+                          onChangeText={setIncrementText}
+                          onFocus={() => {
+                            if (incrementText == null) {
+                              setIncrementText(rawIncrementNumber);
+                            }
+                          }}
+                          onBlur={commitTypedIncrement}
+                          onSubmitEditing={commitTypedIncrement}
+                          keyboardType="numeric"
+                          returnKeyType="done"
+                          selectTextOnFocus
+                          maxLength={5}
+                          textAlign="center"
+                          style={styles.incrementInput}
+                          accessibilityLabel={`Amount per tap in ${incrementUnitLabel}`}
+                        >
+                          <ThemedText
+                            type="bodyLarge"
+                            weight="semiBold"
+                            style={{ color: colors.neutral[600] }}
+                          >
+                            {incrementUnitLabel}
+                          </ThemedText>
+                        </ThemedTextInput>
                         <TouchableOpacity
-                          onPress={() =>
-                            commitIncrement(incrementDraft + incrementStep)
-                          }
+                          onPressIn={() => startHold(1)}
+                          onPressOut={stopHold}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Increase amount per tap"
                         >
                           <MaterialCommunityIcons
                             name="plus"
@@ -663,9 +730,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderRadius: 12,
-    borderWidth: 1,
     paddingVertical: 10,
     paddingHorizontal: 16,
+    gap: 12,
+  },
+  incrementInput: {
+    flex: 1,
   },
   calculator: {
     borderRadius: 12,
