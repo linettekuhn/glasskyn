@@ -1,7 +1,12 @@
 import { Colors, Fonts, getTheme } from "@/constants/theme";
 import { MaterialCommunityIcons, Octicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { StyleSheet, useColorScheme, View } from "react-native";
+import {
+  StyleSheet,
+  useColorScheme,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import TopBar from "@/components/top-bar";
 import GradientBackground from "@/components/ui/gradient-background";
@@ -15,6 +20,9 @@ type TabIconProps = TabBarIconProps & {
   fillName: string;
   size: number;
 };
+
+const TAB_TRANSITION_DURATION = 350;
+const TAB_SLIDE_FRACTION = 0.5;
 
 const TabIcon = (props: TabIconProps) => {
   const IconComponent = props.IconComponent;
@@ -37,6 +45,7 @@ export default function MainLayout() {
   const inactiveColor = colors.neutral[500];
   const focusedColor = colors.primary[500];
   const strokeColor = colors.neutral[200];
+  const { width } = useWindowDimensions();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -47,6 +56,32 @@ export default function MainLayout() {
           screenOptions={{
             sceneStyle: { backgroundColor: "transparent" },
             headerShown: false,
+            lazy: true,
+            freezeOnBlur: true,
+            transitionSpec: {
+              animation: "timing",
+              config: { duration: TAB_TRANSITION_DURATION },
+            },
+            sceneStyleInterpolator: ({ current }) => ({
+              sceneStyle: {
+                opacity: current.progress.interpolate({
+                  inputRange: [-1, 0, 1],
+                  outputRange: [0, 1, 0],
+                }),
+                transform: [
+                  {
+                    translateX: current.progress.interpolate({
+                      inputRange: [-1, 0, 1],
+                      outputRange: [
+                        -width * TAB_SLIDE_FRACTION,
+                        0,
+                        width * TAB_SLIDE_FRACTION,
+                      ],
+                    }),
+                  },
+                ],
+              },
+            }),
             tabBarActiveTintColor: focusedColor,
             tabBarInactiveTintColor: inactiveColor,
             tabBarStyle: {

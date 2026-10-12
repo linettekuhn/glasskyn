@@ -17,6 +17,9 @@ import GlassSurface from "@/components/ui/glass-surface";
 /** Used only if measuring the inline calendar's position fails. */
 const FALLBACK_MODAL_TOP = 120;
 
+/** Single source of truth for calendar cell height; loading rows derive from it. */
+const CELL_HEIGHT = 40;
+
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 const MONTHS = [
   "January",
@@ -491,7 +494,12 @@ export default function JournalCalendar({
               {renderWeekdayRow()}
 
               {loading ? (
-                <View style={styles.loadingRow}>
+                <View
+                  style={[
+                    styles.loadingRow,
+                    { height: (totalCells / 7) * CELL_HEIGHT },
+                  ]}
+                >
                   <ActivityIndicator color={colors.neutral[700]} />
                 </View>
               ) : (
@@ -551,7 +559,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    height: 40,
+    height: CELL_HEIGHT,
   },
   dayCircle: {
     width: 28,
@@ -589,12 +597,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   loadingRow: {
-    height: 210,
     alignItems: "center",
     justifyContent: "center",
   },
   loadingRowWeek: {
-    height: 70,
+    height: CELL_HEIGHT,
   },
   legend: {
     flexDirection: "row",

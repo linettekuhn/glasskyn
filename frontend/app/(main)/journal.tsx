@@ -66,22 +66,6 @@ export default function JournalScreen() {
   const paramsRef = useRef({ tabParam, timeOfDayParam });
   paramsRef.current = { tabParam, timeOfDayParam };
 
-  // TEMP-DIAG: journal render trace.
-  console.log("[JOURNAL] render", {
-    tabParam,
-    timeOfDayParam,
-    timeOfDay,
-    tab,
-    override: overrideRef.current,
-    t: Date.now(),
-  });
-
-  // TEMP-DIAG: mount/unmount trace.
-  useEffect(() => {
-    console.log("[JOURNAL] mount");
-    return () => console.log("[JOURNAL] unmount");
-  }, []);
-
   // Arrival sync: stable callback reading latest params from a ref, so
   // resubscribes can't retrigger it spuriously. Runs on every arrival;
   // cleanup fires only on blur/unmount, which ends the override session —
@@ -97,14 +81,6 @@ export default function JournalScreen() {
       clockNow,
       overrideRef.current,
     );
-    // TEMP-DIAG: arrival resolution trace.
-    console.log("[JOURNAL] applyArrival", {
-      tabParam: tp,
-      timeOfDayParam: tod,
-      hadOverride: overrideRef.current,
-      resolved,
-      clock: clockNow,
-    });
     if (resolved.set) {
       setTimeOfDay(resolved.set);
     }
@@ -113,8 +89,6 @@ export default function JournalScreen() {
       router.setParams({ tab: undefined, timeOfDay: undefined });
     }
     return () => {
-      // TEMP-DIAG: session boundary trace.
-      console.log("[JOURNAL] blur cleanup, resetting override");
       overrideRef.current = false;
     };
   }, []);
@@ -122,8 +96,6 @@ export default function JournalScreen() {
   useFocusEffect(handleFocusArrival);
 
   useEffect(() => {
-    // TEMP-DIAG: in-place param change trace.
-    console.log("[JOURNAL] in-place params", { tabParam, timeOfDayParam });
     // In-place param changes while already focused (deep link into an open
     // journal). Echo runs are no-ops: no valid param + flag held means hold.
     if (tabParam === "routines" || tabParam === "progress") {
