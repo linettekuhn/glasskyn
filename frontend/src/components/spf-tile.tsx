@@ -28,7 +28,9 @@ export default function SpfTile({ highlight }: { highlight?: boolean }) {
         state={spf.state}
         remainingMs={spf.remainingMs}
         lastAppliedAt={spf.lastAppliedAt}
+        firstAppliedAt={spf.firstAppliedAt}
         intervalMin={spf.intervalMin}
+        windowEndMin={spf.windowEndMin}
         todayCount={spf.todayCount}
         indoorsToday={spf.indoorsToday}
         saveInterval={spf.saveInterval}

@@ -29,7 +29,9 @@ export interface UseSpfResult {
   state: SpfState;
   remainingMs: number | null;
   lastAppliedAt: Date | null;
+  firstAppliedAt: Date | null;
   intervalMin: number;
+  windowEndMin: number;
   todayCount: number;
   indoorsToday: boolean;
   canUndo: boolean;
@@ -114,12 +116,16 @@ export function useSpf(): UseSpfResult {
     DEFAULT_WINDOW_END_MIN,
   );
   const lastAppliedAt = lastApplied ? new Date(lastApplied) : null;
+  const todayIsos = recent.filter(
+    (iso) => localDateString(new Date(iso)) === today,
+  );
+  const firstAppliedAt =
+    todayIsos.length > 0
+      ? new Date(todayIsos.reduce((a, b) => (a < b ? a : b)))
+      : null;
   const intervalMs = intervalMin * 60 * 1000;
   const indoorsToday = prefs?.spf_indoors_date === today;
-  const todayCount = recent.filter(
-    (iso) => localDateString(new Date(iso)) === today,
-  ).length;
-
+  const todayCount = todayIsos.length;
   const dueAt =
     lastAppliedAt != null ? lastAppliedAt.getTime() + intervalMs : null;
   const windowEndToday =
@@ -353,7 +359,9 @@ export function useSpf(): UseSpfResult {
     state,
     remainingMs,
     lastAppliedAt,
+    firstAppliedAt,
     intervalMin,
+    windowEndMin,
     todayCount,
     indoorsToday,
     canUndo: undoStack.length > 0,

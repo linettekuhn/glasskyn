@@ -20,11 +20,7 @@ import * as Haptics from "expo-haptics";
 import GlassSurface, { withAlpha } from "@/components/ui/glass-surface";
 import { ThemedText } from "@/components/ui/themed-text";
 import { Colors, getTheme } from "@/constants/theme";
-import {
-  formatRemaining,
-  formatTime,
-  type SpfState,
-} from "@/lib/spf-state";
+import { formatRemaining, formatTime, type SpfState } from "@/lib/spf-state";
 
 export interface SpfPreviewProps {
   loaded: boolean;
@@ -121,11 +117,11 @@ export default function SpfPreview({
       : state === "due"
         ? "Reapply now"
         : state === "idle"
-          ? "Tap when you apply"
+          ? "Tap + to apply"
           : state === "resting"
             ? "Done for today"
             : state === "indoors"
-              ? "Staying in today"
+              ? "Staying indoors"
               : lastAppliedAt != null
                 ? `Last applied ${formatTime(lastAppliedAt)}`
                 : "Sunscreen";
@@ -135,7 +131,9 @@ export default function SpfPreview({
       ? "weather-night"
       : state === "indoors"
         ? "home-outline"
-        : "white-balance-sunny";
+        : state === "due"
+          ? "sun-clock"
+          : "shield-sun";
 
   const handleAdd = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -145,9 +143,7 @@ export default function SpfPreview({
   return (
     <View
       style={styles.square}
-      onLayout={(e: LayoutChangeEvent) =>
-        setTileH(e.nativeEvent.layout.height)
-      }
+      onLayout={(e: LayoutChangeEvent) => setTileH(e.nativeEvent.layout.height)}
     >
       {!loaded ? (
         <GlassSurface style={styles.fill}>
@@ -175,32 +171,9 @@ export default function SpfPreview({
                 ]}
               />
               <View pointerEvents="none" style={styles.topLabels}>
-                <ThemedText
-                  type="caption"
-                  style={{ color: colors.neutral[600] }}
-                >
-                  SPF
-                </ThemedText>
-                <ThemedText
-                  type="captionSmall"
-                  numberOfLines={1}
-                  style={{ color: colors.neutral[600] }}
-                >
-                  {todayCount === 1 ? "1 today" : `${todayCount} today`}
-                </ThemedText>
-              </View>
-              <View
-                pointerEvents="none"
-                style={[styles.center, quiet && styles.dimmed]}
-              >
-                <MaterialCommunityIcons
-                  name={iconName}
-                  size={52}
-                  color={quiet ? colors.neutral[600] : accent}
-                />
                 {state === "due" ? (
                   <ThemedText
-                    type="bodyLarge"
+                    type="caption"
                     weight="semiBold"
                     style={{ color: accent, textAlign: "center" }}
                   >
@@ -217,6 +190,16 @@ export default function SpfPreview({
                     {centerText}
                   </ThemedText>
                 )}
+              </View>
+              <View
+                pointerEvents="none"
+                style={[styles.center, quiet && styles.dimmed]}
+              >
+                <MaterialCommunityIcons
+                  name={iconName}
+                  size={52}
+                  color={quiet ? colors.neutral[600] : accent}
+                />
               </View>
             </GlassSurface>
           </Pressable>

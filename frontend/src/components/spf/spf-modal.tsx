@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { ComponentProps, useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -22,6 +22,7 @@ import ThemedButton from "@/components/ui/themed-button";
 import Divider from "@/components/ui/divider";
 import { Colors, getTheme } from "@/constants/theme";
 import {
+  DEFAULT_INTERVAL_MIN,
   formatRemaining,
   formatTime,
   type SpfState,
@@ -32,7 +33,9 @@ export interface SpfModalProps {
   state: SpfState;
   remainingMs: number | null;
   lastAppliedAt: Date | null;
+  firstAppliedAt: Date | null;
   intervalMin: number;
+  windowEndMin: number;
   todayCount: number;
   indoorsToday: boolean;
   saveInterval: (min: number) => Promise<void>;
@@ -43,9 +46,15 @@ export interface SpfModalProps {
 }
 
 const INTERVAL_PRESETS = [
+  { label: "5m", min: 5 },
   { label: "1.5h", min: 90 },
   { label: "2h", min: 120 },
   { label: "3h", min: 180 },
+];
+
+const LOCATION_OPTIONS = [
+  { label: "Out & About", isIndoors: false, iconName: "weather-sunny" },
+  { label: "Staying In", isIndoors: true, iconName: "home-outline" },
 ];
 
 const EXIT_MS = 220;
@@ -65,7 +74,9 @@ export default function SpfModal({
   state,
   remainingMs,
   lastAppliedAt,
+  firstAppliedAt,
   intervalMin,
+  windowEndMin,
   todayCount,
   indoorsToday,
   saveInterval,
@@ -96,17 +107,35 @@ export default function SpfModal({
 
   const accent = colors.tertiary[600];
 
+  const effectiveInterval =
+    intervalMin > 0 ? intervalMin : DEFAULT_INTERVAL_MIN;
+  const todayTotal =
+    firstAppliedAt != null
+      ? Math.max(
+          1,
+          Math.ceil(
+            (windowEndMin -
+              (firstAppliedAt.getHours() * 60 + firstAppliedAt.getMinutes())) /
+              effectiveInterval,
+          ),
+        )
+      : 0;
+  const percent =
+    firstAppliedAt != null
+      ? Math.min(100, Math.round((todayCount / todayTotal) * 100))
+      : 0;
+
   const statusText =
     state === "fresh" && remainingMs != null
-      ? `Protected · reapply in ${formatRemaining(remainingMs)}`
+      ? `Protected. Reapply in ${formatRemaining(remainingMs)}`
       : state === "due"
-        ? "Protection has worn off · reapply now"
+        ? "Protection has worn off. Reapply now"
         : state === "idle"
           ? "No application logged yet today"
           : state === "resting"
-            ? "Outside sun hours · done for today"
+            ? "Outside sun hours. Done for today"
             : state === "indoors"
-              ? "Marked as staying in today"
+              ? "Marked as staying indoors"
               : lastAppliedAt != null
                 ? `Last applied ${formatTime(lastAppliedAt)}`
                 : "Sunscreen";
@@ -126,6 +155,14 @@ export default function SpfModal({
         },
       ],
     );
+  };
+
+  const handleLocationChange = (isIndoors: boolean) => {
+    if (isIndoors) {
+      void setIndoors();
+    } else {
+      void clearIndoors();
+    }
   };
 
   return (
@@ -185,24 +222,62 @@ export default function SpfModal({
                     </TouchableOpacity>
                   </View>
 
-                  <ThemedText
-                    type="caption"
-                    style={{ color: colors.neutral[600] }}
-                  >
-                    {statusText}
-                  </ThemedText>
-                  <ThemedText
-                    type="caption"
-                    style={{ color: colors.neutral[600] }}
-                  >
-                    {todayCount === 1
-                      ? "1 application today"
-                      : `${todayCount} applications today`}
-                  </ThemedText>
+                  <View style={{ gap: 8 }}>
+                    {firstAppliedAt != null && (
+                      <>
+                        <View style={styles.progressHeader}>
+                          <ThemedText
+                            type="caption"
+                            style={{ color: colors.neutral[600] }}
+                          >
+                            {`${todayCount} of ${todayTotal} application${todayCount > 1 ? "s" : ""} today`}
+                          </ThemedText>
+                          <ThemedText
+                            type="overline"
+                            weight="semiBold"
+                            style={{ color: accent }}
+                          >
+                            {`${percent}%`}
+                          </ThemedText>
+                        </View>
+                        <View
+                          style={[
+                            styles.progressTrack,
+                            { backgroundColor: colors.neutral[200] },
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.progressFill,
+                              {
+                                backgroundColor: accent,
+                                width: `${percent}%`,
+                              },
+                            ]}
+                          />
+                        </View>
+                      </>
+                    )}
+                    <ThemedText
+                      type="caption"
+                      style={{ color: colors.neutral[600] }}
+                    >
+                      {statusText}
+                    </ThemedText>
+                  </View>
 
-                  <ThemedText type="bodyLarge" weight="semiBold">
-                    Reapply every
-                  </ThemedText>
+                  <View>
+                    <ThemedText type="bodyLarge" weight="semiBold">
+                      Reapply interval
+                    </ThemedText>
+                    <ThemedText
+                      type="caption"
+                      style={{ color: colors.neutral[600] }}
+                    >
+                      How often to prompt a reapplication reminder.
+                    </ThemedText>
+                  </View>
+
                   <View style={styles.chipRow}>
                     {INTERVAL_PRESETS.map((preset) => (
                       <ThemedButton
@@ -218,43 +293,59 @@ export default function SpfModal({
                     ))}
                   </View>
 
-                  {indoorsToday ? (
-                    <>
-                      <ThemedText
-                        type="caption"
-                        style={{ color: colors.neutral[600] }}
-                      >
-                        You&apos;re marked as staying in today, so no
-                        reapply countdown is running.
-                      </ThemedText>
-                      <ThemedButton
-                        text="Undo"
-                        textType="caption"
-                        onPress={() => {
-                          void clearIndoors();
-                        }}
-                        outlined
-                        color={colors.primary[500]}
-                        alignment="flex-start"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <ThemedText type="bodyLarge" weight="semiBold">
-                        Staying inside?
-                      </ThemedText>
-                      <ThemedButton
-                        text="Staying in today"
-                        textType="caption"
-                        onPress={() => {
-                          void setIndoors();
-                        }}
-                        outlined
-                        color={colors.primary[500]}
-                        alignment="flex-start"
-                      />
-                    </>
-                  )}
+                  <View>
+                    <ThemedText type="bodyLarge" weight="semiBold">
+                      Sun exposure
+                    </ThemedText>
+                    <ThemedText
+                      type="caption"
+                      style={{ color: colors.neutral[600] }}
+                    >
+                      Staying in? Disable SPF reminders while inside.
+                    </ThemedText>
+                  </View>
+
+                  <GlassSurface style={styles.segmentContainer}>
+                    {LOCATION_OPTIONS.map((option) => {
+                      const selected = indoorsToday === option.isIndoors;
+                      return (
+                        <TouchableOpacity
+                          key={option.label}
+                          activeOpacity={0.7}
+                          style={[
+                            styles.segmentOption,
+                            {
+                              backgroundColor: selected
+                                ? colors.secondary[300]
+                                : "transparent",
+                            },
+                          ]}
+                          onPress={() => handleLocationChange(option.isIndoors)}
+                        >
+                          <MaterialCommunityIcons
+                            name={
+                              option.iconName as ComponentProps<
+                                typeof MaterialCommunityIcons
+                              >["name"]
+                            }
+                            size={20}
+                            color={selected ? colors.text : colors.neutral[600]}
+                          />
+                          <ThemedText
+                            type="bodySmall"
+                            weight={selected ? "medium" : "light"}
+                            style={{
+                              color: selected
+                                ? colors.text
+                                : colors.neutral[600],
+                            }}
+                          >
+                            {option.label}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </GlassSurface>
 
                   <Divider />
 
@@ -301,9 +392,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  progressHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  progressTrack: {
+    height: 10,
+    borderRadius: 5,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 5,
+  },
   chipRow: {
     flexDirection: "row",
     gap: 8,
     flexWrap: "wrap",
+  },
+  segmentContainer: {
+    flexDirection: "row",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  segment: {
+    flexDirection: "row",
+    overflow: "hidden",
+  },
+  segmentOption: {
+    flex: 1,
+    paddingVertical: 10,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 4,
   },
 });

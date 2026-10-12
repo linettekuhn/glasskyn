@@ -233,7 +233,7 @@ export default function WaterPreview({
                   numberOfLines={1}
                   style={{ color: colors.neutral[600] }}
                 >
-                  {`+${displayMl(incrementMl)}`}
+                  {`${displayMl(incrementMl)}`}
                 </ThemedText>
               )}
             </View>
