@@ -37,24 +37,41 @@ interface RoutineCardProps {
   routine: Routine;
   productMap: Map<number, Product>;
   onCompletionChange?: () => void;
+  initialTimeOfDay?: "AM" | "PM";
 }
 
 export default function RoutineCard({
   routine,
   productMap,
   onCompletionChange,
+  initialTimeOfDay,
 }: RoutineCardProps) {
   const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<"AM" | "PM">("AM");
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const [linesHeight, setLinesHeight] = useState(0);
-  const colorScheme = useColorScheme();
+  const [linesHeight, setLinesHeight] = useState(0);  const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
+
+  // TEMP-DIAG: per-instance render trace.
+  console.log("[CARD] render", {
+    routineId: routine.id,
+    initialTimeOfDay,
+    selectedTimeOfDay,
+  });
 
   useEffect(() => {
     setCompletedSteps(
       new Set(routine.steps.filter((s) => s.completed_today).map((s) => s.id)),
     );
   }, [routine.steps]);
+
+  useEffect(() => {
+    // TEMP-DIAG: override sync trace.
+    console.log(
+      "[CARD] sync effect, initialTimeOfDay=",
+      initialTimeOfDay,
+    );
+    if (initialTimeOfDay) setSelectedTimeOfDay(initialTimeOfDay);
+  }, [initialTimeOfDay]);
 
   const filteredSteps = useMemo(() => {
     return routine.steps
@@ -176,7 +193,11 @@ export default function RoutineCard({
         <View style={styles.cardHeaderControls}>
           <DayNightToggle
             value={selectedTimeOfDay === "AM"}
-            onValueChange={(am) => setSelectedTimeOfDay(am ? "AM" : "PM")}
+            onValueChange={(am) => {
+              // TEMP-DIAG: real press trace.
+              console.log("[TOGGLE] press →", am ? "AM" : "PM");
+              setSelectedTimeOfDay(am ? "AM" : "PM");
+            }}
           />
           <View
             style={{

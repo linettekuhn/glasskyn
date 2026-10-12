@@ -81,14 +81,14 @@ export default function MainLayout() {
             }}
           />
           <Tabs.Screen
-            name="chat"
+            name="products"
             options={{
-              title: "Cur.ai",
+              title: "Vanity",
               tabBarIcon: ({ focused, color }: TabBarIconProps) => (
                 <TabIcon
                   IconComponent={MaterialCommunityIcons}
-                  outlineName="chat-outline"
-                  fillName="chat"
+                  outlineName="archive-outline"
+                  fillName="archive"
                   size={28}
                   color={color}
                   focused={focused}
@@ -113,14 +113,14 @@ export default function MainLayout() {
             }}
           />
           <Tabs.Screen
-            name="products"
+            name="chat"
             options={{
-              title: "Vanity",
+              title: "Cur.ai",
               tabBarIcon: ({ focused, color }: TabBarIconProps) => (
                 <TabIcon
                   IconComponent={MaterialCommunityIcons}
-                  outlineName="archive-outline"
-                  fillName="archive"
+                  outlineName="chat-outline"
+                  fillName="chat"
                   size={28}
                   color={color}
                   focused={focused}

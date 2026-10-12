@@ -229,15 +229,6 @@ export default function NotificationSettings() {
         </>
       )}
 
-      <View style={styles.row}>
-        <ThemedText type="bodyLarge">Skin check-in summaries</ThemedText>
-        <Switch
-          value={prefs.skin_nudge_enabled}
-          onValueChange={(v: boolean) => update({ skin_nudge_enabled: v })}
-          trackColor={{ true: colors.secondary[500] }}
-        />
-      </View>
-
       <ThemedText type="bodyLarge">Routine reminders</ThemedText>
 
       <View style={styles.row}>

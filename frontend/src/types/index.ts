@@ -331,12 +331,3 @@ export interface SkinCheckInResponse {
   session_id: number;
   concerns: SkinConcernOut[];
 }
-
-export interface SkinNudge {
-  id: number;
-  session_id: number;
-  text: string;
-  created_at: string | null;
-  seen_at: string | null;
-  dismissed_at: string | null;
-}

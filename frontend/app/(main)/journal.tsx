@@ -1,16 +1,17 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   View,
   StyleSheet,
   useColorScheme,
   TouchableOpacity,
 } from "react-native";
-import { useFocusEffect, router } from "expo-router";
+import { useFocusEffect, router, useLocalSearchParams } from "expo-router";
 import { listRoutines, localToday } from "@/api/routines";
 import { useSkinSessions } from "@/contexts/SkinSessionsContext";
 import { useProducts } from "@/hooks/use-products";
 import { useRoutineCompletionDots } from "@/hooks/use-routine-completion-dots";
 import { groupSessionsByDay } from "@/utils/skin-sessions";
+import { resolveArrivalTimeOfDay } from "@/utils/routine-status";
 import type { Routine } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { CREATE_ROUTINE_OPTIONS } from "@/constants/routine";
@@ -51,6 +52,90 @@ export default function JournalScreen() {
   const [currentRoutineIndex, setCurrentRoutineIndex] = useState(0);
   const [completionVersion, setCompletionVersion] = useState(0);
   const [tab, setTab] = useState<JournalTab>("routines");
+  const [timeOfDay, setTimeOfDay] = useState<"AM" | "PM">(
+    () => (new Date().getHours() >= 12 ? "PM" : "AM"),
+  );
+  const { tab: tabParam, timeOfDay: timeOfDayParam } = useLocalSearchParams<{
+    tab?: string;
+    timeOfDay?: string;
+  }>();
+  // Tracks whether the last applied timeOfDay came from a URL override, so
+  // the post-consume echo (params now empty) holds still instead of falling
+  // back to the clock and clobbering the override.
+  const overrideRef = useRef(false);
+  const paramsRef = useRef({ tabParam, timeOfDayParam });
+  paramsRef.current = { tabParam, timeOfDayParam };
+
+  // TEMP-DIAG: journal render trace.
+  console.log("[JOURNAL] render", {
+    tabParam,
+    timeOfDayParam,
+    timeOfDay,
+    tab,
+    override: overrideRef.current,
+    t: Date.now(),
+  });
+
+  // TEMP-DIAG: mount/unmount trace.
+  useEffect(() => {
+    console.log("[JOURNAL] mount");
+    return () => console.log("[JOURNAL] unmount");
+  }, []);
+
+  // Arrival sync: stable callback reading latest params from a ref, so
+  // resubscribes can't retrigger it spuriously. Runs on every arrival;
+  // cleanup fires only on blur/unmount, which ends the override session —
+  // any number of same-session reruns hold still instead of clocking.
+  const handleFocusArrival = useCallback(() => {
+    const { tabParam: tp, timeOfDayParam: tod } = paramsRef.current;
+    if (tp === "routines" || tp === "progress") {
+      setTab(tp);
+    }
+    const clockNow = new Date().getHours() >= 12 ? "PM" : "AM";
+    const resolved = resolveArrivalTimeOfDay(
+      tod,
+      clockNow,
+      overrideRef.current,
+    );
+    // TEMP-DIAG: arrival resolution trace.
+    console.log("[JOURNAL] applyArrival", {
+      tabParam: tp,
+      timeOfDayParam: tod,
+      hadOverride: overrideRef.current,
+      resolved,
+      clock: clockNow,
+    });
+    if (resolved.set) {
+      setTimeOfDay(resolved.set);
+    }
+    overrideRef.current = resolved.hadOverride;
+    if (tp !== undefined || resolved.consume) {
+      router.setParams({ tab: undefined, timeOfDay: undefined });
+    }
+    return () => {
+      // TEMP-DIAG: session boundary trace.
+      console.log("[JOURNAL] blur cleanup, resetting override");
+      overrideRef.current = false;
+    };
+  }, []);
+
+  useFocusEffect(handleFocusArrival);
+
+  useEffect(() => {
+    // TEMP-DIAG: in-place param change trace.
+    console.log("[JOURNAL] in-place params", { tabParam, timeOfDayParam });
+    // In-place param changes while already focused (deep link into an open
+    // journal). Echo runs are no-ops: no valid param + flag held means hold.
+    if (tabParam === "routines" || tabParam === "progress") {
+      setTab(tabParam);
+      router.setParams({ tab: undefined });
+    }
+    if (timeOfDayParam === "AM" || timeOfDayParam === "PM") {
+      setTimeOfDay(timeOfDayParam);
+      overrideRef.current = true;
+      router.setParams({ timeOfDay: undefined });
+    }
+  }, [tabParam, timeOfDayParam]);
   // Skin sessions come from the shared store (single source of truth) —
   // deletes/updates anywhere propagate here without a refetch.
   const { sessions, loading: sessionsLoading, refresh: refreshSessions } =
@@ -181,6 +266,7 @@ export default function JournalScreen() {
               currentIndex={currentRoutineIndex}
               onIndexChange={setCurrentRoutineIndex}
               onCompletionChange={() => setCompletionVersion((v) => v + 1)}
+              initialTimeOfDay={timeOfDay}
             />
           </View>
         ) : (

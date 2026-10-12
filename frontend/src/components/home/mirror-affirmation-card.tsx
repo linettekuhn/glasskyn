@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Pressable, StyleSheet, View, useColorScheme } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import GlassSurface from "@/components/ui/glass-surface";
 import { ThemedText } from "@/components/ui/themed-text";
 import { Colors, getTheme } from "@/constants/theme";
 import { affirmations } from "@/constants/affirmations";
+import ThemedButton from "../ui/themed-button";
 
 const dailyIndex = () =>
   Math.floor(Date.now() / 86400000) % affirmations.length;
@@ -36,9 +38,9 @@ export default function MirrorAffirmationCard() {
           <ThemedText
             type="overline"
             weight="semiBold"
-            style={{ color: colors.neutral[600], letterSpacing: 0.6 }}
+            style={{ color: colors.neutral[600] }}
           >
-            SAY IT TO YOUR REFLECTION
+            LOOK IN THE MIRROR & REPEAT
           </ThemedText>
         </View>
         <Pressable
@@ -58,16 +60,34 @@ export default function MirrorAffirmationCard() {
       <ThemedText
         type="h3"
         italic
-        style={[styles.quote, { color: colors.tertiary[800] }]}
+        style={[styles.quote, { color: colors.tertiary[900] }]}
       >
         {affirmations[index]}
       </ThemedText>
+
+      <View style={styles.link}>
+        <ThemedText type="bodySmall" style={{ color: colors.secondary[700] }}>
+          Notice skin changes?
+        </ThemedText>
+        <ThemedButton
+          textType="bodySmall"
+          link
+          onPress={() =>
+            router.navigate({
+              pathname: "/(main)/journal",
+              params: { tab: "progress" },
+            })
+          }
+          color={colors.secondary[700]}
+          text="Log journal entry"
+        />
+      </View>
     </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { padding: 20, gap: 14, overflow: "hidden" },
+  card: { padding: 20, gap: 8, overflow: "hidden" },
   labelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -76,4 +96,12 @@ const styles = StyleSheet.create({
   label: { flexDirection: "row", alignItems: "center", gap: 6 },
   quote: { textAlign: "center", paddingHorizontal: 8, lineHeight: 30 },
   hint: { textAlign: "center" },
+  link: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    alignSelf: "center",
+  },
 });

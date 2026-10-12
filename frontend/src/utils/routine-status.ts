@@ -34,6 +34,58 @@ export function getTimeWindow(hour: number): TimeWindow {
   return "night";
 }
 
+/**
+ * Which AM/PM slot a status card CTA refers to (e.g. "Start Night Routine"
+ * refers to PM regardless of the current hour). Null when the CTA refers to
+ * no slot (progress links, peek/empty states).
+ */
+export function ctaTimeOfDay(key: RoutineStatusKey): "AM" | "PM" | null {
+  switch (key) {
+    case "amPrompt":
+    case "amContinue":
+    case "amDone":
+    case "amCatchupPartial":
+    case "nightDoneAmOpen":
+    case "missedAmCatchup":
+      return "AM";
+    case "pmPrompt":
+    case "pmContinue":
+      return "PM";
+    default:
+      return null;
+  }
+}
+
+export interface ArrivalTimeOfDay {
+  /** Toggle value to apply, or null to leave the current one alone. */
+  set: "AM" | "PM" | null;
+  /** Whether the caller should consume the URL params. */
+  consume: boolean;
+  /** Override bookkeeping for the caller to persist across runs. */
+  hadOverride: boolean;
+}
+
+/**
+ * Decides the AM/PM toggle on journal arrival. A valid URL param always
+ * wins; the clock applies only to genuine no-param arrivals — never to the
+ * echo left behind after consuming an override. The override flag survives
+ * echo runs (any number of same-session reruns hold still); only a new
+ * param or an explicit reset may change it afterwards.
+ */
+export function resolveArrivalTimeOfDay(
+  param: string | undefined,
+  clock: "AM" | "PM",
+  hadOverride: boolean,
+): ArrivalTimeOfDay {
+  if (param === "AM" || param === "PM") {
+    return { set: param, consume: true, hadOverride: true };
+  }
+  if (hadOverride) {
+    return { set: null, consume: false, hadOverride: true };
+  }
+  return { set: clock, consume: false, hadOverride: false };
+}
+
 type SlotStatus = "none" | "not_started" | "partial" | "done";
 
 function slotStatus(count: number, doneCount: number): SlotStatus {
