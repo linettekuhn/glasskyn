@@ -507,8 +507,8 @@ export default function JournalMontageScreen() {
 
   const lineColor = colors.neutral[300];
 
-  const { ruleColors, ruleLocations } = useMemo(() => {
-    if (linesHeight <= 0) return { ruleColors: [], ruleLocations: [] };
+  const { ruleColors, ruleLocations, hasRules } = useMemo(() => {
+    if (linesHeight <= 0) return { ruleColors: [], ruleLocations: [], hasRules: false };
     const ruleColors: string[] = [];
     const ruleLocations: number[] = [];
     const count = Math.ceil(linesHeight / LINE_GAP);
@@ -524,7 +524,10 @@ export default function JournalMontageScreen() {
         lineEnd / linesHeight,
       );
     }
-    return { ruleColors, ruleLocations };
+    // Android's native LinearGradientView throws when given < 2 colors,
+    // so only render once a measurable height produced a valid rule set.
+    const hasRules = ruleColors.length >= 2 && ruleLocations.length >= 2;
+    return { ruleColors, ruleLocations, hasRules };
   }, [linesHeight, lineColor]);
 
   const startIndex = useMemo(() => {
@@ -1289,16 +1292,17 @@ export default function JournalMontageScreen() {
           />
         </View>
       </View>
-      <View style={styles.linesWrap}>
-        <LinearGradient
-          pointerEvents="none"
-          colors={ruleColors as [string, string, ...string[]]}
-          locations={ruleLocations as [number, number, ...number[]]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          onLayout={onLinesLayout}
-          style={styles.linesBackground}
-        />
+      <View style={styles.linesWrap} onLayout={onLinesLayout}>
+        {hasRules && (
+          <LinearGradient
+            pointerEvents="none"
+            colors={ruleColors as [string, string, ...string[]]}
+            locations={ruleLocations as [number, number, ...number[]]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.linesBackground}
+          />
+        )}
         <ScrollView
           contentContainerStyle={styles.expandedContent}
           showsVerticalScrollIndicator={false}

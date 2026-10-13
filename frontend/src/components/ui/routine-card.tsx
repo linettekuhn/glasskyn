@@ -75,8 +75,8 @@ export default function RoutineCard({
 
   const lineColor = colors.neutral[300];
 
-  const { ruleColors, ruleLocations } = useMemo(() => {
-    if (linesHeight <= 0) return { ruleColors: [], ruleLocations: [] };
+  const { ruleColors, ruleLocations, hasRules } = useMemo(() => {
+    if (linesHeight <= 0) return { ruleColors: [], ruleLocations: [], hasRules: false };
     const ruleColors: string[] = [];
     const ruleLocations: number[] = [];
     const count = Math.ceil(linesHeight / LINE_GAP);
@@ -92,7 +92,10 @@ export default function RoutineCard({
         lineEnd / linesHeight,
       );
     }
-    return { ruleColors, ruleLocations };
+    // Android's native LinearGradientView throws when given < 2 colors,
+    // so only render once a measurable height produced a valid rule set.
+    const hasRules = ruleColors.length >= 2 && ruleLocations.length >= 2;
+    return { ruleColors, ruleLocations, hasRules };
   }, [linesHeight, lineColor]);
 
   const toggleStep = useCallback(
@@ -221,21 +224,20 @@ export default function RoutineCard({
           </View>
         </View>
       </View>
-      <FlatList
-        data={filteredSteps}
-        keyExtractor={(item: RoutineStep) => item.id.toString()}
-        ListHeaderComponentStyle={styles.linesBackground}
-        ListHeaderComponent={
+      <View style={styles.listWrap} onLayout={onLinesLayout}>
+        {hasRules && (
           <LinearGradient
             pointerEvents="none"
             colors={ruleColors as [string, string, ...string[]]}
             locations={ruleLocations as [number, number, ...number[]]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
-            onLayout={onLinesLayout}
             style={styles.linesBackground}
           />
-        }
+        )}
+      <FlatList
+        data={filteredSteps}
+        keyExtractor={(item: RoutineStep) => item.id.toString()}
         renderItem={({ item, index }: { item: RoutineStep; index: number }) => {
           const isChecked = completedSteps.has(item.id);
           const productName = item.product_id
@@ -276,6 +278,7 @@ export default function RoutineCard({
         }}
         contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
       />
+      </View>
     </GlassSurface>
   );
 }
@@ -308,6 +311,9 @@ const styles = StyleSheet.create({
   },
   linesBackground: {
     ...StyleSheet.absoluteFillObject,
+  },
+  listWrap: {
+    flex: 1,
   },
   listContent: {
     gap: LINE_GAP,
