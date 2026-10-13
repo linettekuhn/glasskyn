@@ -89,6 +89,10 @@ export default function MainLayout() {
               borderTopWidth: 1,
               borderTopColor: strokeColor,
               height: 65,
+              // React Navigation's bottom bar defaults to elevation 8 on
+              // Android, which casts a box-shaped shadow even with a
+              // transparent background
+              elevation: 0,
             },
             tabBarLabelStyle: {
               fontFamily: Fonts.sansMedium,
