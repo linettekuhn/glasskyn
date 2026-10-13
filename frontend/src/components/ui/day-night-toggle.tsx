@@ -59,7 +59,7 @@ export default function DayNightToggle({ value, onValueChange }: Props) {
         <ThemedText
           type="caption"
           weight="bold"
-          style={{ color: !value ? colors.background : "transparent" }}
+          style={{ color: colors.background, opacity: !value ? 1 : 0 }}
         >
           PM
         </ThemedText>
@@ -69,7 +69,7 @@ export default function DayNightToggle({ value, onValueChange }: Props) {
         <ThemedText
           type="caption"
           weight="bold"
-          style={{ color: value ? colors.background : "transparent" }}
+          style={{ color: colors.background, opacity: value ? 1 : 0 }}
         >
           AM
         </ThemedText>
