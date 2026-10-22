@@ -25,5 +25,5 @@ credentials/
 **/data/processed/
 **/data/chromadb/
 backend/data/models/**/checkpoints/
-firebase-adminsdk*.json
+*firebase-adminsdk*.json
 *fcm*service-account*.json
