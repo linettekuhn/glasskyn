@@ -550,5 +550,44 @@ def create_agent_tools(db: Session, user_id: int) -> list:
             logger.error("modify_routine failed: %s", e)
             return f"Error modifying routine: {e}"
 
+    @tool
+    def get_skin_progress(
+        zone: Optional[str] = None,
+        status: Optional[str] = None,
+        days_back: int = 30,
+    ) -> str:
+        """Show the user's skin check-in progress over time.
+
+        Use this when the user asks how their skin marks are doing, what is
+        new or ongoing, or wants progress by area. It reflects only what the
+        user marked during skin check-ins (labels, areas, when marks appeared
+        and when they were no longer marked). It cannot be used to diagnose
+        any condition.
+
+        Args:
+            zone: Optional area filter (forehead, cheeks, nose, chin,
+                jawline, other). Omit for an overview of all areas.
+            status: Optional filter ('active' for ongoing marks, 'resolved'
+                for marks no longer marked). Omit for both.
+            days_back: How far back to look, in days (1-90, default 30).
+
+        Returns a compact overview with ongoing and no-longer-marked counts,
+        new and no-longer-marked counts for the last 30 days, change since
+        the previous check-in, a per-area breakdown, and one line per mark."""
+        try:
+            from app.services.skin_progress import (
+                format_skin_progress,
+                get_skin_progress_summary,
+            )
+
+            summary = get_skin_progress_summary(
+                db, user_id, zone=zone, status=status, days_back=days_back
+            )
+            return format_skin_progress(summary)
+        except Exception as e:
+            logger.error("get_skin_progress failed: %s", e)
+            return f"Error reading skin progress: {e}"
+
     return [lookup_ingredient_safety, query_user_products, summarize_safety,
-            generate_routine, recommend_products, modify_routine]
+            generate_routine, recommend_products, modify_routine,
+            get_skin_progress]

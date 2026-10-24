@@ -67,7 +67,7 @@ export default function EditTemplateScreen() {
       steps: payload.steps,
     });
     router.dismissAll();
-    router.replace("/(main)/routine");
+    router.replace("/(main)/journal");
   };
 
   return (

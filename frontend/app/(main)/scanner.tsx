@@ -105,6 +105,7 @@ export default function ScannerScreen() {
         </View>
         <ThemedButton
           text="Continue"
+          text="Continue"
           onPress={handleRequest}
           alignment="center"
         />

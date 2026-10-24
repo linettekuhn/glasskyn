@@ -8,15 +8,33 @@ interface PresignedUrlResponse {
 
 export async function getPresignedUrl(
   fileName: string,
-  contentType: string
+  contentType: string,
+  folder: string = "products"
 ): Promise<PresignedUrlResponse> {
-  console.log("[API] getPresignedUrl called:", fileName, contentType);
+  console.log("[API] getPresignedUrl called:", fileName, contentType, folder);
   const response = await apiClient.post("/uploads/presigned-url", {
     file_name: fileName,
     content_type: contentType,
+    folder,
   });
   console.log("[API] getPresignedUrl response:", response.data);
   return response.data;
+}
+
+function encodeFilePath(fileKey: string): string {
+  return fileKey
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+}
+
+export async function getPresignedDownloadUrl(
+  fileKey: string,
+): Promise<string> {
+  const response = await apiClient.get(
+    `/uploads/${encodeFilePath(fileKey)}/url`,
+  );
+  return response.data.download_url as string;
 }
 
 export async function uploadToS3(
@@ -34,6 +52,7 @@ export async function uploadToS3(
       method: "PUT",
       headers: {
         "Content-Type": contentType,
+        "x-amz-server-side-encryption": "AES256",
       },
       body: blob,
       signal: controller.signal,

@@ -28,6 +28,7 @@ import {
 import { useChatSession } from "@/contexts/ChatSessionContext";
 import { getRoutine, getActiveRoutine } from "@/api/routines";
 import { getProducts } from "@/api/products";
+import { useSkinSessions } from "@/contexts/SkinSessionsContext";
 import GlassSurface from "@/components/ui/glass-surface";
 import ChatIcon from "@/components/icons/chat-icon";
 import ThemedButton from "@/components/ui/themed-button";
@@ -45,6 +46,10 @@ const QUICK_ACTIONS = {
     label: "Check My Vanity for Risks",
     message: "Check my saved products for any risky or concerning ingredients",
   },
+  skinProgress: {
+    label: "How's My Skin Doing?",
+    message: "How is my skin progress?",
+  },
 } as const;
 
 export default function ChatScreen() {
@@ -60,6 +65,17 @@ export default function ChatScreen() {
   const [hydrated, setHydrated] = useState(false);
   const [hasProducts, setHasProducts] = useState<boolean | null>(null);
   const [hasRoutine, setHasRoutine] = useState<boolean | null>(null);
+  // Skin quick-action gate, derived from the shared store (deletes/wipes
+  // hide it without a dedicated fetch; null until the first load lands).
+  const {
+    sessions: skinSessions,
+    loading: skinSessionsLoading,
+    refresh: refreshSkinSessions,
+  } = useSkinSessions();
+  const hasSkinCheckins =
+    skinSessionsLoading && skinSessions.length === 0
+      ? null
+      : skinSessions.length > 0;
   const flatListRef = useRef<FlatList>(null);
   const routineSavedRef = useRef(false);
   const sendingRef = useRef(false);
@@ -187,10 +203,12 @@ export default function ChatScreen() {
           if (!cancelled) setHasRoutine(false);
         });
 
+      refreshSkinSessions().catch(() => {});
+
       return () => {
         cancelled = true;
       };
-    }, []),
+    }, [refreshSkinSessions]),
   );
 
   const handleSend = async (text?: string) => {
@@ -363,7 +381,8 @@ export default function ChatScreen() {
       !loading &&
       messages.length === 0 &&
       hasProducts !== null &&
-      hasRoutine !== null;
+      hasRoutine !== null &&
+      hasSkinCheckins !== null;
     if (!ready) return null;
 
     const actions = [
@@ -371,6 +390,7 @@ export default function ChatScreen() {
         ? [QUICK_ACTIONS.missingFromRoutine]
         : [QUICK_ACTIONS.buildRoutine]),
       ...(hasProducts ? [QUICK_ACTIONS.vanityRisks] : []),
+      ...(hasSkinCheckins ? [QUICK_ACTIONS.skinProgress] : []),
     ];
     if (actions.length === 0) return null;
 

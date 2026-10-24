@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urlsplit, urlunsplit
 import httpx
 from google.cloud import vision
 from google.cloud.vision import ImageAnnotatorClient
@@ -7,6 +8,14 @@ from app.core.config import GOOGLE_APPLICATION_CREDENTIALS
 logger = logging.getLogger(__name__)
 
 _client: ImageAnnotatorClient | None = None
+
+
+def _redact_url(url: str | None) -> str | None:
+    """Drop the query string so presigned signatures never reach the logs."""
+    if not url:
+        return url
+    p = urlsplit(url)
+    return urlunsplit((p.scheme, p.netloc, p.path, "", ""))
 
 
 def _get_client() -> ImageAnnotatorClient:
@@ -20,7 +29,7 @@ def _get_client() -> ImageAnnotatorClient:
 def detect_text(image_url: str) -> dict:
     client = _get_client()
 
-    logger.info("Downloading image from: %s", image_url)
+    logger.info("Downloading image from: %s", _redact_url(image_url))
     response = httpx.get(image_url, follow_redirects=True, timeout=30)
     response.raise_for_status()
     content = response.content
@@ -30,7 +39,11 @@ def detect_text(image_url: str) -> dict:
     result = client.text_detection(image=image)
 
     if result.error.message:
-        raise RuntimeError(f"Vision API error: {result.error.message}")
+        raise RuntimeError(
+            f"Vision API error: code={result.error.code!r} "
+            f"message={result.error.message!r} "
+            f"details={list(result.error.details)!r}"
+        )
 
     raw_text = ""
     annotations = []

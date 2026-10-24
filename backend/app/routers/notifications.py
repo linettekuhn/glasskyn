@@ -172,3 +172,29 @@ def dev_test_push(
         triggered.append("water")
 
     return {"ok": True, "triggered": triggered}
+
+
+@router.post("/dev/test-nudge", status_code=200)
+def dev_test_nudge(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a skin nudge for the user's latest check-in session (dev only)."""
+    if IS_PRODUCTION:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Not found"
+        )
+
+    from app.models.skin import SkinSession
+    from app.services.skin_nudge import create_nudge_for_session
+
+    latest = (
+        db.query(SkinSession)
+        .filter(SkinSession.user_id == current_user.id)
+        .order_by(SkinSession.id.desc())
+        .first()
+    )
+    if latest is None:
+        return {"ok": False, "reason": "no sessions yet"}
+    create_nudge_for_session(current_user.id, latest.id)
+    return {"ok": True, "session_id": latest.id}

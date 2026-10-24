@@ -1,14 +1,17 @@
 import logging
 import uuid
+
 import boto3
 from botocore.config import Config
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 from app.core.config import (
     AWS_ACCESS_KEY_ID,
     AWS_SECRET_ACCESS_KEY,
     AWS_REGION,
     S3_BUCKET_NAME,
 )
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg",
@@ -48,6 +51,8 @@ def validate_content_type(content_type: str) -> bool:
 def generate_presigned_upload_url(
     file_name: str,
     content_type: str,
+    folder: str = "products",
+    user_id: int | None = None,
     expiration: int = DEFAULT_UPLOAD_EXPIRATION,
 ) -> dict:
     if not validate_content_type(content_type):
@@ -56,10 +61,13 @@ def generate_presigned_upload_url(
         )
 
     ext = file_name.split(".")[-1] if "." in file_name else "jpg"
-    file_key = f"products/{uuid.uuid4()}.{ext}"
+    if user_id is not None:
+        file_key = f"{folder}/{user_id}/{uuid.uuid4()}.{ext}"
+    else:
+        file_key = f"{folder}/{uuid.uuid4()}.{ext}"
 
     client = _get_s3_client()
-    
+
     # Use regional endpoint to avoid redirect issues
     regional_endpoint = f"https://s3.{AWS_REGION}.amazonaws.com"
     upload_url = client.generate_presigned_url(
@@ -68,6 +76,7 @@ def generate_presigned_upload_url(
             "Bucket": S3_BUCKET_NAME,
             "Key": file_key,
             "ContentType": content_type,
+            "ServerSideEncryption": "AES256",
         },
         ExpiresIn=expiration,
         HttpMethod="PUT",
@@ -115,14 +124,21 @@ _MAX_DELETE_OBJECTS_PER_REQUEST = 1000
 def delete_files(file_keys: list[str]) -> list[str]:
     """Batch-delete objects from S3.
 
-    Reuses the module-level S3 client. Returns the list of keys that failed
-    to delete (empty on complete success). Never raises.
+    Returns the list of keys that failed to delete (empty on complete
+    success). Never raises.
     """
-    if not file_keys:
+    unique_keys = [k for k in dict.fromkeys(file_keys) if k]
+    if not unique_keys:
         return []
 
-    client = _get_s3_client()
-    unique_keys = list(dict.fromkeys(file_keys))
+    try:
+        client = _get_s3_client()
+    except Exception as exc:
+        logger.error(
+            "S3 client unavailable, %d key(s) not deleted: %s", len(unique_keys), exc
+        )
+        return unique_keys
+
     failed: list[str] = []
 
     for i in range(0, len(unique_keys), _MAX_DELETE_OBJECTS_PER_REQUEST):
@@ -130,13 +146,13 @@ def delete_files(file_keys: list[str]) -> list[str]:
         try:
             response = client.delete_objects(
                 Bucket=S3_BUCKET_NAME,
-                Delete={"Objects": [{"Key": key} for key in batch]},
+                Delete={"Objects": [{"Key": key} for key in batch], "Quiet": True},
             )
             for error in response.get("Errors", []):
                 key = error.get("Key")
                 if key:
                     failed.append(key)
-        except ClientError as exc:
+        except (ClientError, BotoCoreError) as exc:
             logger.warning("Batch S3 delete failed for %d key(s): %s", len(batch), exc)
             failed.extend(batch)
 

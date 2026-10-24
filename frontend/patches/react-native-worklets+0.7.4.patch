@@ -1,0 +1,17 @@
+diff --git a/node_modules/react-native-worklets/RNWorklets.podspec b/node_modules/react-native-worklets/RNWorklets.podspec
+index d658b49..b0e2c21 100644
+--- a/node_modules/react-native-worklets/RNWorklets.podspec
++++ b/node_modules/react-native-worklets/RNWorklets.podspec
+@@ -71,9 +71,12 @@ Pod::Spec.new do |s|
+       '"$(PODS_ROOT)/DoubleConversion"',
+       '"$(PODS_ROOT)/Headers/Private/React-Core"',
+       '"$(PODS_ROOT)/Headers/Private/Yoga"',
++      "\"$(PODS_ROOT)/#{$worklets_config[:react_native_common_dir]}\"",
++      "\"$(PODS_ROOT)/#{$worklets_config[:react_native_common_dir]}/yoga\"",
+     ].join(' '),
+     "FRAMEWORK_SEARCH_PATHS" => '"${PODS_CONFIGURATION_BUILD_DIR}/React-hermes"',
+     "CLANG_CXX_LANGUAGE_STANDARD" => "c++20",
++    "OTHER_SWIFT_FLAGS" => '$(inherited) -cxx-interoperability-mode=default -Xcc -std=c++20 -Xcc -stdlib=libc++',
+     "GCC_PREPROCESSOR_DEFINITIONS[config=*Debug*]" => "$(inherited) #{hermes_debug_hidden_flags} #{bundle_mode_flag}",
+     "GCC_PREPROCESSOR_DEFINITIONS[config=*Release*]" => "$(inherited) #{bundle_mode_flag}",
+     "OTHER_CFLAGS" => "$(inherited) #{feature_flags} #{version_flags} #{hermes_v1_flag}",

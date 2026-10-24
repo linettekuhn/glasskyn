@@ -3,6 +3,11 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import { registerPushToken, unregisterPushToken } from "../api/notifications";
+import { applySpf } from "../api/spf";
+import {
+  SPF_APPLIED_ACTION_ID,
+  ensureSpfCategory,
+} from "./spf-reminders";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -53,16 +58,39 @@ export async function getPushToken(): Promise<string | null> {
   return getExpoPushToken();
 }
 
+function isSpfReapply(response: Notifications.NotificationResponse): boolean {
+  const data = response.notification.request.content.data;
+  return (
+    data != null && typeof data === "object" && data.kind === "spf-reapply"
+  );
+}
+
+function handleNotificationResponse(
+  response: Notifications.NotificationResponse,
+): void {
+  if (isSpfReapply(response)) {
+    if (response.actionIdentifier === SPF_APPLIED_ACTION_ID) {
+      // Lock-screen log: hit the API directly (no hook available here).
+      // Best-effort — failures reconcile on next focus refetch.
+      applySpf(new Date().toISOString()).catch(() => {});
+    }
+    router.navigate({ pathname: "/(main)", params: { focus: "spf" } });
+    return;
+  }
+  router.push("/(modals)/notifications");
+}
+
 export function setupNotificationListeners(): () => void {
+  void ensureSpfCategory();
   const responseSubscription =
-    Notifications.addNotificationResponseReceivedListener(() => {
-      router.push("/(modals)/notifications");
-    });
+    Notifications.addNotificationResponseReceivedListener(
+      handleNotificationResponse,
+    );
 
   Notifications.getLastNotificationResponseAsync()
     .then((response) => {
       if (response) {
-        router.push("/(modals)/notifications");
+        handleNotificationResponse(response);
       }
     })
     .catch(() => {});

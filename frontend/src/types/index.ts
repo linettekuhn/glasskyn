@@ -147,13 +147,26 @@ export interface UserPreference {
   water_weight_lb: number | null;
   water_activity_level: string | null;
   water_climate: string | null;
+  water_increment_ml: number | null;
+  spf_last_applied_at: string | null;
+  spf_interval_min: number | null;
+  spf_window_start: string | null;
+  spf_window_end: string | null;
+  spf_reminder_enabled: boolean;
+  spf_indoors_date: string | null;
   routine_digest_am_time: string | null;
   routine_digest_pm_time: string | null;
+  skin_nudge_enabled: boolean;
 }
 
 export interface WaterIntake {
   date: string;
   ml: number;
+}
+
+export interface SpfStatus {
+  last_applied_at: string | null;
+  recent_applied_at: string[];
 }
 
 export interface RoutineTemplate {
@@ -207,4 +220,114 @@ export interface IngredientAnalysisResponse {
   overall_safety_score: number | null;
   flags: string[];
   source_attribution: string[];
+}
+
+export type ConcernCategory = "acne" | "pigmentation" | "texture";
+
+export interface Concern {
+  id: string;
+  label: string;
+  category: ConcernCategory;
+  description: string;
+  imageUrl: number;
+  circleImageUrl: number;
+}
+
+export type CircleStatus = "unlabeled" | "labeled" | "skipped";
+
+export interface CircleAnnotation {
+  uuid: string;
+  number: number;
+  x: number;
+  y: number;
+  concernId: string | null;
+  status: CircleStatus;
+  createdOrder: number;
+  /** uuid of the existing backend concern this circle was carried forward from. */
+  carriedFrom: string | null;
+  /** created_at of the carried concern, for the "healed in N days" moment. */
+  carriedCreatedAt: string | null;
+  /** carried circle dropped on the trash to be marked resolved this session. */
+  isResolved: boolean;
+  /** Set when the user drags this circle; submitted as `moved` so the
+   * backend can flag the history entry user_corrected. */
+  wasDragged?: boolean;
+}
+
+export type AnnotationAction =
+  | { type: "place"; circle: CircleAnnotation }
+  | { type: "delete"; circle: CircleAnnotation }
+  | { type: "move"; uuid: string; prev: { x: number; y: number } }
+  | { type: "resolve"; uuid: string };
+
+export interface SkinCheckInConcernPayload {
+  uuid: string;
+  number: number;
+  x: number;
+  y: number;
+  concern_id: string | null;
+  status: CircleStatus;
+  carried_uuid?: string | null;
+  resolved?: boolean;
+  moved?: boolean;
+}
+
+export interface SkinCheckInPayload {
+  photo_uri: string | null;
+  captured_at: string | null;
+  face_landmarks: Record<string, { x: number; y: number } | undefined> | null;
+  concerns: SkinCheckInConcernPayload[];
+  moisture_rating: number | null;
+  texture_rating: number | null;
+  tone_rating: number | null;
+  notes: string | null;
+}
+
+export interface SkinAnchorRef {
+  key: string;
+  ox: number;
+  oy: number;
+  dist: number;
+}
+
+export interface SkinAnchor {
+  point: { x: number; y: number };
+  region: string;
+  refs: SkinAnchorRef[];
+}
+
+export interface SkinConcernOut {
+  id: number;
+  uuid: string | null;
+  user_id: number;
+  label: string | null;
+  status: string | null;
+  created_session_id: number;
+  resolved_session_id: number | null;
+  anchor: SkinAnchor | null;
+  history: Array<{
+    session_id: number;
+    coords: { x: number; y: number };
+    size_estimate: number | null;
+  }>;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface SkinSessionOut {
+  id: number;
+  user_id: number;
+  timestamp: string;
+  image_url: string;
+  face_landmarks: Record<string, { x: number; y: number } | undefined> | null;
+  concerns: SkinConcernOut[];
+  moisture_rating?: number | null;
+  texture_rating?: number | null;
+  tone_rating?: number | null;
+  notes?: string | null;
+}
+
+export interface SkinCheckInResponse {
+  session_id: number;
+  concerns: SkinConcernOut[];
 }
