@@ -1,4 +1,6 @@
+import logging
 import uuid
+
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
@@ -8,6 +10,8 @@ from app.core.config import (
     AWS_REGION,
     S3_BUCKET_NAME,
 )
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg",
@@ -110,3 +114,26 @@ def delete_file(file_key: str) -> bool:
         return True
     except ClientError:
         return False
+
+
+def delete_files(file_keys: list[str]) -> int:
+    """Best-effort bulk delete. Never raises; returns the keys submitted."""
+    keys = [k for k in dict.fromkeys(file_keys) if k]
+    if not keys:
+        return 0
+    try:
+        client = _get_s3_client()
+        for i in range(0, len(keys), 1000):
+            chunk = keys[i : i + 1000]
+            try:
+                client.delete_objects(
+                    Bucket=S3_BUCKET_NAME,
+                    Delete={"Objects": [{"Key": k} for k in chunk], "Quiet": True},
+                )
+            except ClientError as e:
+                logger.warning(
+                    "Failed to bulk-delete %d S3 objects: %s", len(chunk), e
+                )
+    except Exception as e:
+        logger.warning("S3 bulk delete unavailable (%d keys): %s", len(keys), e)
+    return len(keys)

@@ -122,7 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const deleteAccount = async () => {
     await auth.deleteAccount();
-    await unregisterPushNotificationsFromBackend();
     await removeToken();
     await removeRefreshToken();
     setUser(null);

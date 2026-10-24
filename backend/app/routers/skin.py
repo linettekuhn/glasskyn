@@ -22,6 +22,7 @@ from app.schemas.skin import (
 )
 from app.services import storage
 from app.services.skin_anchor import compute_anchor, finite_landmarks
+from app.services.skin_data import purge_skin_data
 
 logger = logging.getLogger(__name__)
 
@@ -436,33 +437,21 @@ def delete_skin_data(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    sessions = _get_user_sessions(db, current_user.id)
-
-    deleted_concerns = (
-        db.query(SkinConcern)
-        .filter(SkinConcern.user_id == current_user.id)
-        .delete(synchronize_session=False)
+    deleted_sessions, deleted_concerns, image_keys = purge_skin_data(
+        db, current_user.id
     )
-
-    for s in sessions:
-        try:
-            storage.delete_file(s.image_url)
-        except Exception as e:
-            logger.warning("Failed to delete S3 object %s: %s", s.image_url, e)
-
-    deleted_sessions = (
-        db.query(SkinSession)
-        .filter(SkinSession.user_id == current_user.id)
-        .delete(synchronize_session=False)
-    )
-
     db.commit()
 
+    # Best-effort and after the commit: a failed transaction must not leave
+    # rows pointing at photos that are already gone.
+    storage.delete_files(image_keys)
+
     logger.info(
-        "Deleted skin data: user=%s sessions=%d concerns=%d",
+        "Deleted skin data: user=%s sessions=%d concerns=%d objects=%d",
         current_user.id,
         deleted_sessions,
         deleted_concerns,
+        len(image_keys),
     )
 
     return DeleteSkinDataResponse(

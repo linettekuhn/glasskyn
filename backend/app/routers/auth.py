@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone, timedelta
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Cookie, Header
@@ -37,10 +38,17 @@ from app.core.security import (
 from app.core import config
 from app.models.refresh_token import RefreshToken
 from app.models.password_reset_token import PasswordResetToken
+from app.models.skin_nudge import SkinNudge
+from app.models.spf_application import SpfApplication
+from app.models.water_intake import WaterIntake
+from app.services import storage
+from app.services.skin_data import purge_skin_data
 from app.services.email import send_password_reset_code
 from jose import JWTError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+logger = logging.getLogger(__name__)
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
@@ -349,6 +357,28 @@ async def delete_me(
 ):
     user_id = current_user.id
 
+    # Journal rows first: concerns before sessions, since the concern FKs have
+    # no cascade. Image keys are collected now and removed from S3 only after
+    # the transaction commits, so a failed delete can't leave rows pointing at
+    # missing photos.
+    skin_sessions, skin_concerns, skin_keys = purge_skin_data(db, user_id)
+
+    scan_keys = [
+        key
+        for row in db.query(ScanResult.image_s3_key, ScanResult.back_image_s3_key)
+        .filter(ScanResult.user_id == user_id)
+        .all()
+        for key in row
+        if key
+    ]
+    product_keys = [
+        key
+        for (key,) in db.query(Product.image_s3_key)
+        .filter(Product.user_id == user_id)
+        .all()
+        if key
+    ]
+
     routine_ids = [
         row[0]
         for row in db.query(Routine.id).filter(Routine.user_id == user_id).all()
@@ -392,10 +422,37 @@ async def delete_me(
     db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete(
         synchronize_session=False
     )
+    # Skin nudges normally cascade with their session, but delete explicitly so
+    # an orphaned row can never block the user delete.
+    db.query(SkinNudge).filter(SkinNudge.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(WaterIntake).filter(WaterIntake.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(SpfApplication).filter(SpfApplication.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user_id
+    ).delete(synchronize_session=False)
     db.query(Product).filter(Product.user_id == user_id).delete(
         synchronize_session=False
     )
 
     db.delete(current_user)
     db.commit()
+
+    # Best-effort and after the commit: object-store failures must never block
+    # account deletion.
+    s3_keys = skin_keys + scan_keys + product_keys
+    storage.delete_files(s3_keys)
+
+    logger.info(
+        "Deleted account: user=%s skin_sessions=%d skin_concerns=%d s3_objects=%d",
+        user_id,
+        skin_sessions,
+        skin_concerns,
+        len(s3_keys),
+    )
     return None
