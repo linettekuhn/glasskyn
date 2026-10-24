@@ -671,11 +671,12 @@ export default function SkinCaptureScreen() {
         holdStartRef.current = null;
         setHoldProgress(0);
         // Release the lock before re-entering: the retry re-acquires it.
-        // (finally below re-clears — harmless no-op.)
+        // Await the retry so this outer finally only runs after it completes;
+        // the retry manages its own lock while it runs.
         busyRef.current = false;
         setCapturing(false);
         setRetrying(false);
-        return triggerCaptureRef.current(true);
+        return await triggerCaptureRef.current(true);
       }
       holdStartRef.current = null;
       setHoldProgress(0);
