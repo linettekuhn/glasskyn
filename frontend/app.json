@@ -2,7 +2,7 @@
   "expo": {
     "name": "Glasskyn",
     "slug": "glasskyn",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon-light.png",
@@ -25,7 +25,6 @@
       "expo-font",
       "expo-notifications",
       "@react-native-community/datetimepicker",
-      "expo-build-properties",
       [
         "expo-build-properties",
         {
@@ -46,7 +45,7 @@
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Glasskyn uses the camera to scan product labels and to capture skin check-in photos for progress tracking."
+        "NSCameraUsageDescription": "Glasskyn uses the camera to scan product labels and to take face photos for your Skin Journal, so you can track changes in your skin over time."
       }
     },
     "android": {
