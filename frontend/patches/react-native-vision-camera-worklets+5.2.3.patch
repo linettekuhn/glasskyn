@@ -1,0 +1,15 @@
+diff --git a/node_modules/react-native-vision-camera-worklets/VisionCameraWorklets.podspec b/node_modules/react-native-vision-camera-worklets/VisionCameraWorklets.podspec
+index ed03a68..6577096 100644
+--- a/node_modules/react-native-vision-camera-worklets/VisionCameraWorklets.podspec
++++ b/node_modules/react-native-vision-camera-worklets/VisionCameraWorklets.podspec
+@@ -31,4 +31,9 @@ Pod::Spec.new do |s|
+   s.dependency 'React-jsi'
+   s.dependency 'React-callinvoker'
+   install_modules_dependencies(s)
++
++  s.pod_target_xcconfig = {
++    "HEADER_SEARCH_PATHS" => '$(inherited) "$(PODS_ROOT)/Headers/Private/React-Core" "$(PODS_ROOT)/../../node_modules/react-native/ReactCommon" "$(PODS_ROOT)/../../node_modules/react-native/ReactCommon/yoga"',
++    "OTHER_SWIFT_FLAGS" => '$(inherited) -cxx-interoperability-mode=default -Xcc -std=c++20 -Xcc -stdlib=libc++',
++  }
+ end
+\ No newline at end of file

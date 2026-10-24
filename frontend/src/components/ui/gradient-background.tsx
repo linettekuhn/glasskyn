@@ -49,6 +49,9 @@ export default function GradientBackground({
   const ry = height * OVAL_RY_RATIO * ovalScale;
   const cx = width / 2;
   const cy = height;
+  const hasSize = width > 0 && height > 0 && rx > 0 && ry > 0;
+  // android fix
+  const ellipseScaleX = hasSize ? rx / ry : 1;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -59,30 +62,43 @@ export default function GradientBackground({
         end={gradientEnd}
         style={StyleSheet.absoluteFill}
       />
-      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
-        <Defs>
-          <RadialGradient
-            id={gradientId}
+      {hasSize && (
+        <Svg
+          style={StyleSheet.absoluteFill}
+          width={width}
+          height={height}
+          viewBox={`0 0 ${width} ${height}`}
+        >
+          <Defs>
+            <RadialGradient
+              id={gradientId}
+              cx={cx}
+              cy={cy}
+              r={ry}
+              fx={cx}
+              fy={cy}
+              gradientUnits="userSpaceOnUse"
+              gradientTransform={`translate(${cx} ${cy}) scale(${ellipseScaleX} 1) translate(${-cx} ${-cy})`}
+            >
+              <Stop offset="0%" stopColor={glow} stopOpacity={ovalOpacity} />
+              <Stop offset="60%" stopColor={glow} stopOpacity={ovalOpacity} />
+              <Stop
+                offset="80%"
+                stopColor={glow}
+                stopOpacity={ovalOpacity * 0.5}
+              />
+              <Stop offset="100%" stopColor={glow} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Ellipse
             cx={cx}
             cy={cy}
             rx={rx}
             ry={ry}
-            fx={cx}
-            fy={cy}
-            gradientUnits="userSpaceOnUse"
-          >
-            <Stop offset="0%" stopColor={glow} stopOpacity={ovalOpacity} />
-            <Stop offset="60%" stopColor={glow} stopOpacity={ovalOpacity} />
-            <Stop
-              offset="80%"
-              stopColor={glow}
-              stopOpacity={ovalOpacity * 0.5}
-            />
-            <Stop offset="100%" stopColor={glow} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={`url(#${gradientId})`} />
-      </Svg>
+            fill={`url(#${gradientId})`}
+          />
+        </Svg>
+      )}
     </View>
   );
 }

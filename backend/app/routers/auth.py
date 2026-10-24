@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone, timedelta
 import logging
 import uuid
@@ -40,6 +41,11 @@ from app.core.security import (
 from app.core import config
 from app.models.refresh_token import RefreshToken
 from app.models.password_reset_token import PasswordResetToken
+from app.models.skin_nudge import SkinNudge
+from app.models.spf_application import SpfApplication
+from app.models.water_intake import WaterIntake
+from app.services import storage
+from app.services.skin_data import purge_skin_data
 from app.services.email import send_password_reset_code
 from app.services.storage import delete_files
 from jose import JWTError
@@ -89,7 +95,9 @@ async def login(body: LoginRequest, response: Response, db: Session = Depends(ge
     refresh_token = create_refresh_token(user.id, family_id)
 
     token_hash = hash_refresh_token(refresh_token)
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=config.REFRESH_TOKEN_EXPIRE_MINUTES)
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=config.REFRESH_TOKEN_EXPIRE_MINUTES
+    )
     db_refresh_token = RefreshToken(
         user_id=user.id,
         token_hash=token_hash,
@@ -117,9 +125,7 @@ async def login(body: LoginRequest, response: Response, db: Session = Depends(ge
 
 
 @router.post("/forgot-password", status_code=202)
-async def forgot_password(
-    body: ForgotPasswordRequest, db: Session = Depends(get_db)
-):
+async def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email).first()
 
     # always return 202 regardless of whether the email exists (no enumeration)
@@ -151,9 +157,7 @@ async def forgot_password(
 
 
 @router.post("/reset-password", status_code=204)
-async def reset_password(
-    body: ResetPasswordRequest, db: Session = Depends(get_db)
-):
+async def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
     code_hash = hash_reset_code(body.code.strip())
     db_token = (
         db.query(PasswordResetToken)
@@ -225,10 +229,14 @@ async def refresh(
         )
 
     token_hash = hash_refresh_token(token)
-    stored_token = db.query(RefreshToken).filter(
-        RefreshToken.token_hash == token_hash,
-        RefreshToken.is_revoked == False,
-    ).first()
+    stored_token = (
+        db.query(RefreshToken)
+        .filter(
+            RefreshToken.token_hash == token_hash,
+            RefreshToken.is_revoked == False,
+        )
+        .first()
+    )
 
     if not stored_token:
         # token hash not found → possible token reuse (theft)
@@ -252,7 +260,9 @@ async def refresh(
     new_access_token = create_access_token(user.id)
     new_refresh_token = create_refresh_token(user.id, stored_token.family_id)
     new_token_hash = hash_refresh_token(new_refresh_token)
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=config.REFRESH_TOKEN_EXPIRE_MINUTES)
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=config.REFRESH_TOKEN_EXPIRE_MINUTES
+    )
 
     new_stored_token = RefreshToken(
         user_id=user.id,
@@ -361,18 +371,39 @@ async def delete_me(
 
     user_id = current_user.id
 
+    # Journal rows first: concerns before sessions, since the concern FKs have
+    # no cascade. Image keys are collected now and removed from S3 only after
+    # the transaction commits, so a failed delete can't leave rows pointing at
+    # missing photos.
+    skin_sessions, skin_concerns, skin_keys = purge_skin_data(db, user_id)
+
+    scan_keys = [
+        key
+        for row in db.query(ScanResult.image_s3_key, ScanResult.back_image_s3_key)
+        .filter(ScanResult.user_id == user_id)
+        .all()
+        for key in row
+        if key
+    ]
+    product_keys = [
+        key
+        for (key,) in db.query(Product.image_s3_key)
+        .filter(Product.user_id == user_id)
+        .all()
+        if key
+    ]
+
     routine_ids = [
-        row[0]
-        for row in db.query(Routine.id).filter(Routine.user_id == user_id).all()
+        row[0] for row in db.query(Routine.id).filter(Routine.user_id == user_id).all()
     ]
 
     if routine_ids:
         db.query(RoutineStepCompletion).filter(
             RoutineStepCompletion.routine_id.in_(routine_ids)
         ).delete(synchronize_session=False)
-        db.query(RoutineStep).filter(
-            RoutineStep.routine_id.in_(routine_ids)
-        ).delete(synchronize_session=False)
+        db.query(RoutineStep).filter(RoutineStep.routine_id.in_(routine_ids)).delete(
+            synchronize_session=False
+        )
     db.query(RoutineStepCompletion).filter(
         RoutineStepCompletion.user_id == user_id
     ).delete(synchronize_session=False)
@@ -403,17 +434,13 @@ async def delete_me(
         if key
     ]
     photo_keys = list(
-        dict.fromkeys(
-            scan_image_keys + scan_back_image_keys + product_image_keys
-        )
+        dict.fromkeys(scan_image_keys + scan_back_image_keys + product_image_keys)
     )
 
     db.query(ScanResult).filter(ScanResult.user_id == user_id).delete(
         synchronize_session=False
     )
-    db.query(Alert).filter(Alert.user_id == user_id).delete(
-        synchronize_session=False
-    )
+    db.query(Alert).filter(Alert.user_id == user_id).delete(synchronize_session=False)
     db.query(ChatMessage).filter(ChatMessage.user_id == user_id).delete(
         synchronize_session=False
     )
@@ -439,9 +466,20 @@ async def delete_me(
     db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete(
         synchronize_session=False
     )
-    db.query(PasswordResetToken).filter(
-        PasswordResetToken.user_id == user_id
-    ).delete(synchronize_session=False)
+    # Skin nudges normally cascade with their session, but delete explicitly so
+    # an orphaned row can never block the user delete.
+    db.query(SkinNudge).filter(SkinNudge.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(WaterIntake).filter(WaterIntake.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(SpfApplication).filter(SpfApplication.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user_id).delete(
+        synchronize_session=False
+    )
     db.query(Product).filter(Product.user_id == user_id).delete(
         synchronize_session=False
     )
@@ -449,22 +487,16 @@ async def delete_me(
     db.delete(current_user)
     db.commit()
 
-    # Best-effort S3 cleanup after the DB transaction commits.
-    # Failures must not turn a successful account deletion into a 500.
-    if photo_keys:
-        try:
-            failed = delete_files(photo_keys)
-            if failed:
-                logger.warning(
-                    "Failed to delete %d S3 object(s) for deleted user %s: %s",
-                    len(failed),
-                    user_id,
-                    failed,
-                )
-        except Exception:
-            logger.exception(
-                "Unexpected error deleting S3 objects for deleted user %s",
-                user_id,
-            )
+    # Best-effort and after the commit: object-store failures must never block
+    # account deletion.
+    s3_keys = skin_keys + scan_keys + product_keys
+    storage.delete_files(s3_keys)
 
+    logger.info(
+        "Deleted account: user=%s skin_sessions=%d skin_concerns=%d s3_objects=%d",
+        user_id,
+        skin_sessions,
+        skin_concerns,
+        len(s3_keys),
+    )
     return None

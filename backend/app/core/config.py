@@ -22,7 +22,9 @@ PASSWORD_RESET_CODE_EXPIRE_MINUTES: int = int(
 )
 
 EMAIL_FROM: str = os.environ.get("EMAIL_FROM", "")
-SES_REGION: str = os.environ.get("SES_REGION", os.environ.get("AWS_REGION", "us-east-1"))
+SES_REGION: str = os.environ.get(
+    "SES_REGION", os.environ.get("AWS_REGION", "us-east-1")
+)
 
 OBF_API_BASE_URL: str = os.environ.get(
     "OBF_API_BASE_URL", "https://world.openbeautyfacts.org"
@@ -66,7 +68,7 @@ APP_VERSION: str = os.environ.get("APP_VERSION", "1.0.0")
 APP_MIN_VERSION: str = os.environ.get("APP_MIN_VERSION", "1.0.0")
 APP_STORE_URL: str = os.environ.get(
     "APP_STORE_URL",
-    "https://apps.apple.com/app/glasskyn/id6752230698",
+    "https://apps.apple.com/app/glasskyn/id6804337287",
 )
 PLAY_STORE_URL: str = os.environ.get(
     "PLAY_STORE_URL",

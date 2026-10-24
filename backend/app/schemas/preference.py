@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
 
@@ -11,8 +12,16 @@ class PreferenceUpdate(BaseModel):
     water_weight_lb: Optional[float] = None
     water_activity_level: Optional[str] = None
     water_climate: Optional[str] = None
+    water_increment_ml: Optional[int] = None
+    spf_last_applied_at: Optional[datetime] = None
+    spf_interval_min: Optional[int] = None
+    spf_window_start: Optional[str] = None
+    spf_window_end: Optional[str] = None
+    spf_reminder_enabled: Optional[bool] = None
+    spf_indoors_date: Optional[str] = None
     routine_digest_am_time: Optional[str] = None
     routine_digest_pm_time: Optional[str] = None
+    skin_nudge_enabled: Optional[bool] = None
 
 
 class PreferenceOut(BaseModel):
@@ -24,7 +33,15 @@ class PreferenceOut(BaseModel):
     water_weight_lb: Optional[float]
     water_activity_level: Optional[str]
     water_climate: Optional[str]
+    water_increment_ml: Optional[int]
+    spf_last_applied_at: Optional[datetime]
+    spf_interval_min: Optional[int]
+    spf_window_start: Optional[str]
+    spf_window_end: Optional[str]
+    spf_reminder_enabled: bool
+    spf_indoors_date: Optional[str]
     routine_digest_am_time: Optional[str]
     routine_digest_pm_time: Optional[str]
+    skin_nudge_enabled: bool
 
     model_config = {"from_attributes": True}

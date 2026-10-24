@@ -20,6 +20,7 @@ interface RoutinePagerProps {
   currentIndex: number;
   onIndexChange: (index: number) => void;
   onCompletionChange?: () => void;
+  initialTimeOfDay?: "AM" | "PM";
 }
 
 export default function RoutinePager({
@@ -28,6 +29,7 @@ export default function RoutinePager({
   currentIndex,
   onIndexChange,
   onCompletionChange,
+  initialTimeOfDay,
 }: RoutinePagerProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -64,6 +66,7 @@ export default function RoutinePager({
               routine={item}
               productMap={productMap}
               onCompletionChange={onCompletionChange}
+              initialTimeOfDay={initialTimeOfDay}
             />
           </View>
         )}

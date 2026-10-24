@@ -10,6 +10,8 @@ const getBaseUrl = () => {
   }
   const extraApiUrl = Constants.expoConfig?.extra?.apiUrl;
   if (extraApiUrl) return extraApiUrl;
+  const publicApiUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (publicApiUrl) return publicApiUrl;
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const ip = hostUri.split(":")[0];

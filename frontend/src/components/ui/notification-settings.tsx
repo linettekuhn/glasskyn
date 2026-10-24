@@ -15,12 +15,13 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { getPreferences, savePreferences } from "@/api/preferences";
+import { requestSpfReminderPermission } from "@/services/spf-reminders";
 import type { UserPreference } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { ThemedText } from "./themed-text";
 import GlassSurface from "./glass-surface";
 
-type TimeTarget = "water" | "am" | "pm";
+type TimeTarget = "water" | "am" | "pm" | "spfStart" | "spfEnd";
 
 const DIGEST_DEFAULT_TIMES: Record<"am" | "pm", string> = {
   am: "08:00",
@@ -31,6 +32,7 @@ export default function NotificationSettings() {
   const [prefs, setPrefs] = useState<UserPreference | null>(null);
   const [timeTarget, setTimeTarget] = useState<TimeTarget | null>(null);
   const [saving, setSaving] = useState(false);
+  const [spfPermDenied, setSpfPermDenied] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -86,7 +88,11 @@ export default function NotificationSettings() {
         ? prefs?.routine_digest_am_time
         : timeTarget === "pm"
           ? prefs?.routine_digest_pm_time
-          : (prefs?.water_reminder_time ?? "12:00");
+          : timeTarget === "spfStart"
+            ? (prefs?.spf_window_start ?? "08:00")
+            : timeTarget === "spfEnd"
+              ? (prefs?.spf_window_end ?? "18:00")
+              : (prefs?.water_reminder_time ?? "12:00");
     const [h, m] = (value ?? "12:00").split(":").map(Number);
     const d = new Date();
     d.setHours(h || 12, m || 0, 0, 0);
@@ -98,7 +104,11 @@ export default function NotificationSettings() {
       ? "Morning routine time"
       : timeTarget === "pm"
         ? "Evening routine time"
-        : "Water reminder time";
+        : timeTarget === "spfStart"
+          ? "Sun hours start"
+          : timeTarget === "spfEnd"
+            ? "Sun hours end"
+            : "Water reminder time";
 
   const onTimeChange = (event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS !== "ios") {
@@ -112,8 +122,24 @@ export default function NotificationSettings() {
       update({ routine_digest_am_time: time });
     } else if (timeTarget === "pm") {
       update({ routine_digest_pm_time: time });
+    } else if (timeTarget === "spfStart") {
+      update({ spf_window_start: time });
+    } else if (timeTarget === "spfEnd") {
+      update({ spf_window_end: time });
     } else {
       update({ water_reminder_time: time });
+    }
+  };
+
+  const handleSpfToggle = async (value: boolean) => {
+    if (!value) {
+      update({ spf_reminder_enabled: false });
+      return;
+    }
+    const granted = await requestSpfReminderPermission();
+    setSpfPermDenied(!granted);
+    if (granted) {
+      update({ spf_reminder_enabled: true });
     }
   };
 
@@ -140,7 +166,9 @@ export default function NotificationSettings() {
         </View>
       )}
       <ThemedText type="captionSmall" style={{ color: colors.neutral[500] }}>
-        {saving ? "Saving…" : "Reminders are delivered as push notifications."}
+        {saving
+          ? "Saving…"
+          : "Water and routine reminders arrive as push notifications; SPF reminders arrive on this device."}
       </ThemedText>
       <View style={styles.row}>
         <ThemedText type="bodyLarge">Water reminder</ThemedText>
@@ -163,6 +191,77 @@ export default function NotificationSettings() {
             {prefs.water_reminder_time}
           </ThemedText>
         </TouchableOpacity>
+      )}
+
+      <View style={styles.row}>
+        <ThemedText type="bodyLarge">Sunscreen reapply reminder</ThemedText>
+        <Switch
+          value={prefs.spf_reminder_enabled}
+          onValueChange={(v: boolean) => {
+            void handleSpfToggle(v);
+          }}
+          trackColor={{ true: colors.secondary[500] }}
+        />
+      </View>
+
+      {spfPermDenied && !prefs.spf_reminder_enabled && (
+        <View style={{ gap: 4 }}>
+          <ThemedText
+            type="captionSmall"
+            style={{ color: colors.neutral[600] }}
+          >
+            Notifications are off, so sunscreen reminders can&apos;t fire.
+          </ThemedText>
+          <TouchableOpacity onPress={() => void Linking.openSettings()}>
+            <ThemedText
+              type="caption"
+              weight="medium"
+              style={{ color: colors.secondary[700] }}
+            >
+              Open Settings
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {prefs.spf_reminder_enabled && (
+        <>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => setTimeTarget("spfStart")}
+          >
+            <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
+              Sun hours start
+            </ThemedText>
+            <ThemedText type="bodyLarge" weight="semiBold">
+              {prefs.spf_window_start ?? "08:00"}
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => setTimeTarget("spfEnd")}
+          >
+            <ThemedText type="bodySmall" style={{ color: colors.neutral[600] }}>
+              Sun hours end
+            </ThemedText>
+            <ThemedText type="bodyLarge" weight="semiBold">
+              {prefs.spf_window_end ?? "18:00"}
+            </ThemedText>
+          </TouchableOpacity>
+
+          {prefs.spf_window_start != null &&
+            prefs.spf_window_end != null &&
+            prefs.spf_window_end <= prefs.spf_window_start && (
+              <ThemedText
+                type="captionSmall"
+                style={{ color: colors.neutral[600] }}
+              >
+                Sun hours end should be after the start. Reminders pause until
+                fixed.
+              </ThemedText>
+            )}
+        </>
       )}
 
       <ThemedText type="bodyLarge">Routine reminders</ThemedText>

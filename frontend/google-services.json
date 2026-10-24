@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "866805330005",
+    "project_id": "glasskyn-59613",
+    "storage_bucket": "glasskyn-59613.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866805330005:android:214df9e4bbc175238e64dc",
+        "android_client_info": {
+          "package_name": "com.linettekuhn.glasskyn"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXjKuCBT3ZSzlka5PF6KPn6QIy2vqdIfw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

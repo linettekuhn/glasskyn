@@ -12,6 +12,7 @@ import type { Routine, Product, RoutineStep } from "@/types";
 import { Colors, getTheme } from "@/constants/theme";
 import { FREQUENCY_LABELS } from "@/constants/routine";
 import { markStepComplete } from "@/api/routines";
+import { applySpf } from "@/api/spf";
 import { ThemedText } from "./themed-text";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import DayNightToggle from "./day-night-toggle";
@@ -36,17 +37,20 @@ interface RoutineCardProps {
   routine: Routine;
   productMap: Map<number, Product>;
   onCompletionChange?: () => void;
+  initialTimeOfDay?: "AM" | "PM";
 }
 
 export default function RoutineCard({
   routine,
   productMap,
   onCompletionChange,
+  initialTimeOfDay,
 }: RoutineCardProps) {
-  const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<"AM" | "PM">("AM");
+  const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<"AM" | "PM">(
+    initialTimeOfDay ?? "AM",
+  );
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const [linesHeight, setLinesHeight] = useState(0);
-  const colorScheme = useColorScheme();
+  const [linesHeight, setLinesHeight] = useState(0);  const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
 
   useEffect(() => {
@@ -54,6 +58,10 @@ export default function RoutineCard({
       new Set(routine.steps.filter((s) => s.completed_today).map((s) => s.id)),
     );
   }, [routine.steps]);
+
+  useEffect(() => {
+    if (initialTimeOfDay) setSelectedTimeOfDay(initialTimeOfDay);
+  }, [initialTimeOfDay]);
 
   const filteredSteps = useMemo(() => {
     return routine.steps
@@ -67,8 +75,8 @@ export default function RoutineCard({
 
   const lineColor = colors.neutral[300];
 
-  const { ruleColors, ruleLocations } = useMemo(() => {
-    if (linesHeight <= 0) return { ruleColors: [], ruleLocations: [] };
+  const { ruleColors, ruleLocations, hasRules } = useMemo(() => {
+    if (linesHeight <= 0) return { ruleColors: [], ruleLocations: [], hasRules: false };
     const ruleColors: string[] = [];
     const ruleLocations: number[] = [];
     const count = Math.ceil(linesHeight / LINE_GAP);
@@ -84,7 +92,10 @@ export default function RoutineCard({
         lineEnd / linesHeight,
       );
     }
-    return { ruleColors, ruleLocations };
+    // Android's native LinearGradientView throws when given < 2 colors,
+    // so only render once a measurable height produced a valid rule set.
+    const hasRules = ruleColors.length >= 2 && ruleLocations.length >= 2;
+    return { ruleColors, ruleLocations, hasRules };
   }, [linesHeight, lineColor]);
 
   const toggleStep = useCallback(
@@ -96,6 +107,14 @@ export default function RoutineCard({
         else next.delete(id);
         return next;
       });
+      if (
+        nowCompleted &&
+        routine.steps.find((s) => s.id === id)?.step_type === "spf"
+      ) {
+        // Checking an SPF step logs a sunscreen application (one-way:
+        // unchecking never removes it). Tile picks it up on focus refetch.
+        applySpf(new Date().toISOString()).catch(() => {});
+      }
       markStepComplete(routine.id, id, nowCompleted)
         .catch(() => {
           setCompletedSteps((prev) => {
@@ -115,6 +134,15 @@ export default function RoutineCard({
       filteredSteps.length > 0 &&
       filteredSteps.every((s) => completedSteps.has(s.id));
     const desired = !allChecked;
+    if (
+      desired &&
+      filteredSteps.some(
+        (s) => s.step_type === "spf" && !completedSteps.has(s.id),
+      )
+    ) {
+      // "Check all" including an SPF step logs one application per gesture.
+      applySpf(new Date().toISOString()).catch(() => {});
+    }
     setCompletedSteps((prev) => {
       const next = new Set(prev);
       for (const s of filteredSteps) {
@@ -124,8 +152,7 @@ export default function RoutineCard({
       return next;
     });
     const ops = filteredSteps.map((s) =>
-      markStepComplete(routine.id, s.id, desired).catch(() => {
-        setCompletedSteps((prev) => {
+      markStepComplete(routine.id, s.id, desired).catch(() => {        setCompletedSteps((prev) => {
           const next = new Set(prev);
           if (desired) next.delete(s.id);
           else next.add(s.id);
@@ -159,7 +186,9 @@ export default function RoutineCard({
         <View style={styles.cardHeaderControls}>
           <DayNightToggle
             value={selectedTimeOfDay === "AM"}
-            onValueChange={(am) => setSelectedTimeOfDay(am ? "AM" : "PM")}
+            onValueChange={(am) => {
+              setSelectedTimeOfDay(am ? "AM" : "PM");
+            }}
           />
           <View
             style={{
@@ -195,21 +224,20 @@ export default function RoutineCard({
           </View>
         </View>
       </View>
-      <FlatList
-        data={filteredSteps}
-        keyExtractor={(item: RoutineStep) => item.id.toString()}
-        ListHeaderComponentStyle={styles.linesBackground}
-        ListHeaderComponent={
+      <View style={styles.listWrap} onLayout={onLinesLayout}>
+        {hasRules && (
           <LinearGradient
             pointerEvents="none"
             colors={ruleColors as [string, string, ...string[]]}
             locations={ruleLocations as [number, number, ...number[]]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
-            onLayout={onLinesLayout}
             style={styles.linesBackground}
           />
-        }
+        )}
+      <FlatList
+        data={filteredSteps}
+        keyExtractor={(item: RoutineStep) => item.id.toString()}
         renderItem={({ item, index }: { item: RoutineStep; index: number }) => {
           const isChecked = completedSteps.has(item.id);
           const productName = item.product_id
@@ -250,6 +278,7 @@ export default function RoutineCard({
         }}
         contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
       />
+      </View>
     </GlassSurface>
   );
 }
@@ -282,6 +311,9 @@ const styles = StyleSheet.create({
   },
   linesBackground: {
     ...StyleSheet.absoluteFillObject,
+  },
+  listWrap: {
+    flex: 1,
   },
   listContent: {
     gap: LINE_GAP,

@@ -10,10 +10,13 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
 import { useAuth } from "../../src/contexts/AuthContext";
+import { useSkinSessions } from "../../src/contexts/SkinSessionsContext";
 import NotificationSettings from "../../src/components/ui/notification-settings";
 import HomeRoutineSetting from "../../src/components/ui/home-routine-setting";
 import UnitsSetting from "../../src/components/ui/units-setting";
+import { deleteSkinData } from "../../src/api/skin";
 import {
   getSkinProfile,
   listRoutines,
@@ -84,7 +87,8 @@ function SettingsRow({
 }
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
+  const { clearAll: clearSkinSessions } = useSkinSessions();
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
   const [skinProfile, setSkinProfile] = useState<SkinProfile | null>(null);
@@ -120,7 +124,53 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
-    router.push("/(modals)/delete-account");
+    Alert.alert(
+      "Delete Account",
+      "This permanently deletes your account and all of your data. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              router.replace("/(auth)/login");
+            } catch {
+              // interceptor shows toast
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDeleteSkinData = () => {
+    Alert.alert(
+      "Delete skin data",
+      "This permanently deletes all captured photos and concern history. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteSkinData();
+              // Empty every subscribed screen + evict cached photos now.
+              clearSkinSessions();
+              Toast.show({
+                type: "success",
+                text1: "Skin data deleted",
+                position: "bottom",
+              });
+            } catch {
+              // interceptor shows toast
+            }
+          },
+        },
+      ],
+    );
   };
 
   const hasSkinProfile =
@@ -208,6 +258,21 @@ export default function ProfileScreen() {
                 color={colors.neutral[400]}
               />
             </View>
+          </GlassSurface>
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="overline" style={{ color: colors.neutral[600] }}>
+            Skin Tracking
+          </ThemedText>
+          <GlassSurface style={styles.card}>
+            <SettingsRow
+              label="Delete skin data"
+              icon="delete-outline"
+              destructive
+              last
+              onPress={handleDeleteSkinData}
+            />
           </GlassSurface>
         </View>
 

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Glasskyn",
     "slug": "glasskyn",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon-light.png",
@@ -21,9 +21,18 @@
       ],
       "expo-router",
       "expo-secure-store",
+      "expo-brightness",
       "expo-font",
       "expo-notifications",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.5"
+          }
+        }
+      ]
     ],
     "scheme": "cosmetic-expiry",
     "newArchEnabled": true,
@@ -36,13 +45,16 @@
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Glasskyn uses your camera to photograph your skincare products. For example, scanning a moisturizer's label lets Glasskyn autofill its name and ingredients, and flag any that may irritate your skin."
+        "NSCameraUsageDescription": "Glasskyn uses your camera to scan product labels, so it can autofill ingredients and flag irritants, and to take face photos for your Skin Journal to track changes in your skin over time."
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/foreground-icon.png",
+        "backgroundImage": "./assets/background-icon.png",
+        "monochromeImage": "./assets/monochrome-icon.png",
+        "backgroundColor": "#CDFFF8"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,

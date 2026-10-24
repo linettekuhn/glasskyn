@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useColorScheme } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider, useAuth } from "../src/contexts/AuthContext";
+import { SkinSessionsProvider } from "../src/contexts/SkinSessionsContext";
 import { BootProvider, useBoot } from "../src/contexts/BootContext";
 import { ChatSessionProvider } from "../src/contexts/ChatSessionContext";
 import { VersionCheckProvider, useVersionCheck } from "../src/contexts/VersionCheckContext";
@@ -104,6 +105,7 @@ export default function RootLayout() {
     >
       <SafeAreaProvider>
         <AuthProvider>
+          <SkinSessionsProvider>
           <ChatSessionProvider>
             <VersionCheckProvider>
               <BootProvider>
@@ -111,6 +113,7 @@ export default function RootLayout() {
               </BootProvider>
             </VersionCheckProvider>
           </ChatSessionProvider>
+          </SkinSessionsProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

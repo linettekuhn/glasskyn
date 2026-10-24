@@ -9,4 +9,7 @@ from .routine import SkinProfile, Routine, RoutineStep, RoutineTemplate, Routine
 from .routine_step_completion import RoutineStepCompletion
 from .user_preference import UserPreference
 from .water_intake import WaterIntake
+from .spf_application import SpfApplication
 from .chat import ChatMessage, ChatSession
+from .skin import SkinSession, SkinConcern
+from .skin_nudge import SkinNudge

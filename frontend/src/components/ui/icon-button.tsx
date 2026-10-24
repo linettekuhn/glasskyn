@@ -1,6 +1,11 @@
 import { Colors, getTheme } from "@/constants/theme";
 import { ComponentType } from "react";
-import { StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
+import {
+  Insets,
+  StyleSheet,
+  TouchableOpacity,
+  useColorScheme,
+} from "react-native";
 
 type Props = {
   onPress: () => void;
@@ -11,6 +16,9 @@ type Props = {
   active?: boolean;
   activeColor?: string;
   backgroundColor?: string;
+  disabled?: boolean;
+  accessibilityLabel?: string;
+  hitSlop?: Insets | number;
 };
 
 export default function IconButton({
@@ -22,6 +30,9 @@ export default function IconButton({
   active = false,
   activeColor = "rgba(255,200,0,0.6)",
   backgroundColor = "rgba(0,0,0,0.5)",
+  disabled = false,
+  accessibilityLabel,
+  hitSlop,
 }: Props) {
   const colorScheme = useColorScheme();
   const colors = Colors[getTheme(colorScheme)];
@@ -29,10 +40,15 @@ export default function IconButton({
   return (
     <TouchableOpacity
       onPress={onPress}
+      disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityLabel ? "button" : undefined}
+      hitSlop={hitSlop}
       style={[
         styles.button,
         { backgroundColor },
         active && { backgroundColor: activeColor },
+        disabled && { opacity: 0.4 },
       ]}
     >
       <IconComponent

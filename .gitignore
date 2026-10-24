@@ -27,3 +27,6 @@ credentials/
 
 # ML model weights / checkpoints (too large for git - download or train, keep local only)
 **/*.pt
+backend/data/models/**/checkpoints/
+*firebase-adminsdk*.json
+*fcm*service-account*.json
