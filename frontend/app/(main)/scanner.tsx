@@ -101,12 +101,12 @@ export default function ScannerScreen() {
               type="bodyLarge"
               style={{ color: colors.neutral[500], textAlign: "center" }}
             >
-              Allow camera access to scan your product labels.
+              Glasskyn uses the camera to scan your product labels.
             </ThemedText>
           </View>
         </View>
         <ThemedButton
-          text="Allow Camera Access"
+          text="Continue"
           onPress={handleRequest}
           alignment="center"
         />

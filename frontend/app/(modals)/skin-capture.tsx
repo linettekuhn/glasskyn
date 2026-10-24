@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   AppState,
   Image,
+  Linking,
   StyleSheet,
   TouchableOpacity,
   useWindowDimensions,
@@ -34,6 +35,8 @@ import ThemedButton from "@/components/ui/themed-button";
 import IconButton from "@/components/ui/icon-button";
 import GuideOval, { type OvalMode } from "@/components/skin/guide-oval";
 import SkinRingFlash from "@/components/skin/skin-ring-flash";
+import NoCameraIcon from "@/components/icons/no-camera-icon";
+import TapCameraIcon from "@/components/icons/tap-camera-icon";
 import { useGuideOval } from "@/hooks/use-guide-oval";
 import { useLiveLuma } from "@/hooks/use-live-luma";
 import {
@@ -157,14 +160,14 @@ export default function SkinCaptureScreen() {
   const { width, height } = useWindowDimensions();
   const isFocused = useIsFocused();
   const device = useCameraDevice("front");
-  const { hasPermission, requestPermission } = useCameraPermission();
+  const { hasPermission, status, requestPermission } = useCameraPermission();
   const { setDraft } = useSkinCapture();
 
   // NOTE: capture resolution is intentionally fixed at UHD_4_3 below (4:3
   // must match the ghost overlay, crop geometry and landmark reprojection of
   // every existing session). Do not pick per-device "best" resolution here.
 
-  const [ready, setReady] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const [faces, setFaces] = useState<Face[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<"camera" | "preview">("camera");
@@ -240,20 +243,24 @@ export default function SkinCaptureScreen() {
   const hasCapturedRef = useRef(false);
   const warmedUpRef = useRef(false);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const granted = hasPermission || (await requestPermission());
-        if (mounted) setReady(Boolean(granted));
-      } catch (e) {
-        if (mounted) setError(String(e));
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [hasPermission, requestPermission]);
+  // `hasPermission` is the single source of truth: useCameraPermission
+  // re-reads the status on AppState → active, so a grant made in Settings
+  // while the app was backgrounded flips it without a remount.
+  //
+  // Never prompt on mount: the primer screen owns the first request so the
+  // system dialog can't appear without the user tapping Continue.
+  const handleRequestPermission = useCallback(async () => {
+    if (requesting) return;
+    setRequesting(true);
+    try {
+      // The hook re-reads the status after the request and re-renders.
+      await requestPermission();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setRequesting(false);
+    }
+  }, [requesting, requestPermission]);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (next) => {
@@ -346,7 +353,7 @@ export default function SkinCaptureScreen() {
   );
 
   const cameraActive =
-    ready &&
+    hasPermission &&
     device != null &&
     phase === "camera" &&
     isFocused &&
@@ -840,7 +847,7 @@ export default function SkinCaptureScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style={ringLight ? "dark" : "light"} />
-      {ready && device ? (
+      {hasPermission && device ? (
         <View style={StyleSheet.absoluteFill}>
           <Camera
             style={StyleSheet.absoluteFill}
@@ -1096,19 +1103,79 @@ export default function SkinCaptureScreen() {
             </View>
           )}
         </View>
-      ) : (
+      ) : hasPermission ? (
         <View style={styles.cameraFallback}>
           <ThemedText style={{ color: txtColor }} type="bodyLarge">
-            {!ready
-              ? "Camera permission not granted"
-              : device == null
-                ? "No front camera device found"
-                : "Initializing…"}
+            No front camera device found
           </ThemedText>
           {error && (
             <ThemedText
               style={{ color: txtColor, opacity: 0.7 }}
               type="caption"
+            >
+              {error}
+            </ThemedText>
+          )}
+        </View>
+      ) : (
+        <View style={styles.permissionScreen}>
+          <View style={styles.permissionCopy}>
+            {status === "not-determined" ? (
+              <TapCameraIcon color={Colors["light"].secondary[400]} />
+            ) : (
+              <NoCameraIcon color={Colors["light"].error} />
+            )}
+            <ThemedText
+              type="h2"
+              style={{ color: txtColor, textAlign: "center" }}
+            >
+              {status === "not-determined"
+                ? "Camera Access Needed"
+                : status === "restricted"
+                  ? "Camera Access Is Restricted"
+                  : "Camera Access Is Off"}
+            </ThemedText>
+            <ThemedText
+              type="body"
+              style={{ color: txtColor, opacity: 0.7, textAlign: "center" }}
+            >
+              {status === "not-determined"
+                ? "A journal entry is a photo of your face, so Skin Journal can't save an entry without the camera. Your photos are saved to your account so you can track changes in your skin over time."
+                : status === "restricted"
+                  ? "Camera access is restricted on this device, possibly by Screen Time or a device management profile. Check those settings to continue."
+                  : "Skin Journal needs the camera to take your journal entry photo. Turn on camera access for Glasskyn in your phone's Settings to continue."}
+            </ThemedText>
+          </View>
+
+          {status === "not-determined" ? (
+            <ThemedButton
+              text="Continue"
+              onPress={() => void handleRequestPermission()}
+              loading={requesting}
+              alignment="stretch"
+              color={btnColor}
+            />
+          ) : (
+            <ThemedButton
+              text="Open Settings"
+              onPress={() => Linking.openSettings()}
+              alignment="stretch"
+              color={btnColor}
+            />
+          )}
+
+          <ThemedButton
+            text="Back to journal"
+            onPress={() => router.back()}
+            link
+            textType="bodySmall"
+            color={txtColor}
+          />
+
+          {error && (
+            <ThemedText
+              type="caption"
+              style={{ color: txtColor, opacity: 0.6, textAlign: "center" }}
             >
               {error}
             </ThemedText>
@@ -1127,6 +1194,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     padding: 24,
+  },
+  permissionScreen: {
+    flex: 1,
+    justifyContent: "center",
+    gap: 20,
+    paddingHorizontal: 32,
+  },
+  permissionCopy: {
+    alignItems: "center",
+    gap: 12,
   },
   topBar: {
     position: "absolute",
