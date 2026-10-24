@@ -39,7 +39,10 @@ export default function NotificationSettings() {
 
   const checkNotificationPermission = useCallback(() => {
     Notifications.getPermissionsAsync()
-      .then(({ status }) => setPermissionStatus(status))
+      .then(({ status }) => {
+        setPermissionStatus(status);
+        if (status === "granted") setSpfPermDenied(false);
+      })
       .catch(() => {});
   }, []);
 
