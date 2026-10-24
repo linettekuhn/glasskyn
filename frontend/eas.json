@@ -10,6 +10,9 @@
       "channel": "development",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://dev-api.glasskyn.app/"
+      },
+      "ios": {
+        "image": "macos-sequoia-15.6-xcode-26.2"
       }
     },
     "preview": {
@@ -27,7 +30,10 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.glasskyn.app/"
       },
-      "channel": "production"
+      "channel": "production",
+      "ios": {
+        "image": "macos-sequoia-15.6-xcode-26.2"
+      }
     }
   }
 }
