@@ -11,6 +11,9 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://dev-api.glasskyn.app/"
       },
+      "android": {
+        "buildType": "apk"
+      },
       "ios": {
         "image": "macos-sequoia-15.6-xcode-26.2"
       }
@@ -20,6 +23,9 @@
       "channel": "preview",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://dev-api.glasskyn.app/"
+      },
+      "android": {
+        "buildType": "apk"
       },
       "ios": {
         "image": "macos-sequoia-15.6-xcode-26.2"
@@ -31,6 +37,9 @@
         "EXPO_PUBLIC_API_URL": "https://api.glasskyn.app/"
       },
       "channel": "production",
+      "android": {
+        "buildType": "app-bundle"
+      },
       "ios": {
         "image": "macos-sequoia-15.6-xcode-26.2"
       }

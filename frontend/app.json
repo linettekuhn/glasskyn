@@ -23,7 +23,13 @@
       "expo-secure-store",
       "expo-brightness",
       "expo-font",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#031D1D"
+        }
+      ],
       "@react-native-community/datetimepicker",
       [
         "expo-build-properties",
@@ -58,7 +64,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.linettekuhn.glasskyn"
+      "package": "com.linettekuhn.glasskyn",
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
